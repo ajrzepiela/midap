@@ -5,7 +5,7 @@
 4. Train U-Net
 5. Include segmentation-generation into workflow (workflow manager/bash script)
 
-# Starting the virtual environment on Euler
+## Starting the virtual environment on Euler
 module load new eth_proxy gcc/4.8.2 java/1.8.0_91 python/3.6.1
 source ackermann/bin/activate
 
