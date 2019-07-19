@@ -9,4 +9,5 @@
 module load new eth_proxy gcc/4.8.2 java/1.8.0_91 python/3.6.1
 source ackermann/bin/activate
 
-
+## Convert .vsi to .tiff
+python util/convert_files.py --directory 'TimeLapse_20190517_15052019_L-algMono-0.1/'
