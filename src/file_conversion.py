@@ -64,7 +64,7 @@ def main():
 	create_dir(tiff_dir)
 
 	vsi_files = glob.glob(vsi_dir + '/*.vsi')
-	do_convert(vsi_files, tiff_dir)
+# 	do_convert(vsi_files, tiff_dir)
 	
 
 if __name__ == "__main__":
