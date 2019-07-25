@@ -52,20 +52,20 @@ def do_convert(vsi_files, tiff_dir):
 	
 	jb.kill_vm()
 
-def main():
-	# pass argument
-	ap = argparse.ArgumentParser()
-	ap.add_argument("-d", "--directory", type=str,
-	help="Name of directory containing .vsi files.")
-	args = vars(ap.parse_args())
+# def main():
+# 	# pass argument
+# 	ap = argparse.ArgumentParser()
+# 	ap.add_argument("-d", "--directory", type=str,
+# 	help="Name of directory containing .vsi files.")
+# 	args = vars(ap.parse_args())
 
-	directory = args['directory'] #name of directory with vsi-files:
-	vsi_dir, tiff_dir = create_dir_name(directory)
-	create_dir(tiff_dir)
+# 	directory = args['directory'] #name of directory with vsi-files:
+# 	vsi_dir, tiff_dir = create_dir_name(directory)
+# 	create_dir(tiff_dir)
 
-	vsi_files = glob.glob(vsi_dir + '/*.vsi')
-	do_convert(vsi_files, tiff_dir)
+# 	vsi_files = glob.glob(vsi_dir + '/*.vsi')
+# 	do_convert(vsi_files, tiff_dir)
 	
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
