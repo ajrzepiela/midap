@@ -4,14 +4,14 @@ import numpy as np
 
 import argparse
 import bioformats as bf
+import imageio
 import javabridge as jb
-import tifffile
 import tqdm
 
 def create_dir_name(d):
 	data_dir = 'data/'
-	vsi_dir = data_dir + d
-	tiff_dir = data_dir + d + '_tiff'
+	vsi_dir = d #data_dir + d
+	tiff_dir = d + 'tiff/' #data_dir + d + '_tiff/'
 	return vsi_dir, tiff_dir
 
 def create_dir(tiff_dir):
@@ -41,7 +41,7 @@ def svi_to_tiff(path, tiff_dir):
                                         rescale=False)
                     images.append(image)
             filename = tiff_dir + os.path.splitext(os.path.basename(path))[0] + '.tiff'
-            tifffile.imsave(filename,np.array(images))
+            imageio.mimwrite(filename,np.array(images))
 
 def do_convert(vsi_files, tiff_dir):
 	jb.start_vm(class_path=bf.JARS, max_heap_size="2G")
