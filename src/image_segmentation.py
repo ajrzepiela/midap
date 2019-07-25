@@ -1,5 +1,12 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import os
+import tqdm
+
 from PIL import Image, ImageSequence
+from scipy.ndimage.morphology import binary_dilation, grey_dilation
+import skimage.measure as measure
+import cv2
 
 def open_tiff(path):
 	# load all pages of tiff file
@@ -18,8 +25,9 @@ def scale_pixel_vals(img):
 def find_rectangle(contours):
 	#find the rectangular contour 
 	x_range_contours = np.array([np.max(c[:,1]) - np.min(c[:,1]) for c in contours])
+	y_range_contours = np.array([np.max(c[:,0]) - np.min(c[:,0]) for c in contours])
         #assume chamber size is above a specific value
-	ix = np.where(x_range_contours > 500)[0]
+	ix = list(set(np.where(x_range_contours > 400)[0])&set(np.where(y_range_contours > 400)[0]))
 	ix_rect = ix[np.where([contours[i][:,1][0] == contours[i][:,1][-1] for i in ix])[0][0]]
 	return ix_rect
 
@@ -56,3 +64,35 @@ def do_cutout(img, corners_cut):
 	left_x, right_x, lower_y, upper_y = corners_cut
 	cutout = img[lower_y:upper_y, left_x:right_x]
 	return cutout
+
+def cutout_all_pages(path):
+	all_pages = open_tiff(path)
+
+	all_cutouts = []
+	pbar_pages = tqdm.tqdm(all_pages)
+	for i, img in enumerate(pbar_pages):
+        	# scale pixel-values
+		img = scale_pixel_vals(img)
+		# find contours
+		dilation = grey_dilation(img, size=(20,20))
+		contours = measure.find_contours(dilation, 180,  fully_connected='high')
+		# find rectangle of specific size
+		ix_rect = find_rectangle(contours)
+		# get the corners of the rectangle
+		corners = get_corners(contours[ix_rect])
+        	
+		# rectangle for first image
+		if i == 0:
+                	rectangle_x, rectangle_y, range_x, range_y = draw_rectangle(corners)
+                	# generate cutout
+                	corners_cut = get_corners(np.array([rectangle_y, rectangle_x]).T)
+                	cutout = do_cutout(img, corners_cut)
+                	all_cutouts.append(cutout)
+		elif i > 0:
+                	rectangle_x, rectangle_y = draw_rectangle(corners, range_x,
+                                                          range_y, first_image = False)
+                	corners_cut = get_corners(np.array([rectangle_y, rectangle_x]).T)
+                	cutout = do_cutout(img, corners_cut)
+                	all_cutouts.append(cutout)
+
+	return all_cutouts
