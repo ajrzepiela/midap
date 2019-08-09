@@ -22,13 +22,19 @@ def scale_pixel_vals(img):
 	img = np.float32(img)
 	return img
 
-def find_rectangle(contours):
+def find_rectangle(contours, wind_width, wind_height):	
+	# select only those contour which contain a closed shape
+	closed_shape_ix = np.where([(c[:,1][0] == c[:,1][-1])&(c[:,0][0] == c[:,0][-1])\
+                            for c in contours])[0]
+	closed_shapes = [contours[ix] for ix in closed_shape_ix]
+
 	#find the rectangular contour 
-	x_range_contours = np.array([np.max(c[:,1]) - np.min(c[:,1]) for c in contours])
-	y_range_contours = np.array([np.max(c[:,0]) - np.min(c[:,0]) for c in contours])
+	x_range_contours = np.array([np.max(c[:,1]) - np.min(c[:,1]) for c in closed_shapes])
+	y_range_contours = np.array([np.max(c[:,0]) - np.min(c[:,0]) for c in closed_shapes])
         #assume chamber size is above a specific value
-	ix = list(set(np.where(x_range_contours > 400)[0])&set(np.where(y_range_contours > 400)[0]))
-	ix_rect = ix[np.where([contours[i][:,1][0] == contours[i][:,1][-1] for i in ix])[0][0]]
+	ix = list(set(np.where(x_range_contours > wind_width)[0])&set(np.where(y_range_contours > wind_height)[0]))
+	#ix_rect = ix[np.where([contours[i][:,1][0] == contours[i][:,1][-1] for i in ix])[0][0]]
+	ix_rect = closed_shape_ix[ix[0]]
 	return ix_rect
 
 def get_corners(shape):
@@ -54,8 +60,9 @@ def draw_rectangle(corners, range_x = False, range_y = False, first_image = True
 
 	else:
 		right_x = left_x + range_x
-		upper_y = lower_y + range_y
-
+		#upper_y = lower_y + range_y
+		lower_y = upper_y - range_y
+		
 		rectangle_x = [left_x, right_x, right_x, left_x, left_x]
 		rectangle_y = [lower_y, lower_y, upper_y, upper_y, lower_y]
 		return rectangle_x, rectangle_y
@@ -65,7 +72,7 @@ def do_cutout(img, corners_cut):
 	cutout = img[lower_y:upper_y, left_x:right_x]
 	return cutout
 
-def cutout_all_pages(path):
+def cutout_all_pages(path, wind_width, wind_height):
 	all_pages = open_tiff(path)
 
 	all_cutouts = []
@@ -73,11 +80,14 @@ def cutout_all_pages(path):
 	for i, img in enumerate(pbar_pages):
         	# scale pixel-values
 		img = scale_pixel_vals(img)
+		# enhance contrast
+		img = img.astype('uint8')
+		enhanced = cv2.equalizeHist(img)
 		# find contours
-		dilation = grey_dilation(img, size=(20,20))
-		contours = measure.find_contours(dilation, 180,  fully_connected='high')
+		#dilation = grey_dilation(img, size=(20,20))
+		contours = measure.find_contours(enhanced, 180,  fully_connected='high')
 		# find rectangle of specific size
-		ix_rect = find_rectangle(contours)
+		ix_rect = find_rectangle(contours, wind_width, wind_height)
 		# get the corners of the rectangle
 		corners = get_corners(contours[ix_rect])
         	
