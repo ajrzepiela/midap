@@ -92,4 +92,4 @@ def save_mat(cuts, segm, data_dir):
                                                     'scoreRaw' : scoreRaw, 
                                         'props' :  properties}})
 
-    ix+=1
+        ix+=1
