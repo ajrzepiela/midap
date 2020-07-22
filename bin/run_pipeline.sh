@@ -30,6 +30,7 @@ POS=$(echo $INP_1 | grep -Po "[Pp][Oo][Ss][0-9]+")
 RAW_IM="raw_im/"
 SEG_PATH="xy1/"
 CUT_PATH="phase/"
+SEG_IM_PATH="seg_im/"
 
 make_dir $PATH_FOLDER$POS
 make_dir $PATH_FOLDER$POS$CHANNEL_1
@@ -48,15 +49,26 @@ make_dir $PATH_FOLDER$POS$CHANNEL_1$SEG_PATH$CUT_PATH
 make_dir $PATH_FOLDER$POS$CHANNEL_2$SEG_PATH$CUT_PATH
 make_dir $PATH_FOLDER$POS$CHANNEL_3$SEG_PATH$CUT_PATH
 
+make_dir $PATH_FOLDER$POS$CHANNEL_1$SEG_IM_PATH
+make_dir $PATH_FOLDER$POS$CHANNEL_2$SEG_IM_PATH
+make_dir $PATH_FOLDER$POS$CHANNEL_3$SEG_IM_PATH
+
 # 2) Split frames
 echo "split frames"
-python stack2frames.py --path $PATH_FOLDER$INP_1 --pos $POS --channel $CHANNEL_1
-python stack2frames.py --path $PATH_FOLDER$INP_2 --pos $POS --channel $CHANNEL_2
-python stack2frames.py --path $PATH_FOLDER$INP_3 --pos $POS --channel $CHANNEL_3
+#python stack2frames.py --path $PATH_FOLDER$INP_1 --pos $POS --channel $CHANNEL_1
+#python stack2frames.py --path $PATH_FOLDER$INP_2 --pos $POS --channel $CHANNEL_2
+#python stack2frames.py --path $PATH_FOLDER$INP_3 --pos $POS --channel $CHANNEL_3
 
 # 3) Cut chambers
 echo "cut chambers"
 echo $PATH_FOLDER$POS$CHANNEL_1$RAW_IM
-python frames2cuts.py --path_ch0 $PATH_FOLDER$POS$CHANNEL_1$RAW_IM --path_ch1 $PATH_FOLDER$POS$CHANNEL_2$RAW_IM --path_ch2 $PATH_FOLDER$POS$CHANNEL_3$RAW_IM
+#python frames2cuts.py --path_ch0 $PATH_FOLDER$POS$CHANNEL_1$RAW_IM --path_ch1 $PATH_FOLDER$POS$CHANNEL_2$RAW_IM --path_ch2 $PATH_FOLDER$POS$CHANNEL_3$RAW_IM
 #python frames2cuts.py --path_PH $PATH_FOLDER$POS$CHANNEL_2$RAW_IM
 #python frames2cuts.py --path_PH $PATH_FOLDER$POS$CHANNEL_3$RAW_IM
+
+# 4) Segmentation
+python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_2 --channel 'eGFP'
+python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_3 --channel 'mCherry'
+
+# 5) Conversion
+
