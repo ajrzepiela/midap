@@ -31,6 +31,7 @@ RAW_IM="raw_im/"
 SEG_PATH="xy1/"
 CUT_PATH="phase/"
 SEG_IM_PATH="seg_im/"
+SEG_MAT_PATH="seg/"
 
 make_dir $PATH_FOLDER$POS
 make_dir $PATH_FOLDER$POS$CHANNEL_1
@@ -53,6 +54,10 @@ make_dir $PATH_FOLDER$POS$CHANNEL_1$SEG_IM_PATH
 make_dir $PATH_FOLDER$POS$CHANNEL_2$SEG_IM_PATH
 make_dir $PATH_FOLDER$POS$CHANNEL_3$SEG_IM_PATH
 
+make_dir $PATH_FOLDER$POS$CHANNEL_1$SEG_PATH$SEG_MAT_PATH
+make_dir $PATH_FOLDER$POS$CHANNEL_2$SEG_PATH$SEG_MAT_PATH
+make_dir $PATH_FOLDER$POS$CHANNEL_3$SEG_PATH$SEG_MAT_PATH
+
 # 2) Split frames
 echo "split frames"
 #python stack2frames.py --path $PATH_FOLDER$INP_1 --pos $POS --channel $CHANNEL_1
@@ -67,8 +72,8 @@ echo $PATH_FOLDER$POS$CHANNEL_1$RAW_IM
 #python frames2cuts.py --path_PH $PATH_FOLDER$POS$CHANNEL_3$RAW_IM
 
 # 4) Segmentation
-python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_2 --channel 'eGFP'
-python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_3 --channel 'mCherry'
+#python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_2 --channel 'eGFP'
+#python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_3 --channel 'mCherry'
 
 # 5) Conversion
-
+python seg2mat.py --path_cut $PATH_FOLDER$POS$CHANNEL_2$SEG_PATH$CUT_PATH --path_seg $PATH_FOLDER$POS$CHANNEL_2$SEG_IM_PATH --path_channel $PATH_FOLDER$POS$CHANNEL_2
