@@ -16,5 +16,5 @@ raw_filename = os.path.splitext(path_tail)[0]
 stack = io.imread(args.path)
 print(stack.shape)
 for ix, frame in enumerate(tqdm(stack[:10])):
-	io.imsave(path_head + '/' + args.pos + args.channel + 'raw_im/' + raw_filename + '_frame' + str("%03d" % ix) + '.png', frame, check_contrast=False)
+	io.imsave(path_head + '/' + args.pos + args.channel + 'raw_im/' + raw_filename + '_frame' + str("%03d" % ix) + '.tif', frame, check_contrast=False)
 
