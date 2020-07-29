@@ -1,0 +1,3 @@
+[submodule "SuperSegger"]
+	path = SuperSegger
+	url = https://github.com/wiggins-lab/SuperSegger.git

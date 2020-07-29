@@ -1,7 +1,8 @@
 function execute = tracking_supersegger(path)
 	% add path
 	addpath(genpath('../SuperSegger'))
-	addpath(genpath('../data'))
+	addpath(genpath(path))
+        %addpath(genpath('../data'))
 
 	% define folder with images
 	image_folder = path

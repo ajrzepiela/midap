@@ -7,7 +7,7 @@ conda activate /cluster/work/sis/cdss/oschmanf/miniconda3/envs/workflow
 #jupyter nbconvert --to notebook --execute ../notebooks/Test_widget.ipynb
 
 # -1) Define parameters
-#python set_parameters.py
+python set_parameters.py
 
 #PATH_FOLDER="/cluster/work/sis/cdss/oschmanf/ackermann-bacteria-segmentation/data/data_Glen/3_ZF270g-FS144r/_tiff/"
 
@@ -146,5 +146,3 @@ for i in $(seq 2 $NUM_CHANNEL_TYPES); do
         CH="CHANNEL_$i"
         matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS${!CH}')"
 done
-#matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS$CHANNEL_2')"
-#matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS$CHANNEL_3')"
