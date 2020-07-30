@@ -17,11 +17,16 @@ chmod +x run_pipeline_local.sh
 ```
 
 ### Run pipeline on local machine
-#### 1. Navigate to bin-directory and execute pipeline
+#### 1. Navigate to bin-directory and activate conda environment
 ```
 cd bin/
+conda activate workflow
+```
+
+#### 2. Execute pipeline
+```
 ./run_pipeline_local.sh
 ```
 
-#### 2. Select folder path and input files via GUI
+#### 3. Select folder path and input files via GUI
 

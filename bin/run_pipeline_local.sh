@@ -1,7 +1,7 @@
 #!/bin/bash
 
-eval "$(conda shell.bash hook)"
-conda activate ~/miniconda3/envs/workflow
+#eval "$(conda shell.bash hook)"
+#conda activate ~/miniconda3/envs/workflow
 
 
 # -1) Define parameters
