@@ -152,5 +152,5 @@ done
 echo "run tracking"
 for i in $(seq 2 $NUM_CHANNEL_TYPES); do
         CH="CHANNEL_$i"
-        /Applications/MATLAB_R2018b.app/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS${!CH}')"
+        /Applications/MATLAB_R2017b.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS${!CH}')"
 done
