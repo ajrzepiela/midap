@@ -122,7 +122,6 @@ fi
 # 5) Conversion
 echo "run file-conversion"
 for i in $(seq 2 $NUM_CHANNEL_TYPES); do
-        echo $i
         CH="CHANNEL_$i"
         python seg2mat.py --path_cut $PATH_FOLDER$POS${!CH}$SEG_PATH$CUT_PATH --path_seg $PATH_FOLDER$POS${!CH}$SEG_IM_PATH --path_channel $PATH_FOLDER$POS${!CH}
 done

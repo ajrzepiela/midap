@@ -250,7 +250,6 @@ def save_mat(cuts, segm, data_dir):
     fname_base = 'CWRt' 
     ix = 0
     for ph, seg in zip(cuts, segm):
-        print('run')
         #phase images
         phase = ph
 
