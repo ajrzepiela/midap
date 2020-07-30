@@ -11,21 +11,28 @@ sg.set_options(font=appFont)
 layout = [[sg.Text('Foldername', font='bold')],
           [sg.Input(key='folder_name'), sg.FolderBrowse()],
           [sg.Text('')],
+          [sg.Text('')],
           [sg.Text('Input Files', font='bold')],
           [sg.Text('Phase')],
           [sg.Input(key='inp_1'), sg.FileBrowse()],
-          [sg.Text('Additional channel 1')],
+          [sg.Checkbox('Phase', key='phase', default=True)],
+          [sg.Text('')],
+          [sg.Text('Additional channel 1', font='bold')],
           [sg.Input(key='inp_2'), sg.FileBrowse()],
-          [sg.Text('Additional channel 2')],
+          [sg.Text('Channel type 1')],
+          [sg.Checkbox('GFP', key='gfp_1'), sg.Checkbox('mCherry', key='cherry_1'), sg.Checkbox('TXRED', key='txred_1')],
+          [sg.Text('Cell type 1')],      
+          [sg.Checkbox('13B01', key='cell_type_11'), sg.Checkbox('ZF270g', key='cell_type_12'), sg.Checkbox('FS144', key='cell_type_13')],
+          [sg.Checkbox('A3M17', key='cell_type_14'), sg.Checkbox('1F187', key='cell_type_15')], 
+          [sg.Text('')],
+          [sg.Text('Additional channel 2', font='bold')],
           [sg.Input(key='inp_3'), sg.FileBrowse()],
-          [sg.Text('')],
-          [sg.Text('Channels', font='bold')],
-          [sg.Checkbox('Phase', key='phase'), sg.Checkbox('GFP', key='gfp'), sg.Checkbox('mCherry', key='cherry'), sg.Checkbox('TXRED', key='txred')],
-          [sg.Text('')],
-          [sg.Text('Cell types', font='bold')],      
-          [sg.Checkbox('13B01', key='cell_type_1'), sg.Checkbox('ZF270g', key='cell_type_2'), sg.Checkbox('FS144', key='cell_type_3')],
-          [sg.Checkbox('A3M17', key='cell_type_4'), sg.Checkbox('1F187', key='cell_type_5')], 
-	  [sg.Text('')],
+          [sg.Text('Channel type 2')],
+          [sg.Checkbox('GFP', key='gfp_2'), sg.Checkbox('mCherry', key='cherry_2'), sg.Checkbox('TXRED', key='txred_2')],
+          [sg.Text('Cell type 2')],      
+          [sg.Checkbox('13B01', key='cell_type_21'), sg.Checkbox('ZF270g', key='cell_type_22'), sg.Checkbox('FS144', key='cell_type_23')],
+          [sg.Checkbox('A3M17', key='cell_type_24'), sg.Checkbox('1F187', key='cell_type_25')], 
+	      [sg.Text('')],
           [sg.OK(), sg.Cancel()]] 
 
 window = sg.Window('Parameters', layout)
@@ -39,13 +46,14 @@ for i in range(3):
     if len(values['inp_' + str(i + 1)]) > 0:
         sel_inputs.append(values['inp_' + str(i + 1)])
 
-channel_types = ['Phase', 'GFP', 'mCherry', 'TXRED']
-channel_type_vals = [values['phase'], values['gfp'], values['cherry'], values['txred']]
+channel_types = ['Phase', 'GFP', 'mCherry', 'TXRED', 'GFP', 'mCherry', 'TXRED']
+channel_type_vals = [values['phase'], values['gfp_1'], values['cherry_1'], values['txred_1'], values['gfp_2'], values['cherry_2'], values['txred_2']]
 ix_channels = np.where(channel_type_vals)[0]
 sel_channel_types = [channel_types[i] for i in ix_channels]
 
-cell_types = ['13B01', 'Zf270g', 'FS144', 'A3M17', '1F187']
-cell_type_vals = [values['cell_type_1'], values['cell_type_2'], values['cell_type_3'], values['cell_type_4'], values['cell_type_5']]
+cell_types = ['13B01', 'Zf270g', 'FS144', 'A3M17', '1F187', '13B01', 'Zf270g', 'FS144', 'A3M17', '1F187']
+cell_type_vals = [values['cell_type_11'], values['cell_type_12'], values['cell_type_13'], values['cell_type_14'], values['cell_type_15'],\
+                  values['cell_type_21'], values['cell_type_22'], values['cell_type_23'], values['cell_type_24'], values['cell_type_25']]
 ix_cells = np.where(cell_type_vals)[0]
 sel_cell_types = [cell_types[i] for i in ix_cells]
 

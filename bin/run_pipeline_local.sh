@@ -93,30 +93,51 @@ fi
 
 # 4) Segmentation
 echo "segment images"
-if [[ $CHANNEL_2 == "/GFP/" ]]
+if [[ $CELL_TYPE_1 == "13B01" ]] || [[ $CELL_TYPE_1 == "Zf270g" ]] || [[ $CELL_TYPE_1 == "1F187" ]]
     then
         python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_2 --channel 'eGFP'
 fi
-if [[ $CHANNEL_2 == "/mCherry/" ]]
+
+if [[ $CELL_TYPE_1 == "FS144" ]] || [[ $CELL_TYPE_1 == "Zf270g" ]]
     then
         python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_2 --channel 'mCherry'
 fi
-if [[ $CHANNEL_2 == "/TXRED/" ]]
-    then
-        python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_2 --channel 'mCherry'
-fi
-if [[ $CHANNEL_3 == "/GFP/" ]]
+
+if [[ $CELL_TYPE_2 == "13B01" ]] || [[ $CELL_TYPE_2 == "Zf270g" ]] || [[ $CELL_TYPE_2 == "1F187" ]]
     then
         python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_3 --channel 'eGFP'
 fi
-if [[ $CHANNEL_3 == "/mCherry/" ]]
+
+if [[ $CELL_TYPE_2 == "FS144" ]] || [[ $CELL_TYPE_2 == "Zf270g" ]]
     then
         python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_3 --channel 'mCherry'
 fi
-if [[ $CHANNEL_3 == "/TXRED/" ]]
-    then
-        python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_3 --channel 'mCherry'
-fi
+
+
+# if [[ $CHANNEL_2 == "/GFP/" ]]
+#     then
+#         python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_2 --channel 'eGFP'
+# fi
+# if [[ $CHANNEL_2 == "/mCherry/" ]]
+#     then
+#         python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_2 --channel 'mCherry'
+# fi
+# if [[ $CHANNEL_2 == "/TXRED/" ]]
+#     then
+#         python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_2 --channel 'mCherry'
+# fi
+# if [[ $CHANNEL_3 == "/GFP/" ]]
+#     then
+#         python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_3 --channel 'eGFP'
+# fi
+# if [[ $CHANNEL_3 == "/mCherry/" ]]
+#     then
+#         python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_3 --channel 'mCherry'
+# fi
+# if [[ $CHANNEL_3 == "/TXRED/" ]]
+#     then
+#         python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_3 --channel 'mCherry'
+# fi
 
 
 # 5) Conversion
