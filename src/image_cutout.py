@@ -8,8 +8,8 @@ from matplotlib.widgets  import RectangleSelector
 from PIL import Image, ImageEnhance, ImageSequence
 from scipy.ndimage.morphology import binary_dilation, grey_dilation
 from skimage import util, exposure
-#from skimage.feature import register_translation
-from skimage.registration import phase_cross_correlation
+from skimage.feature import register_translation
+#from skimage.registration import phase_cross_correlation
 from skimage.filters import threshold_otsu, threshold_mean
 from skimage.filters import unsharp_mask
 import skimage.measure as measure
@@ -74,7 +74,8 @@ class CutoutImage:
 
     def align_two_images(self, src_img, ref_img):
         # aligns a source image in comparison to a reference image
-        return phase_cross_correlation(src_img, ref_img)[0].astype(int)
+        #return phase_cross_correlation(src_img, ref_img)[0].astype(int)
+        return register_translation(src_img, ref_img)[0].astype(int)
 
 
     def align_all_images(self):
