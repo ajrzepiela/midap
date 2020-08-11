@@ -27,7 +27,6 @@ def svi_to_tiff(file_name, tiff_dir):
         c_total = reader.rdr.getSizeC()
         z_total = reader.rdr.getSizeZ()
         t_total = reader.rdr.getSizeT()
-
         #pbar_c = tqdm.tqdm(range(c_total))
 
         for channel in range(c_total):

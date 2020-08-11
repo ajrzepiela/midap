@@ -1,12 +1,14 @@
 #!/bin/bash
 #module load new eth_proxy gcc/4.8.2 python/3.7.1 matlab/R2017b
 
-eval "$(conda shell.bash hook)"
+#eval "$(conda shell.bash hook)"
 #conda activate ~/miniconda3/envs/workflow
 
-# -1) Define parameters
-#python set_parameters.py
+# 0) Define parameters
+python set_parameters.py
 source settings.sh
+
+echo $PATH_FOLDER
 
 POSITIONS=()
 for i in $PATH_FOLDER*.vsi; do # Whitespace-safe but not recursive.
@@ -17,9 +19,6 @@ POS_UNIQ=($(printf "%s\n" "${POSITIONS[@]}" | sort -u));
 
 for POS in "${POS_UNIQ[@]}"; do
     echo $POS
-
-    # 0) Convert files
-    #python convert_files.py --directory ../data/data_Glen/3_ZF270g-FS144r/
 
 
     # 1) Generate folder structure
@@ -36,12 +35,6 @@ for POS in "${POS_UNIQ[@]}"; do
     CUT_PATH="phase/"
     SEG_IM_PATH="seg_im/"
     SEG_MAT_PATH="seg/"
-
-
-#    for i in $(seq 1 $NUM_CHANNEL_TYPES); do 
-#        CH="CHANNEL_$i"
-#	echo ${!CH}
-#    done
 
     # generate folders for channels
     make_dir $PATH_FOLDER$POS
@@ -82,8 +75,6 @@ for POS in "${POS_UNIQ[@]}"; do
 
    
     #2) Convert files
-    #CHANNELS=($CHANNEL_1 $CHANNEL_2 $CHANNEL_3)
-    #echo $CHANNELS
     FILES=()
     for f in $PATH_FOLDER*$POS*.vsi; do
         FILES+=($f)
@@ -91,23 +82,21 @@ for POS in "${POS_UNIQ[@]}"; do
 
     for i in $(seq 1 $NUM_CHANNEL_TYPES); do
         CH="CHANNEL_$i"
-        VAR=$(find $PATH_FOLDER -name *$POS*${!CH}*.vsi)
+        VAR=`find $PATH_FOLDER -name *$POS*${!CH}*.vsi`
 	python convert_files.py --file $VAR --tiff_dir $PATH_FOLDER$POS/${!CH}/
     done
 
 
-    # 2) Split frames
+    # 3) Split frames
     echo "split frames"
     for i in $(seq 1 $NUM_CHANNEL_TYPES); do
         CH="CHANNEL_$i"
-        #I="INP_$i"
         INP=$(find $PATH_FOLDER$POS/${!CH}/ -name *.tiff)
-        echo $INP
         python stack2frames.py --path $INP --pos $POS --channel /${!CH}/
     done
 
 
-    # 3) Cut chambers
+    # 4) Cut chambers
     echo "cut chambers"
     if [ -z "$CHANNEL_2" ] || [ -z "$CHANNEL_3" ]
         then
@@ -118,7 +107,7 @@ for POS in "${POS_UNIQ[@]}"; do
     fi
 
 
-    # 4) Segmentation
+    # 5) Segmentation
     echo "segment images"
     if [[ $CELL_TYPE_1 == "13B01" ]] || [[ $CELL_TYPE_1 == "Zf270g" ]] || [[ $CELL_TYPE_1 == "1F187" ]]
         then
@@ -140,34 +129,8 @@ for POS in "${POS_UNIQ[@]}"; do
             python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_3 --channel 'mCherry'
     fi
 
-#    echo "segment images"
-#    if [[ $CHANNEL_2 == "/GFP/" ]]
-#        then
-#            python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_2 --channel 'eGFP'
-#    fi
-#    if [[ $CHANNEL_2 == "/mCherry/" ]]
-#        then
-#            python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_2 --channel 'mCherry'
-#    fi
-#    if [[ $CHANNEL_2 == "/TXRED/" ]]
-#        then
-#            python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_2 --channel 'mCherry'
-#fi
-#if [[ $CHANNEL_3 == "/GFP/" ]]
-#    then
-#        python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_3 --channel 'eGFP'
-#fi
-#if [[ $CHANNEL_3 == "/mCherry/" ]]
-#    then
-#        python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_3 --channel 'mCherry'
-#fi
-#if [[ $CHANNEL_3 == "/TXRED/" ]]
-#    then
-#        python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_3 --channel 'mCherry'
-#fi
-#
-#
-    # 5) Conversion
+
+    # 6) Conversion
     echo "run file-conversion"
     for i in $(seq 2 $NUM_CHANNEL_TYPES); do
         CH="CHANNEL_$i"
@@ -175,7 +138,7 @@ for POS in "${POS_UNIQ[@]}"; do
     done
 
 
-    # 6) Tracking
+    # 7) Tracking
     echo "run tracking"
     for i in $(seq 2 $NUM_CHANNEL_TYPES); do
         CH="CHANNEL_$i"

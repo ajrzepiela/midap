@@ -265,7 +265,6 @@ class CutoutImage:
         print('align images')
         self.align_all_images()
         self.set_offset()
-        print(self.off)
         
         print('cutout images')
         src = self.open_tiff(self.files[0])

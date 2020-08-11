@@ -15,7 +15,7 @@ layout = [[sg.Text('Foldername', font='bold')],
           [sg.Text('Input Files', font='bold')],
           [sg.Text('Phase')],
           [sg.Input(key='inp_1'), sg.FileBrowse()],
-          [sg.Checkbox('Phase', key='phase', default=True)],
+          [sg.Checkbox('Phase', key='phase', default=True), sg.Checkbox('PH', key='ph', default=False)],
           [sg.Text('')],
           [sg.Text('Additional channel 1', font='bold')],
           [sg.Input(key='inp_2'), sg.FileBrowse()],
@@ -46,8 +46,8 @@ for i in range(3):
     if len(values['inp_' + str(i + 1)]) > 0:
         sel_inputs.append(values['inp_' + str(i + 1)])
 
-channel_types = ['Phase', 'GFP', 'mCherry', 'TXRED', 'GFP', 'mCherry', 'TXRED']
-channel_type_vals = [values['phase'], values['gfp_1'], values['cherry_1'], values['txred_1'], values['gfp_2'], values['cherry_2'], values['txred_2']]
+channel_types = ['Phase', 'PH', 'GFP', 'mCherry', 'TXRED', 'GFP', 'mCherry', 'TXRED']
+channel_type_vals = [values['phase'], values['ph'], values['gfp_1'], values['cherry_1'], values['txred_1'], values['gfp_2'], values['cherry_2'], values['txred_2']]
 ix_channels = np.where(channel_type_vals)[0]
 sel_channel_types = [channel_types[i] for i in ix_channels]
 
@@ -78,6 +78,6 @@ for i, s in enumerate(sel_cell_types):
 file_settings.write("NUM_CELL_TYPES=" + str(len(sel_cell_types)) + "\n")
 
 for i, s in enumerate(sel_channel_types):
-        file_settings.write("CHANNEL_" + str(i + 1) + "=/" + s + "/ \n")
+        file_settings.write("CHANNEL_" + str(i + 1) + "=" + s + "\n")
 file_settings.write("NUM_CHANNEL_TYPES=" + str(len(sel_channel_types)) + "\n")
 file_settings.close()
