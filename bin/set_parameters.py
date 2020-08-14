@@ -115,7 +115,7 @@ if values['chamber'] == True:
     #     documents = yaml.dump(dict_file, file)
 
     file_settings = open("settings.sh","w") 
-    file_settings.write("DATA_TYPE=CHAMBER" + "/ \n") 
+    file_settings.write("DATA_TYPE=CHAMBER" + "\n") 
     file_settings.write("PATH_FOLDER=" + values['folder_name'] + "/ \n") 
 
     #file_settings.write("INPUTS=" + str(sel_inputs) + "\n")

@@ -42,7 +42,8 @@ class SegmentationPredictor():
         print('Image segmentation')
         model_pred = unet_inference(input_size = imgs_pad.shape[1:3] + (1,))
         model_pred.load_weights(self.model_weights)
-        y_preds = model_pred.predict(imgs_pad[:10])
+        print(imgs_pad.shape)
+        y_preds = model_pred.predict(imgs_pad, batch_size = 1, verbose = 1)
 
         print('Segmentation storage')
         if not os.path.exists(path_pos + path_seg):
@@ -51,7 +52,7 @@ class SegmentationPredictor():
         for i, y in enumerate(y_preds):
             seg = (self.undo_padding_stack(y) > 0.5).astype(int)
             seg_label = label(seg)
-            io.imsave(path_pos + path_seg + path_imgs[i][:-7] + 'seg.png', seg_label, check_contrast=False)
+            io.imsave(path_pos + path_seg + path_imgs[i][:-4] + '_seg.png', seg_label, check_contrast=False)
 
 
     def scale_pixel_vals(self, img):
