@@ -117,7 +117,7 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
                 python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_2 --channel 'eGFP'
         fi
 
-        if [[ $CELL_TYPE_1 == "FS144" ]] || [[ $CELL_TYPE_1 == "Zf270g" ]]
+        if [[ $CELL_TYPE_1 == "FS144" ]] || [[ $CELL_TYPE_1 == "A3M17" ]]
                 then
                 python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_2 --channel 'mCherry'
         fi
@@ -127,7 +127,7 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
                 python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_3 --channel 'eGFP'
         fi
 
-        if [[ $CELL_TYPE_2 == "FS144" ]] || [[ $CELL_TYPE_2 == "Zf270g" ]]
+        if [[ $CELL_TYPE_2 == "FS144" ]] || [[ $CELL_TYPE_2 == "A3M17" ]]
                 then
                 python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel $CHANNEL_3 --channel 'mCherry'
         fi
@@ -145,8 +145,8 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
         echo "run tracking"
         for i in $(seq 2 $NUM_CHANNEL_TYPES); do
                 CH="CHANNEL_$i"
-                /Applications/MATLAB_R2020a.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/')"
-                #/Applications/MATLAB_R2017b.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT')"
+                #/Applications/MATLAB_R2020a.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/')"
+                /Applications/MATLAB_R2017b.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/')"
         done
     done
 fi
@@ -202,8 +202,8 @@ if [[ $DATA_TYPE == "WELL" ]]
 
         # 5) Tracking
         echo "run tracking"
-        /Applications/MATLAB_R2020a.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT')"
-        #/Applications/MATLAB_R2017b.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT')"
+        #/Applications/MATLAB_R2020a.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT')"
+        /Applications/MATLAB_R2017b.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT')"
 fi
 
 # #!/bin/bash

@@ -25,7 +25,7 @@ class SegmentationPredictor():
         seg_label = label(seg)
 
         print('Segmentation storage')
-        io.imsave(path_pos + path_seg + path_img[:-7] + 'seg.png', seg_label, check_contrast=False)
+        io.imsave(path_pos + path_seg + path_img[:-7] + 'seg.tif', seg_label, check_contrast=False)
 
 
     def run_image_stack(self, path_pos, path_cut, path_seg):
@@ -49,10 +49,14 @@ class SegmentationPredictor():
         if not os.path.exists(path_pos + path_seg):
             os.makedirs(path_pos + path_seg)
 
+        segs_bin = []
         for i, y in enumerate(y_preds):
             seg = (self.undo_padding_stack(y) > 0.5).astype(int)
             seg_label = label(seg)
-            io.imsave(path_pos + path_seg + path_imgs[i][:-4] + '_seg.png', seg_label, check_contrast=False)
+            io.imsave(path_pos + path_seg + path_imgs[i][:-7] + '_seg.tif', seg_label, check_contrast=False)
+
+            segs_bin.append(seg)
+        #io.imsave(path_pos + path_seg + path_imgs[i][:-11] + '_full_stack.tif', np.array(segs_bin))
 
 
     def scale_pixel_vals(self, img):
