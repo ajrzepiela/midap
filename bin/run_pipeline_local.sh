@@ -33,7 +33,9 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
         SEG_MAT_PATH="seg/"
 
         # generate folders for different channels (phase, fluorescent)
+        #[[ -d $PATH_FOLDER$POS ]] && rm -r $PATH_FOLDER$POS
         make_dir $PATH_FOLDER$POS
+        #mkdir $PATH_FOLDER$POS
         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                 CH="CHANNEL_$i"
                 make_dir $PATH_FOLDER$POS/${!CH}/
@@ -147,7 +149,17 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
                 CH="CHANNEL_$i"
                 /Applications/MATLAB_R2020a.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/')"
                 #/Applications/MATLAB_R2017b.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/')"
+                
+                MAT_FILE=$PATH_FOLDER$POS/${!CH}/$SEG_PATH/clist.mat
+                if ! test -f "$MAT_FILE"; then
+                    rm -r $PATH_FOLDER$POS/${!CH}/$SEG_PATH/
+                    echo $PATH_FOLDER$POS/${!CH}/$SEG_PATH/
+                    rm $PATH_FOLDER$POS/${!CH}/CONST.mat
+                    rm $PATH_FOLDER$POS/${!CH}/$RAW_IM/cropbox.mat 
+                fi
+
         done
+
     done
 fi
 
