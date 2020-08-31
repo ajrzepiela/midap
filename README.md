@@ -29,4 +29,7 @@ conda activate workflow
 ```
 
 #### 3. Select folder path and input files via GUI
-
+1. The matlab root folder can be found with the following Matlab-command:
+```
+matlabroot
+```

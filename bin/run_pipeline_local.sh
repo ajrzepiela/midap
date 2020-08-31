@@ -147,13 +147,11 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
         echo "run tracking"
         for i in $(seq 2 $NUM_CHANNEL_TYPES); do
                 CH="CHANNEL_$i"
-                /Applications/MATLAB_R2020a.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/')"
-                #/Applications/MATLAB_R2017b.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/')"
+                $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/')"
                 
                 MAT_FILE=$PATH_FOLDER$POS/${!CH}/$SEG_PATH/clist.mat
                 if ! test -f "$MAT_FILE"; then
                     rm -r $PATH_FOLDER$POS/${!CH}/$SEG_PATH/
-                    echo $PATH_FOLDER$POS/${!CH}/$SEG_PATH/
                     rm $PATH_FOLDER$POS/${!CH}/CONST.mat
                     rm $PATH_FOLDER$POS/${!CH}/$RAW_IM/cropbox.mat 
                 fi
@@ -214,8 +212,14 @@ if [[ $DATA_TYPE == "WELL" ]]
 
         # 5) Tracking
         echo "run tracking"
-        /Applications/MATLAB_R2020a.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT')"
-        #/Applications/MATLAB_R2017b.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT')"
+        $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT')"
+
+        MAT_FILE=$PATH_FILE_WO_EXT/$SEG_PATH/clist.mat
+        if ! test -f "$MAT_FILE"; then
+                rm -r $PATH_FILE_WO_EXT/$SEG_PATH/
+                rm $PATH_FILE_WO_EXT/CONST.mat
+                rm $PATH_FILE_WO_EXT/$RAW_IM/cropbox.mat 
+        fi
 fi
 
 # #!/bin/bash

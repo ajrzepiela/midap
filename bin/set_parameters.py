@@ -38,11 +38,19 @@ layout_chamber = [[sg.Text('Foldername', key = 'title_folder_name', font='bold')
                   [sg.Text('Cell type 2', key = 'cell_type_2')],      
                   [sg.Column([[sg.Checkbox('13B01', key='cell_type_21'), sg.Checkbox('ZF270g', key='cell_type_22'), sg.Checkbox('FS144', key='cell_type_23')],
                   [sg.Checkbox('A3M17', key='cell_type_24'), sg.Checkbox('1F187', key='cell_type_25')]], key = 'col_cell_type_2')], 
+                  [sg.Text('')],
+                  [sg.Text('Matlab root folder', font='bold')],
+                  [sg.Text('Path to Matlab root folder')],
+                  [sg.Input(key='matlab_root')],
 	              [sg.Text('')],
                   [sg.Column([[sg.OK(), sg.Cancel()]], key='col_final')]]
                 
 layout_well = [[sg.Text('Filename', key = 'title_file_name', font='bold')],
                [sg.Column([[sg.Input(key='file_name'), sg.FileBrowse()]], key='col_file_name')],
+               [sg.Text('')],
+               [sg.Text('Matlab root folder', font='bold')],
+               [sg.Text('Path to Matlab root folder')],
+               [sg.Input(key='matlab_root')],
 	           [sg.Text('')],
                [sg.Column([[sg.OK(), sg.Cancel()]], key='col_final')]]
 
@@ -74,6 +82,7 @@ if values['chamber'] == True:
     file_settings.write("DATA_TYPE=CHAMBER" + "\n") 
     file_settings.write("PATH_FOLDER=" + values['folder_name'] + "/ \n") 
     file_settings.write("FILE_TYPE=" + values['file_type'] + "\n") 
+    file_settings.write("MATLAB_ROOT=" + values['matlab_root'] + "\n") 
 
     for i, s in enumerate(sel_cell_types):
         file_settings.write("CELL_TYPE_" + str(i + 1) + "=" + s + "\n")
@@ -94,4 +103,5 @@ if values['well'] == True:
     file_settings = open("settings.sh","w") 
     file_settings.write("DATA_TYPE=WELL" + "\n") 
     file_settings.write("PATH_FILE=" + values['file_name'] + "\n") 
+    file_settings.write("MATLAB_ROOT=" + values['matlab_root'] + "\n") 
     file_settings.close()
