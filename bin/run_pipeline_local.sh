@@ -14,7 +14,7 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
         echo $PATH_FOLDER
 
         POSITIONS=()
-        for i in $PATH_FOLDER*.tiff; do # Whitespace-safe but not recursive.
+        for i in $PATH_FOLDER*.$FILE_TYPE; do
         POS=$(echo $i | grep -Eo "[Pp][Oo][Ss][0-9]+")
         POSITIONS+=($POS)
         done
@@ -32,32 +32,32 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
         SEG_IM_PATH="seg_im/"
         SEG_MAT_PATH="seg/"
 
-        # generate folders for channels
+        # generate folders for different channels (phase, fluorescent)
         make_dir $PATH_FOLDER$POS
         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                 CH="CHANNEL_$i"
                 make_dir $PATH_FOLDER$POS/${!CH}/
         done
 
-        # generate folders raw_im
+        # generate folder raw_im for raw images
         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                 CH="CHANNEL_$i"
                 make_dir $PATH_FOLDER$POS/${!CH}/$RAW_IM
         done
 
-        # generate folders for tracking results
+        # generate folder xy1 for tracking results
         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                 CH="CHANNEL_$i"
                 make_dir $PATH_FOLDER$POS/${!CH}/$SEG_PATH
         done
 
-        # generate folders for cutout images
+        # generate folder for cutout images
         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                 CH="CHANNEL_$i"
                 make_dir $PATH_FOLDER$POS/${!CH}/$SEG_PATH$CUT_PATH
         done
 
-        # generate folders for segmentation images
+        # generate folder seg_im for segmentation images
         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                 CH="CHANNEL_$i"
                 make_dir $PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH
