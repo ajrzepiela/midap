@@ -4,7 +4,7 @@ import scipy.ndimage as ndi
 from skimage import feature
 from skimage import exposure
 from skimage.filters import sobel, threshold_otsu, threshold_minimum, threshold_local
-from skimage.measure import label, regionprops
+from skimage.measure import regionprops
 from skimage.morphology import watershed
 from skimage.segmentation.boundaries import find_boundaries
 from skimage.util import img_as_ubyte
@@ -16,6 +16,7 @@ from skimage.exposure import is_low_contrast, adjust_sigmoid
 from skimage.feature import canny
 from skimage.filters import unsharp_mask
 from skimage.measure import label
+import scipy.ndimage as ndi
 from skimage.morphology import remove_small_objects
 from skimage.filters import rank
 from skimage.morphology import disk
@@ -245,6 +246,23 @@ class ImageSegmentation:
 
 def save_mat(cuts, segm, data_dir):
     # generate one mat-file per timeframe for segmentation images
+    
+    # Output:
+    # mask_bg : a binary image in which all background (non-cell) pixels are masked
+    # mask_cell : cell mask, a binary image the same size as phase in which each cell is masked by a connected region of white pixels (in our case: same as mask_cell)
+    # phase : Original phase image
+
+    # segs:
+    # segs_good: % on segments, image of the boundaries between cells that the program has determined are correct (i.e., not spurious). (in our case: whole segmentation)
+    # segs_bad: % off segments, image of program-determined spurious boundaries between cells (in our case: black image, assume segmentation to be correct)
+    # segs_3n: % an image of all of boundary intersections, segments that cannot be switched off
+
+    # segs_label: % bwlabel of good and bad segs. (in our case: labeled version of segs)
+    # score: % cell scores for regions (in our case: all regions are assumed to be correct)
+    # scoreRaw: % raw scores for segments (in our case: all segments are assumed to be correct)
+    # props: % segement properties for segments
+
+
 
     seg_dir = data_dir + 'xy1/seg/'
     fname_base = 'CWRt' 
@@ -255,12 +273,21 @@ def save_mat(cuts, segm, data_dir):
 
         # mask background
         mask_bg = np.where(((seg * 1)<1),0,1).astype('uint8')
-
+        
+        # compute variables for seg-struct
         # labeling of segmentations
-        img_label = label(seg.astype(bool))
+        img_label = seg
+        #img_label = label(seg, connectivity = 1)
+        #img_label = ndi.label(seg.astype(bool))[0].astype(int)
         bounds = find_boundaries(img_label)
         score = np.ones(np.max(img_label)).astype(int)
         scoreRaw = score * 50
+
+        segs_bad = np.zeros((seg.shape))
+
+        # mask cells
+        mask_cell = mask_bg
+        #mask_cell = (mask_bg - bounds - seg) > 0
 
         # detect and count all cells in image
         num_regs = np.max(img_label)#int(len(np.unique(img_label)))
@@ -282,9 +309,6 @@ def save_mat(cuts, segm, data_dir):
 
             properties.append(bb_dict)
 
-        # vars to be defined
-        mask_cell = (mask_bg - bounds - seg) > 0
-
         # image size and values
         min_col_bb = np.min([p[0][1][0][0] for p in properties])
         min_row_bb = np.min([p[0][1][0][1] for p in properties])
@@ -295,14 +319,23 @@ def save_mat(cuts, segm, data_dir):
         crop_box = np.array([[min_row_bb, min_col_bb, max_row_bb, max_col_bb]]).astype(int)
 
         filename = seg_dir + fname_base + str('{:05}'.format(ix+1)) + 'xy001_seg.mat'
+        # sio.savemat(filename,{'phase' : phase, 'mask_bg' : mask_bg.astype(float), 'mask_cell' : mask_cell.astype(bool), 
+        #             'crop_box' : crop_box,
+        #             'segs' : {'segs_good' : seg.astype(bool), 'segs_3n' : bounds.astype(bool),
+        #                                     'segs_label' : img_label.astype(bool), 'score' : score,
+        #                                     'scoreRaw' : scoreRaw, 'segs_bad' : seg.astype(bool)},
+        #             'regs' : {'regs_label' : img_label.astype(float), 'num_regs' : num_regs, 'score' : score,
+        #                                     'scoreRaw' : scoreRaw, 
+        #                         'props' :  properties}})
+
         sio.savemat(filename,{'phase' : phase, 'mask_bg' : mask_bg.astype(float), 'mask_cell' : mask_cell.astype(bool), 
                             'crop_box' : crop_box,
-                            'segs' : {'segs_good' : seg.astype(bool), 'segs_3n' : bounds.astype(bool),
-                                                    'segs_label' : img_label.astype(bool), 'score' : score,
-                                                    'scoreRaw' : scoreRaw, 'segs_bad' : seg.astype(bool)},
+                            'segs' : {'segs_good' : seg.astype(bool), 'segs_3n' : bounds.astype(float),
+                                      'segs_label' : img_label.astype(float), 'score' : score.astype(float),
+                                      'scoreRaw' : scoreRaw.astype(float), 'segs_bad' : segs_bad.astype(bool)},
                             'regs' : {'regs_label' : img_label.astype(float), 'num_regs' : num_regs, 'score' : score,
-                                                    'scoreRaw' : scoreRaw, 
-                                        'props' :  properties}})
+                                      'scoreRaw' : scoreRaw.astype(float), 
+                                      'props' :  properties}}) #img_label.astype(int) #img_label.astype(float) #img_label.astype(float)
 
 
         ix+=1

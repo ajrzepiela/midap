@@ -145,8 +145,8 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
         echo "run tracking"
         for i in $(seq 2 $NUM_CHANNEL_TYPES); do
                 CH="CHANNEL_$i"
-                #/Applications/MATLAB_R2020a.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/')"
-                /Applications/MATLAB_R2017b.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/')"
+                /Applications/MATLAB_R2020a.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/')"
+                #/Applications/MATLAB_R2017b.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/')"
         done
     done
 fi
@@ -194,7 +194,7 @@ if [[ $DATA_TYPE == "WELL" ]]
         
         # 3) Segmentation
         echo "segment images"
-        python main_prediction.py --path_pos $PATH_FILE_WO_EXT --path_channel "" --channel 'well'
+        python main_prediction.py --path_pos $PATH_FILE_WO_EXT --path_channel "" --channel 'well_new' --postprocessing True
 
         # 4) Conversion
         echo "run file-conversion"
@@ -202,8 +202,8 @@ if [[ $DATA_TYPE == "WELL" ]]
 
         # 5) Tracking
         echo "run tracking"
-        #/Applications/MATLAB_R2020a.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT')"
-        /Applications/MATLAB_R2017b.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT')"
+        /Applications/MATLAB_R2020a.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT')"
+        #/Applications/MATLAB_R2017b.app/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT')"
 fi
 
 # #!/bin/bash
