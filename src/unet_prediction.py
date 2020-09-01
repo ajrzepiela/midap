@@ -7,15 +7,63 @@ import numpy as np
 import os
 import re
 
+import matplotlib.pyplot as plt
+from matplotlib.widgets import CheckButtons
+
 from model import unet_inference
 
 class SegmentationPredictor():
 
-    def __init__(self, model_weights, postprocessing, div = 16, connectivity = 1):
-        self.model_weights = model_weights
+    def __init__(self, postprocessing, div = 16, connectivity = 1):
+        #self.model_weights = model_weights
         self.postprocessing = postprocessing
         self.div = div # divisor
         self.connectivity = connectivity
+
+    def select_weights(self, path_pos, path_cut, path_seg):
+        print('Select weights')
+        path_img = np.sort(os.listdir(path_pos + path_cut))[-1]
+
+        img = self.scale_pixel_vals(io.imread(path_pos + path_cut + path_img))
+        img_pad = self.pad_image(img)
+        
+        model_weights = os.listdir('../model_weights/')
+        segs = []
+        for m in model_weights:
+            model_pred = unet_inference(input_size = img_pad.shape[1:3] + (1,))
+            model_pred.load_weights('../model_weights/'+m)
+            y_pred = model_pred.predict(img_pad)
+            seg = (self.undo_padding(y_pred) > 0.5).astype(int)
+            segs.append(seg)
+        
+        num_subplots = int(np.ceil(np.sqrt(len(model_weights))))
+        plt.figure(figsize = (10,10))
+        for i,s in enumerate(segs):
+            plt.subplot(num_subplots,num_subplots,i+1)
+            plt.imshow(img)
+            plt.contour(s, [0], colors = 'r', linewidths = 0.5)
+            plt.title('model weights ' + str(i + 1))
+            plt.xticks([])
+            plt.yticks([])
+        plt.suptitle('Select model weights')
+        rax = plt.axes([0.3, 0.01, 0.3, 0.08])
+        labels = ['model weights ' + str(i + 1) for i in range(len(model_weights))]
+        visibility = [False for i in range(len(model_weights))]
+        check = CheckButtons(rax, labels)
+
+        # def func(label):
+        #     index = labels.index(label)
+        #     #lines[index].set_visible(not lines[index].get_visible())
+        #     plt.draw()
+
+        # check.on_clicked(func)
+
+        plt.show()
+
+        ix_model_weights = np.where(check.get_status())[0][0]
+        sel_model_weights = model_weights[ix_model_weights]
+        self.model_weights = '../model_weights/' + sel_model_weights
+
 
     def run_single_image(self, path_pos, path_cut, path_seg, path_img):
         print('Image padding')
@@ -36,6 +84,7 @@ class SegmentationPredictor():
 
     def run_image_stack(self, path_pos, path_cut, path_seg):
         print('Image padding')
+        print(self.model_weights)
         path_imgs = np.sort(os.listdir(path_pos + path_cut))
 
         imgs_pad = []
