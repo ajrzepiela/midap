@@ -42,7 +42,16 @@ layout_chamber = [[sg.Text('Foldername', key = 'title_folder_name', font='bold')
                 #   [sg.Text('Matlab root folder', font='bold')],
                   [sg.Text('Path to Matlab root folder', font='bold')],
                   [sg.Input(key='matlab_root')],
-	              [sg.Text('')],
+                  [sg.Text('SuperSegger constants', font='bold')],
+                  [sg.Text('Constants')],
+                  [sg.Input('100XPa', key='constants')],
+                  [sg.Text('Time Step')],
+                  [sg.Input('1', key='time_step')],
+                  [sg.Text('Neighbor Flag')],
+                  [sg.Input('true', key='neighbor_flag')],
+                  [sg.Text('Minimal cell age')],
+                  [sg.Input('3', key='min_cell_age')],
+	                [sg.Text('')],
                   [sg.Column([[sg.OK(), sg.Cancel()]], key='col_final')]]
                 
 layout_well = [[sg.Text('Filename', key = 'title_file_name', font='bold')],
@@ -51,7 +60,16 @@ layout_well = [[sg.Text('Filename', key = 'title_file_name', font='bold')],
             #    [sg.Text('Matlab root folder', font='bold')],
                [sg.Text('Path to Matlab root folder', font='bold')],
                [sg.Input(key='matlab_root')],
-	           [sg.Text('')],
+               [sg.Text('SuperSegger constants', font='bold')],
+               [sg.Text('Constants')],
+               [sg.Input('100XPa', key='constants')],
+               [sg.Text('Time Step')],
+               [sg.Input('1', key='time_step')],
+               [sg.Text('Neighbor Flag')],
+               [sg.Input('true', key='neighbor_flag')],
+               [sg.Text('Minimal cell age')],
+               [sg.Input('1', key='min_cell_age')],
+	             [sg.Text('')],
                [sg.Column([[sg.OK(), sg.Cancel()]], key='col_final')]]
 
 window = sg.Window('Parameters', layout).Finalize()
@@ -67,7 +85,8 @@ if values['chamber'] == True:
     window.close()
 
     channel_type_vals = [values['ch1'], values['ch2'], values['ch3']]
-    sel_channel_types = channel_type_vals
+    sel_channel_types = [x for x in channel_type_vals if x]
+    #sel_channel_types = channel_type_vals
 
     # cell_types = ['13B01', 'Zf270g', 'FS144', 'A3M17', '1F187', '13B01', 'Zf270g', 'FS144', 'A3M17', '1F187']
     # cell_type_vals = [values['cell_type_11'], values['cell_type_12'], values['cell_type_13'], values['cell_type_14'], values['cell_type_15'],\
@@ -86,6 +105,10 @@ if values['chamber'] == True:
     file_settings.write("PATH_FOLDER=" + values['folder_name'] + "/ \n") 
     file_settings.write("FILE_TYPE=" + values['file_type'] + "\n") 
     file_settings.write("MATLAB_ROOT=" + values['matlab_root'] + "\n") 
+    file_settings.write("CONSTANTS=" + values['constants'] + "\n") 
+    file_settings.write("TIME_STEP=" + values['time_step'] + "\n") 
+    file_settings.write("NEIGHBOR_FLAG=" + str(int(bool(values['neighbor_flag']))) + "\n") 
+    file_settings.write("MIN_CELL_AGE=" + values['min_cell_age'] + "\n") 
 
     # for i, s in enumerate(sel_cell_types):
     #     file_settings.write("CELL_TYPE_" + str(i + 1) + "=" + s + "\n")
@@ -107,4 +130,8 @@ if values['well'] == True:
     file_settings.write("DATA_TYPE=WELL" + "\n") 
     file_settings.write("PATH_FILE=" + values['file_name'] + "\n") 
     file_settings.write("MATLAB_ROOT=" + values['matlab_root'] + "\n") 
+    file_settings.write("CONSTANTS=" + values['constants'] + "\n") 
+    file_settings.write("TIME_STEP=" + values['time_step'] + "\n") 
+    file_settings.write("NEIGHBOR_FLAG=" + values['neighbor_flag'] + "\n") 
+    file_settings.write("MIN_CELL_AGE=" + values['min_cell_age'] + "\n") 
     file_settings.close()

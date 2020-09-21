@@ -8,7 +8,8 @@ import os
 import re
 
 import matplotlib.pyplot as plt
-from matplotlib.widgets import CheckButtons
+from matplotlib.widgets import CheckButtons, RadioButtons
+from matplotlib_widget import MyRadioButtons
 
 from model import unet_inference
 
@@ -36,20 +37,23 @@ class SegmentationPredictor():
             seg = (self.undo_padding(y_pred) > 0.5).astype(int)
             segs.append(seg)
         
+        labels = [mw.split('.')[0].split('_')[-1] for mw in model_weights]
         num_subplots = int(np.ceil(np.sqrt(len(model_weights))))
         plt.figure(figsize = (10,10))
         for i,s in enumerate(segs):
             plt.subplot(num_subplots,num_subplots,i+1)
             plt.imshow(img)
             plt.contour(s, [0], colors = 'r', linewidths = 0.5)
-            plt.title('model weights ' + str(i + 1))
+            plt.title('model weights trained for ' + labels[i])
             plt.xticks([])
             plt.yticks([])
-        plt.suptitle('Select model weights')
+        plt.suptitle('Select model weights for channel: ' + path_seg.split('/')[1])
         rax = plt.axes([0.3, 0.01, 0.3, 0.08])
-        labels = ['model weights ' + str(i + 1) for i in range(len(model_weights))]
+        #labels = ['model weights ' + str(i + 1) for i in range(len(model_weights))]
         visibility = [False for i in range(len(model_weights))]
-        check = CheckButtons(rax, labels)
+        # check = CheckButtons(rax, labels)
+        check = RadioButtons(rax, labels)
+        # check = MyRadioButtons(rax, labels, ncol=2)
 
         # def func(label):
         #     index = labels.index(label)
@@ -60,7 +64,8 @@ class SegmentationPredictor():
 
         plt.show()
 
-        ix_model_weights = np.where(check.get_status())[0][0]
+        #ix_model_weights = np.where(check.get_status())[0][0]
+        ix_model_weights = np.where([check.value_selected == l for l in labels])[0][0]
         sel_model_weights = model_weights[ix_model_weights]
         self.model_weights = '../model_weights/' + sel_model_weights
 
@@ -79,7 +84,7 @@ class SegmentationPredictor():
 
         print('Segmentation storage')
         #io.imsave(path_pos + path_seg + path_img[:-7] + 'seg.tif', seg_label, check_contrast=False)
-        io.imsave(path_pos + path_seg + path_img.replace('_cut.tif', '').replace('.tif', '') + '_seg.tif', seg_label, check_contrast=False)
+        io.imsave(path_pos + path_seg + path_img.replace('_cut.tif', '').replace('.tif', '') + '_seg.tiff', seg_label, check_contrast=False)
 
 
     def run_image_stack(self, path_pos, path_cut, path_seg):
@@ -115,7 +120,7 @@ class SegmentationPredictor():
             else:
                 seg_label  = label(seg, connectivity=self.connectivity)
                 print(np.unique(seg_label))
-            io.imsave(path_pos + path_seg + path_imgs[i].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_seg.tif', seg_label, check_contrast=False)
+            io.imsave(path_pos + path_seg + path_imgs[i].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_seg.tiff', seg_label, check_contrast=False)
             #segs.append(seg_label)
         #print(np.array(segs).shape)
         #io.imsave(path_pos + '/' + path_imgs[i][:-11] + '_full_stack.tif', np.array(segs))

@@ -45,7 +45,7 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
                 make_dir $PATH_FOLDER$POS/${!CH}/$RAW_IM
         done
 
-        # generate folder xy1 for tracking results
+        # generate folder for tracking results
         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                 CH="CHANNEL_$i"
                 make_dir $PATH_FOLDER$POS/${!CH}/$SEG_PATH
@@ -100,7 +100,7 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
 
         # 5) Segmentation
         echo "segment images"
-        for i in $(seq 2 $NUM_CHANNEL_TYPES); do
+        for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                 CH="CHANNEL_$i"
                 python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel ${!CH}
         done
@@ -108,7 +108,7 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
 
         # 6) Conversion
         echo "run file-conversion"
-        for i in $(seq 2 $NUM_CHANNEL_TYPES); do
+        for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                 CH="CHANNEL_$i"
                 python seg2mat.py --path_cut $PATH_FOLDER$POS/${!CH}/$SEG_PATH$CUT_PATH --path_seg $PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH --path_channel $PATH_FOLDER$POS/${!CH}/
         done
@@ -116,10 +116,9 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
 
         # 7) Tracking
         echo "run tracking"
-        for i in $(seq 2 $NUM_CHANNEL_TYPES); do
+        for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                 CH="CHANNEL_$i"
-                $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/')"
-                
+                $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/', '$CONSTANTS' , $NEIGHBOR_FLAG, $TIME_STEP, $MIN_CELL_AGE)"
                 MAT_FILE=$PATH_FOLDER$POS/${!CH}/$SEG_PATH/clist.mat
                 if ! test -f "$MAT_FILE"; then
                     rm -r $PATH_FOLDER$POS/${!CH}/$SEG_PATH/
@@ -183,7 +182,7 @@ if [[ $DATA_TYPE == "WELL" ]]
 
         # 5) Tracking
         echo "run tracking"
-        $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT')"
+        $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/',$CONSTANTS, $TIME_STEP,$NEIGHBOR_FLAG,$MIN_CELL_AGE)"
 
         MAT_FILE=$PATH_FILE_WO_EXT/$SEG_PATH/clist.mat
         if ! test -f "$MAT_FILE"; then

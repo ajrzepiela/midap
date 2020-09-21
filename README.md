@@ -1,5 +1,5 @@
 ### Setup on local machine (Mac)
-#### 1. Initialization and update of submodule (SuperSeggar)
+#### 1. Initialization and update of submodule (SuperSegger)
 ```
 git submodule init
 git submodule update
@@ -35,6 +35,7 @@ conda activate workflow
 
 2. In case of chambers, select folder path, identifiers of input files and Matlab root folder
 ![Screenshot_1](window_chamber.png)
+If only one or two out of three channels was used, specify only the identifiers of those channels and leave the other fields free. 
 
 3. The matlab root folder can be found with the following Matlab-command:
 ```
