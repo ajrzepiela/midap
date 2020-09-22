@@ -13,23 +13,45 @@ from matplotlib_widget import MyRadioButtons
 
 from model import unet_inference
 
+from skimage.filters import sobel
+from skimage.morphology import watershed
+
 class SegmentationPredictor():
 
-    def __init__(self, postprocessing, div = 16, connectivity = 1):
+    def __init__(self, postprocessing, invert_img = False, div = 16, connectivity = 1):
         #self.model_weights = model_weights
         self.postprocessing = postprocessing
         self.div = div # divisor
         self.connectivity = connectivity
+        self.invert_img = invert_img
+
+    def segment_region_based(self, img, min_val = 40, max_val = 50):
+        elevation_map = sobel(img)
+        markers = np.zeros_like(img)
+        markers[img < min_val] = 1
+        markers[img > max_val] = 2
+        segmentation = watershed(elevation_map, markers)
+        #segmentation = binary_fill_holes(segmentation - 1)
+        return (segmentation <= 1).astype(int)#segmentation
 
     def select_weights(self, path_pos, path_cut, path_seg):
         print('Select weights')
         path_img = np.sort(os.listdir(path_pos + path_cut))[-1]
 
-        img = self.scale_pixel_vals(io.imread(path_pos + path_cut + path_img))
+        print(self.invert_img)
+
+        if self.invert_img == False:
+            img = self.scale_pixel_vals(io.imread(path_pos + path_cut + path_img))
+        elif self.invert_img == True:
+            img = self.scale_pixel_vals(np.invert(io.imread(path_pos + path_cut + path_img)))
         img_pad = self.pad_image(img)
+
+        # try watershed segmentation as classical segmentation method
+        watershed_seg = self.segment_region_based(img)
         
+        # compute sample segmentations for all stored weights
         model_weights = os.listdir('../model_weights/')
-        segs = []
+        segs = []#[watershed_seg]
         for m in model_weights:
             model_pred = unet_inference(input_size = img_pad.shape[1:3] + (1,))
             model_pred.load_weights('../model_weights/'+m)
@@ -37,8 +59,11 @@ class SegmentationPredictor():
             seg = (self.undo_padding(y_pred) > 0.5).astype(int)
             segs.append(seg)
         
+        # display different segmentation methods
+        #labels = ['watershed']
+        #labels.append([mw.split('.')[0].split('_')[-1] for mw in model_weights])
         labels = [mw.split('.')[0].split('_')[-1] for mw in model_weights]
-        num_subplots = int(np.ceil(np.sqrt(len(model_weights))))
+        num_subplots = int(np.ceil(np.sqrt(len(segs))))
         plt.figure(figsize = (10,10))
         for i,s in enumerate(segs):
             plt.subplot(num_subplots,num_subplots,i+1)
@@ -50,7 +75,7 @@ class SegmentationPredictor():
         plt.suptitle('Select model weights for channel: ' + path_seg.split('/')[1])
         rax = plt.axes([0.3, 0.01, 0.3, 0.08])
         #labels = ['model weights ' + str(i + 1) for i in range(len(model_weights))]
-        visibility = [False for i in range(len(model_weights))]
+        visibility = [False for i in range(len(segs))]
         # check = CheckButtons(rax, labels)
         check = RadioButtons(rax, labels)
         # check = MyRadioButtons(rax, labels, ncol=2)
@@ -94,7 +119,10 @@ class SegmentationPredictor():
 
         imgs_pad = []
         for p in path_imgs:
-            img = self.scale_pixel_vals(io.imread(path_pos + path_cut + p))
+            if self.invert_img == False:
+                img = self.scale_pixel_vals(io.imread(path_pos + path_cut + p))
+            elif self.invert_img == True:
+                img = self.scale_pixel_vals(np.invert(io.imread(path_pos + path_cut + p)))
             img_pad = self.pad_image(img)
             imgs_pad.append(img_pad)
         imgs_pad = np.concatenate(imgs_pad)

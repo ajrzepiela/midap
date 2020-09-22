@@ -1,4 +1,4 @@
-function execute = tracking_supersegger(path, constants, neighbor_flag, time_step, min_cell_age)
+function execute = tracking_supersegger(path, constants, neighbor_flag, time_step, min_cell_age, data_type)
 
 	disp(constants)
 
@@ -27,18 +27,24 @@ function execute = tracking_supersegger(path, constants, neighbor_flag, time_ste
 	% define folder with images
 	image_folder = path
 
-	% set default parameters for tracking
-	CONST.parallel.verbose = 0;
-	CONST.trackOpti.REMOVE_STRAY = false;
-	PARALLEL_FLAG = false
-
 	% set constants for segmentation and tracking
+	PARALLEL_FLAG = false
 	CONST = loadConstants (constants,PARALLEL_FLAG); %'60XEclb' '100XPa' '100XEc'
 	CONST.getLocusTracks.TimeStep = time_step;%1;
 	CONST.trackOpti.NEIGHBOR_FLAG = neighbor_flag; %true;
 	CONST.trackOpti.MIN_CELL_AGE = min_cell_age; %3; %1%3
 
+	% set default parameters for tracking
+	CONST.parallel.verbose = 0;
+	CONST.trackOpti.REMOVE_STRAY = false;
 
+	if data_type == 'WELL'
+		disp(data_type)
+		%CONSTANTS FOR JOHANNES
+		CONST.trackOpti.MIN_AREA_NO_NEIGH = 8;
+		CONST.trackOpti.SMALL_AREA_MERGE = 8;
+		CONST.getLocusTracks.PixelSize = 6/162;
+	end
 	
 
 	%CONST.trackLoci.numSpots = [0];

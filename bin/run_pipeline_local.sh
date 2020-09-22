@@ -93,7 +93,7 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
                 then
                 python frames2cuts.py --path_ch0 $PATH_FOLDER$POS/$CHANNEL_1/$RAW_IM
                 echo $PATH_FOLDER$POS$CHANNEL_1$RAW_IM
-                else
+        else
                 python frames2cuts.py --path_ch0 $PATH_FOLDER$POS/$CHANNEL_1/$RAW_IM --path_ch1 $PATH_FOLDER$POS/$CHANNEL_2/$RAW_IM --path_ch2 $PATH_FOLDER$POS/$CHANNEL_3/$RAW_IM
         fi
 
@@ -102,7 +102,12 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
         echo "segment images"
         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                 CH="CHANNEL_$i"
-                python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel ${!CH}
+                if [ -z "$CHANNEL_2" ] || [ -z "$CHANNEL_3" ]
+                        then
+                        python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 1 --image_inversion 1
+                else
+                        python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 0 --image_inversion 0
+                fi
         done
 
 
@@ -174,7 +179,7 @@ if [[ $DATA_TYPE == "WELL" ]]
         
         # 3) Segmentation
         echo "segment images"
-        python main_prediction.py --path_pos $PATH_FILE_WO_EXT --path_channel "" --postprocessing True
+        python main_prediction.py --path_pos $PATH_FILE_WO_EXT --path_channel "" --postprocessing 1 --image_inversion 0
 
         # 4) Conversion
         echo "run file-conversion"
@@ -182,7 +187,7 @@ if [[ $DATA_TYPE == "WELL" ]]
 
         # 5) Tracking
         echo "run tracking"
-        $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/',$CONSTANTS, $TIME_STEP,$NEIGHBOR_FLAG,$MIN_CELL_AGE)"
+        $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT', '$CONSTANTS' , $NEIGHBOR_FLAG, $TIME_STEP, $MIN_CELL_AGE, '$DATA_TYPE')"
 
         MAT_FILE=$PATH_FILE_WO_EXT/$SEG_PATH/clist.mat
         if ! test -f "$MAT_FILE"; then
