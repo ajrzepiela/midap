@@ -35,7 +35,9 @@ class SegmentationPredictor():
 
     def select_weights(self, path_pos, path_cut, path_seg):
         print('Select weights')
-        path_img = np.sort(os.listdir(path_pos + path_cut))[-1]
+        list_files = np.sort(os.listdir(path_pos + path_cut))
+        ix_half = int(len(list_files)/2)
+        path_img = list_files[ix_half]
 
         img = self.scale_pixel_vals(io.imread(path_pos + path_cut + path_img))
         img_pad = self.pad_image(img)
