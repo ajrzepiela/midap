@@ -123,7 +123,7 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
         echo "run tracking"
         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                 CH="CHANNEL_$i"
-                $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/', '$CONSTANTS' , $NEIGHBOR_FLAG, $TIME_STEP, $MIN_CELL_AGE)"
+                $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/', '$CONSTANTS' , $NEIGHBOR_FLAG, $TIME_STEP, $MIN_CELL_AGE, '$DATA_TYPE')"
                 MAT_FILE=$PATH_FOLDER$POS/${!CH}/$SEG_PATH/clist.mat
                 if ! test -f "$MAT_FILE"; then
                     rm -r $PATH_FOLDER$POS/${!CH}/$SEG_PATH/

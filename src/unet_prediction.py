@@ -14,7 +14,7 @@ from matplotlib_widget import MyRadioButtons
 from model import unet_inference
 
 from skimage.filters import sobel
-from skimage.morphology import watershed
+from skimage.segmentation import watershed
 
 class SegmentationPredictor():
 
@@ -40,18 +40,18 @@ class SegmentationPredictor():
 
         print(self.invert_img)
 
-        if self.invert_img == False:
-            img = self.scale_pixel_vals(io.imread(path_pos + path_cut + path_img))
-        elif self.invert_img == True:
-            img = self.scale_pixel_vals(np.invert(io.imread(path_pos + path_cut + path_img)))
+        #if self.invert_img == False:
+        img = self.scale_pixel_vals(io.imread(path_pos + path_cut + path_img))
+        #elif self.invert_img == True:
+        #    img = self.scale_pixel_vals(np.invert(io.imread(path_pos + path_cut + path_img)))
         img_pad = self.pad_image(img)
 
         # try watershed segmentation as classical segmentation method
-        watershed_seg = self.segment_region_based(img)
+        watershed_seg = self.segment_region_based(img, 0.16, 0.19)
         
         # compute sample segmentations for all stored weights
         model_weights = os.listdir('../model_weights/')
-        segs = []#[watershed_seg]
+        segs = [watershed_seg]
         for m in model_weights:
             model_pred = unet_inference(input_size = img_pad.shape[1:3] + (1,))
             model_pred.load_weights('../model_weights/'+m)
@@ -60,16 +60,19 @@ class SegmentationPredictor():
             segs.append(seg)
         
         # display different segmentation methods
-        #labels = ['watershed']
-        #labels.append([mw.split('.')[0].split('_')[-1] for mw in model_weights])
-        labels = [mw.split('.')[0].split('_')[-1] for mw in model_weights]
+        labels = ['watershed']
+        labels += [mw.split('.')[0].split('_')[-1] for mw in model_weights]
+        #labels = [mw.split('.')[0].split('_')[-1] for mw in model_weights]
         num_subplots = int(np.ceil(np.sqrt(len(segs))))
         plt.figure(figsize = (10,10))
         for i,s in enumerate(segs):
             plt.subplot(num_subplots,num_subplots,i+1)
             plt.imshow(img)
             plt.contour(s, [0], colors = 'r', linewidths = 0.5)
-            plt.title('model weights trained for ' + labels[i])
+            if i == 0:
+                plt.title('watershed')
+            else:
+                plt.title('model trained for ' + labels[i])
             plt.xticks([])
             plt.yticks([])
         plt.suptitle('Select model weights for channel: ' + path_seg.split('/')[1])
@@ -90,9 +93,15 @@ class SegmentationPredictor():
         plt.show()
 
         #ix_model_weights = np.where(check.get_status())[0][0]
-        ix_model_weights = np.where([check.value_selected == l for l in labels])[0][0]
-        sel_model_weights = model_weights[ix_model_weights]
-        self.model_weights = '../model_weights/' + sel_model_weights
+        if check.value_selected == 'watershed':
+            self.model_weights = 'watershed'
+        else:
+            ix_model_weights = np.where([check.value_selected == l for l in labels])[0][0]
+            sel_model_weights = model_weights[ix_model_weights - 1]
+            self.model_weights = '../model_weights/' + sel_model_weights
+        
+        print('selected weights')
+        print(self.model_weights)
 
 
     def run_single_image(self, path_pos, path_cut, path_seg, path_img):
@@ -117,21 +126,26 @@ class SegmentationPredictor():
         print(self.model_weights)
         path_imgs = np.sort(os.listdir(path_pos + path_cut))
 
-        imgs_pad = []
-        for p in path_imgs:
-            if self.invert_img == False:
+        if self.model_weights == 'watershed':
+            print('do watershed segm')
+            y_preds = []
+            for p in path_imgs:
                 img = self.scale_pixel_vals(io.imread(path_pos + path_cut + p))
-            elif self.invert_img == True:
-                img = self.scale_pixel_vals(np.invert(io.imread(path_pos + path_cut + p)))
-            img_pad = self.pad_image(img)
-            imgs_pad.append(img_pad)
-        imgs_pad = np.concatenate(imgs_pad)
+                y_preds.append(self.segment_region_based(img, 0.16, 0.19))
 
-        print('Image segmentation')
-        model_pred = unet_inference(input_size = imgs_pad.shape[1:3] + (1,))
-        model_pred.load_weights(self.model_weights)
-        print(imgs_pad.shape)
-        y_preds = model_pred.predict(imgs_pad, batch_size = 1, verbose = 1)
+        else:
+            imgs_pad = []
+            for p in path_imgs:
+                img = self.scale_pixel_vals(io.imread(path_pos + path_cut + p))
+                img_pad = self.pad_image(img)
+                imgs_pad.append(img_pad)
+            imgs_pad = np.concatenate(imgs_pad)
+
+            print('Image segmentation')
+            model_pred = unet_inference(input_size = imgs_pad.shape[1:3] + (1,))
+            model_pred.load_weights(self.model_weights)
+            print(imgs_pad.shape)
+            y_preds = model_pred.predict(imgs_pad, batch_size = 1, verbose = 1)
 
         print('Segmentation storage')
         if not os.path.exists(path_pos + path_seg):
@@ -139,15 +153,18 @@ class SegmentationPredictor():
 
         #segs = []
         for i, y in enumerate(y_preds):
-            seg = (self.undo_padding_stack(y) > 0.5).astype(int)
+            if self.model_weights == 'watershed':
+                seg = y
+            else:
+                seg = (self.undo_padding_stack(y) > 0.5).astype(int)
             if self.postprocessing == True:
                 clean_seg = self.postprocess_seg(seg)
                 seg_label  = label(clean_seg, connectivity=self.connectivity)
-                print(np.unique(seg_label))
+                #print(np.unique(seg_label))
             #io.imsave(path_pos + path_seg + path_imgs[i][:-7] + '_seg.tif', seg_label, check_contrast=False)
             else:
                 seg_label  = label(seg, connectivity=self.connectivity)
-                print(np.unique(seg_label))
+                #print(np.unique(seg_label))
             io.imsave(path_pos + path_seg + path_imgs[i].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_seg.tiff', seg_label, check_contrast=False)
             #segs.append(seg_label)
         #print(np.array(segs).shape)

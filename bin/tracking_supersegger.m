@@ -3,15 +3,15 @@ function execute = tracking_supersegger(path, constants, neighbor_flag, time_ste
 	disp(constants)
 
 	% set default values for parameters
-	if time_step == 'None'
+	if isequal(time_step, 'None')
 		time_step = 1;
 	end
 
-	if neighbor_flag == 'None'
+	if isequal(neighbor_flag, 'None')
 		neighbor_flag = true;
 	end
 
-	if min_cell_age == 'None'
+	if isequal(min_cell_age, 'None')
 		min_cell_age = 3;
 	end
 
@@ -22,7 +22,6 @@ function execute = tracking_supersegger(path, constants, neighbor_flag, time_ste
 	% add path
 	addpath(genpath('../SuperSegger'))
 	addpath(genpath(path))
-    %addpath(genpath('../data'))
 
 	% define folder with images
 	image_folder = path
@@ -38,9 +37,7 @@ function execute = tracking_supersegger(path, constants, neighbor_flag, time_ste
 	CONST.parallel.verbose = 0;
 	CONST.trackOpti.REMOVE_STRAY = false;
 
-	if data_type == 'WELL'
-		disp(data_type)
-		%CONSTANTS FOR JOHANNES
+	if isequal(data_type, 'WELL')
 		CONST.trackOpti.MIN_AREA_NO_NEIGH = 8;
 		CONST.trackOpti.SMALL_AREA_MERGE = 8;
 		CONST.getLocusTracks.PixelSize = 6/162;
