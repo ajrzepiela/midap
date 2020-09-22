@@ -8,11 +8,10 @@ from unet_prediction import SegmentationPredictor
 parser = argparse.ArgumentParser()
 parser.add_argument("--path_pos")
 parser.add_argument("--path_channel")
-parser.add_argument("--image_inversion")
 parser.add_argument("--postprocessing")
 args = parser.parse_args()
 
-pred = SegmentationPredictor(postprocessing=bool(int(args.postprocessing)), invert_img = bool(int(args.image_inversion)))
+pred = SegmentationPredictor(postprocessing=bool(int(args.postprocessing)))
 path_cut = '/' + args.path_channel + '/xy1/phase/'
 path_seg = '/' + args.path_channel + '/seg_im/'
 

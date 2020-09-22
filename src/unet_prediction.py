@@ -18,12 +18,11 @@ from skimage.segmentation import watershed
 
 class SegmentationPredictor():
 
-    def __init__(self, postprocessing, invert_img = False, div = 16, connectivity = 1):
+    def __init__(self, postprocessing, div = 16, connectivity = 1):
         #self.model_weights = model_weights
         self.postprocessing = postprocessing
         self.div = div # divisor
         self.connectivity = connectivity
-        self.invert_img = invert_img
 
     def segment_region_based(self, img, min_val = 40, max_val = 50):
         elevation_map = sobel(img)
@@ -38,12 +37,7 @@ class SegmentationPredictor():
         print('Select weights')
         path_img = np.sort(os.listdir(path_pos + path_cut))[-1]
 
-        print(self.invert_img)
-
-        #if self.invert_img == False:
         img = self.scale_pixel_vals(io.imread(path_pos + path_cut + path_img))
-        #elif self.invert_img == True:
-        #    img = self.scale_pixel_vals(np.invert(io.imread(path_pos + path_cut + path_img)))
         img_pad = self.pad_image(img)
 
         # try watershed segmentation as classical segmentation method
@@ -99,9 +93,6 @@ class SegmentationPredictor():
             ix_model_weights = np.where([check.value_selected == l for l in labels])[0][0]
             sel_model_weights = model_weights[ix_model_weights - 1]
             self.model_weights = '../model_weights/' + sel_model_weights
-        
-        print('selected weights')
-        print(self.model_weights)
 
 
     def run_single_image(self, path_pos, path_cut, path_seg, path_img):
@@ -122,18 +113,17 @@ class SegmentationPredictor():
 
 
     def run_image_stack(self, path_pos, path_cut, path_seg):
-        print('Image padding')
-        print(self.model_weights)
         path_imgs = np.sort(os.listdir(path_pos + path_cut))
 
         if self.model_weights == 'watershed':
-            print('do watershed segm')
+            print('Image segmentation')
             y_preds = []
             for p in path_imgs:
                 img = self.scale_pixel_vals(io.imread(path_pos + path_cut + p))
                 y_preds.append(self.segment_region_based(img, 0.16, 0.19))
 
         else:
+            print('Image padding')
             imgs_pad = []
             for p in path_imgs:
                 img = self.scale_pixel_vals(io.imread(path_pos + path_cut + p))

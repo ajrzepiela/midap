@@ -1,7 +1,5 @@
 function execute = tracking_supersegger(path, constants, neighbor_flag, time_step, min_cell_age, data_type)
 
-	disp(constants)
-
 	% set default values for parameters
 	if isequal(time_step, 'None')
 		time_step = 1;
@@ -14,10 +12,6 @@ function execute = tracking_supersegger(path, constants, neighbor_flag, time_ste
 	if isequal(min_cell_age, 'None')
 		min_cell_age = 3;
 	end
-
-	disp(time_step)
-	disp(neighbor_flag)
-	disp(min_cell_age)
 	
 	% add path
 	addpath(genpath('../SuperSegger'))

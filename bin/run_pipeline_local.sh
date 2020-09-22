@@ -102,12 +102,12 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
         echo "segment images"
         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                 CH="CHANNEL_$i"
-                if [ -z "$CHANNEL_2" ] || [ -z "$CHANNEL_3" ]
-                        then
-                        python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 1 --image_inversion 1
-                else
-                        python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 0 --image_inversion 0
-                fi
+                #if [ -z "$CHANNEL_2" ] || [ -z "$CHANNEL_3" ]
+                #        then
+                python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 0
+                #else
+                #        python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 0
+                #fi
         done
 
 
@@ -179,7 +179,7 @@ if [[ $DATA_TYPE == "WELL" ]]
         
         # 3) Segmentation
         echo "segment images"
-        python main_prediction.py --path_pos $PATH_FILE_WO_EXT --path_channel "" --postprocessing 1 --image_inversion 0
+        python main_prediction.py --path_pos $PATH_FILE_WO_EXT --path_channel "" --postprocessing 1
 
         # 4) Conversion
         echo "run file-conversion"
