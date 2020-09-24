@@ -31,6 +31,7 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
         CUT_PATH="phase/"
         SEG_IM_PATH="seg_im/"
         SEG_MAT_PATH="seg/"
+        SEG_IM_TRACK_PATH="input_ilastik_tracking/"
 
         # generate folders for different channels (phase, fluorescent)
         make_dir $PATH_FOLDER$POS
@@ -61,6 +62,12 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                 CH="CHANNEL_$i"
                 make_dir $PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH
+        done
+
+        # generate folder seg_im_track for stacks of segmentation images for tracking
+        for i in $(seq 1 $NUM_CHANNEL_TYPES); do
+                CH="CHANNEL_$i"
+                make_dir $PATH_FOLDER$POS/${!CH}/$SEG_IM_TRACK_PATH
         done
 
         # generate folders for segmentation-mat files

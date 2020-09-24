@@ -55,16 +55,15 @@ class SegmentationPredictor():
             seg = (self.undo_padding(y_pred) > 0.5).astype(int)
             segs.append(seg)
         
-        # display different segmentation methods
+        # display different segmentation methods (watershed + NN trained for different cell types)
         labels = ['watershed']
         labels += [mw.split('.')[0].split('_')[-1] for mw in model_weights]
-        #labels = [mw.split('.')[0].split('_')[-1] for mw in model_weights]
         num_subplots = int(np.ceil(np.sqrt(len(segs))))
         plt.figure(figsize = (10,10))
         for i,s in enumerate(segs):
             plt.subplot(num_subplots,num_subplots,i+1)
             plt.imshow(img)
-            plt.contour(s, [0], colors = 'r', linewidths = 0.5)
+            plt.contour(s, [0.5], colors = 'r', linewidths = 0.5)
             if i == 0:
                 plt.title('watershed')
             else:
@@ -73,22 +72,12 @@ class SegmentationPredictor():
             plt.yticks([])
         plt.suptitle('Select model weights for channel: ' + path_seg.split('/')[1])
         rax = plt.axes([0.3, 0.01, 0.3, 0.08])
-        #labels = ['model weights ' + str(i + 1) for i in range(len(model_weights))]
-        visibility = [False for i in range(len(segs))]
-        # check = CheckButtons(rax, labels)
+        #visibility = [False for i in range(len(segs))]
         check = RadioButtons(rax, labels)
-        # check = MyRadioButtons(rax, labels, ncol=2)
-
-        # def func(label):
-        #     index = labels.index(label)
-        #     #lines[index].set_visible(not lines[index].get_visible())
-        #     plt.draw()
-
-        # check.on_clicked(func)
 
         plt.show()
 
-        #ix_model_weights = np.where(check.get_status())[0][0]
+        #extract selected segmentation method from output of RadioButton
         if check.value_selected == 'watershed':
             self.model_weights = 'watershed'
         else:
@@ -110,18 +99,19 @@ class SegmentationPredictor():
         seg_label = label(seg, connectivity=self.connectivity)
 
         print('Segmentation storage')
-        #io.imsave(path_pos + path_seg + path_img[:-7] + 'seg.tif', seg_label, check_contrast=False)
         io.imsave(path_pos + path_seg + path_img.replace('_cut.tif', '').replace('.tif', '') + '_seg.tiff', seg_label, check_contrast=False)
 
 
-    def run_image_stack(self, path_pos, path_cut, path_seg):
+    def run_image_stack(self, path_pos, path_cut, path_seg, path_seg_track):
         path_imgs = np.sort(os.listdir(path_pos + path_cut))
 
         if self.model_weights == 'watershed':
             print('Image segmentation')
             y_preds = []
+            cuts = []
             for p in path_imgs:
                 img = self.scale_pixel_vals(io.imread(path_pos + path_cut + p))
+                cuts.append(img)
                 y_preds.append(self.segment_region_based(img, 0.16, 0.19))
 
         else:
@@ -136,35 +126,29 @@ class SegmentationPredictor():
             print('Image segmentation')
             model_pred = unet_inference(input_size = imgs_pad.shape[1:3] + (1,))
             model_pred.load_weights(self.model_weights)
-            print(imgs_pad.shape)
             y_preds = model_pred.predict(imgs_pad, batch_size = 1, verbose = 1)
 
         print('Segmentation storage')
         if not os.path.exists(path_pos + path_seg):
             os.makedirs(path_pos + path_seg)
 
-        #segs = []
+        segs = []
         for i, y in enumerate(y_preds):
             if self.model_weights == 'watershed':
                 seg = y
+                segs.append(seg)
             else:
+                io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_prob.tiff', y_preds.astype(float))
                 seg = (self.undo_padding_stack(y) > 0.5).astype(int)
+                segs.append(seg)
             if self.postprocessing == True:
                 clean_seg = self.postprocess_seg(seg)
                 seg_label  = label(clean_seg, connectivity=self.connectivity)
-                #print(np.unique(seg_label))
-            #io.imsave(path_pos + path_seg + path_imgs[i][:-7] + '_seg.tif', seg_label, check_contrast=False)
             else:
                 seg_label  = label(seg, connectivity=self.connectivity)
-                #print(np.unique(seg_label))
             io.imsave(path_pos + path_seg + path_imgs[i].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_seg.tiff', seg_label, check_contrast=False)
-            #segs.append(seg_label)
-        #print(np.array(segs).shape)
-        #io.imsave(path_pos + '/' + path_imgs[i][:-11] + '_full_stack.tif', np.array(segs))
-        #new_filename = path_pos + '/' + re.sub(r'frame\d+_cut.tif', 'full_stack_seg.tif', path_imgs[i])
-        #new_filename = path_pos + '/' + re.sub(r'frame\d+.tif', 'full_stack_seg.tif', path_imgs[i])
-        #print(new_filename)
-        #io.imsave('test.tif', np.array(segs)) #np.array(segs)
+        io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_bin.tiff', np.array(segs))
+        io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_cut.tiff', np.array(imgs_pad).astype(float))
 
     def postprocess_seg(self, seg, min_size = 6, max_size = 100): #100
         label_objects = label(seg, connectivity = self.connectivity)
@@ -172,17 +156,6 @@ class SegmentationPredictor():
         mask_sizes = (sizes > min_size)&(sizes < max_size)
         mask_sizes[0] = 0
         filtered_image = (mask_sizes[label_objects] > 0).astype(int)
-        # label_seg = label(seg, connectivity = 1)
-        # props = regionprops(label_seg)
-        # areas = np.array([p.area for p in props])
-        # mask_areas = (areas > 6)&(areas < 50)
-        # filtered_image = mask_areas[seg].astype(int)
-
-        # label_objects, _ = ndi.label(seg.astype(int))
-        # sizes = np.bincount(label_objects.ravel())
-        # mask_sizes = (sizes > min_size)&(sizes < max_size)
-        # mask_sizes[0] = 0
-        # filtered_image = (mask_sizes[label_objects] > 0).astype(int)
         return filtered_image
 
     def scale_pixel_vals(self, img):
