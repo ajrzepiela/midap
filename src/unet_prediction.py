@@ -99,7 +99,7 @@ class SegmentationPredictor():
         seg_label = label(seg, connectivity=self.connectivity)
 
         print('Segmentation storage')
-        io.imsave(path_pos + path_seg + path_img.replace('_cut.tif', '').replace('.tif', '') + '_seg.tiff', seg_label, check_contrast=False)
+        io.imsave(path_pos + path_seg + path_img.replace('_cut.tif', '').replace('.tif', '') + '_seg.tiff', seg_label.astype('uint16'), check_contrast=False)
 
 
     def run_image_stack(self, path_pos, path_cut, path_seg, path_seg_track):
@@ -146,7 +146,7 @@ class SegmentationPredictor():
                 seg_label  = label(clean_seg, connectivity=self.connectivity)
             else:
                 seg_label  = label(seg, connectivity=self.connectivity)
-            io.imsave(path_pos + path_seg + path_imgs[i].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_seg.tiff', seg_label, check_contrast=False)
+            io.imsave(path_pos + path_seg + path_imgs[i].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_seg.tiff', seg_label.astype('uint16'), check_contrast=False)
         io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_bin.tiff', np.array(segs))
         io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_cut.tiff', np.array(imgs_pad).astype(float))
 
