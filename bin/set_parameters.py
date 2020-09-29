@@ -13,7 +13,7 @@ def Button(*args, **kwargs):
 
 layout = [[sg.Text('Data type', font='bold')],
           [sg.Checkbox('Chamber', key='chamber', default=False), sg.Checkbox('Well', key='well', default=False)],
-	      [sg.Text('')],
+	        [sg.Text('')],
           [sg.Column([[sg.OK(), sg.Cancel()]], key='col_final')]]
 
 layout_chamber = [[sg.Text('Foldername', key = 'title_folder_name', font='bold')],

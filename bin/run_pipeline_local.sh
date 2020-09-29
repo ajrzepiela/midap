@@ -132,11 +132,24 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
                 CH="CHANNEL_$i"
                 $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/', '$CONSTANTS' , $NEIGHBOR_FLAG, $TIME_STEP, $MIN_CELL_AGE, '$DATA_TYPE')"
                 MAT_FILE=$PATH_FOLDER$POS/${!CH}/$SEG_PATH/clist.mat
-                if ! test -f "$MAT_FILE"; then
-                    rm -r $PATH_FOLDER$POS/${!CH}/$SEG_PATH/
+                while ! test -f "$MAT_FILE"; do
+                    #rm -r $PATH_FOLDER$POS/${!CH}/$SEG_PATH/
+                    rm $PATH_FOLDER$POS/${!CH}/$SEG_PATH$SEG_MAT_PATH/*_err.mat
                     rm $PATH_FOLDER$POS/${!CH}/CONST.mat
-                    rm $PATH_FOLDER$POS/${!CH}/$RAW_IM/cropbox.mat 
-                fi
+                    rm $PATH_FOLDER$POS/${!CH}/$RAW_IM/cropbox.mat
+
+                    python restrict_frames.py
+                    source settings.sh
+                    LIST_FILES=($(ls $PATH_FOLDER$POS/${!CH}/$SEG_PATH$SEG_MAT_PATH))
+                    NUM_FILES=${#LIST_FILES[@]}
+                    NUM_REMOVE=$NUM_FILES-$END_FRAME #number of files to remove
+
+                    for FILE in ${LIST_FILES[@]:$END_FRAME:$NUM_REMOVE}; do
+                        rm $PATH_FOLDER$POS/${!CH}/$SEG_PATH$SEG_MAT_PATH/$FILE
+                    done
+                    $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/', '$CONSTANTS' , $NEIGHBOR_FLAG, $TIME_STEP, $MIN_CELL_AGE, '$DATA_TYPE')"
+                    
+                done
 
         done
 
