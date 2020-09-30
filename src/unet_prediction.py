@@ -106,14 +106,21 @@ class SegmentationPredictor():
         path_imgs = np.sort(os.listdir(path_pos + path_cut))
 
         if self.model_weights == 'watershed':
-            print('Image segmentation')
-            y_preds = []
+            print('Image segmentation and storage')
+            segs = []
             cuts = []
             for p in path_imgs:
                 img = self.scale_pixel_vals(io.imread(path_pos + path_cut + p))
+                seg = self.segment_region_based(img, 0.16, 0.19)
                 cuts.append(img)
-                y_preds.append(self.segment_region_based(img, 0.16, 0.19))
+                if self.postprocessing == True:
+                    seg = self.postprocess_seg(seg)
+                segs.append(seg)
+                seg_label  = label(seg, connectivity=self.connectivity)
 
+                io.imsave(path_pos + path_seg + p.replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_seg.tiff', seg_label.astype('uint16'), check_contrast=False)
+            io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_bin.tiff', np.array(segs))
+        
         else:
             print('Image padding')
             imgs_pad = []
@@ -128,27 +135,40 @@ class SegmentationPredictor():
             model_pred.load_weights(self.model_weights)
             y_preds = model_pred.predict(imgs_pad, batch_size = 1, verbose = 1)
 
-        print('Segmentation storage')
-        if not os.path.exists(path_pos + path_seg):
-            os.makedirs(path_pos + path_seg)
-
-        segs = []
-        for i, y in enumerate(y_preds):
-            if self.model_weights == 'watershed':
-                seg = y
-                segs.append(seg)
-            else:
-                io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_prob.tiff', y_preds.astype(float))
+            print('Segmentation storage')
+            segs = []
+            for i, y in enumerate(y_preds):
                 seg = (self.undo_padding_stack(y) > 0.5).astype(int)
+                if self.postprocessing == True:
+                    seg = self.postprocess_seg(seg)
                 segs.append(seg)
-            if self.postprocessing == True:
-                clean_seg = self.postprocess_seg(seg)
-                seg_label  = label(clean_seg, connectivity=self.connectivity)
-            else:
                 seg_label  = label(seg, connectivity=self.connectivity)
-            io.imsave(path_pos + path_seg + path_imgs[i].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_seg.tiff', seg_label.astype('uint16'), check_contrast=False)
-        io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_bin.tiff', np.array(segs))
-        io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_cut.tiff', np.array(imgs_pad).astype(float))
+
+                io.imsave(path_pos + path_seg + path_imgs[i].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_seg.tiff', seg_label.astype('uint16'), check_contrast=False)
+
+            io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_cut.tiff', np.array(imgs_pad).astype(float))
+            io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_bin.tiff', np.array(segs))
+            io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_prob.tiff', y_preds.astype(float))
+        # if not os.path.exists(path_pos + path_seg):
+        #     os.makedirs(path_pos + path_seg)
+
+        #segs = []
+        # for i, y in enumerate(y_preds):
+        #     if self.model_weights == 'watershed':
+        #         seg = y
+        #         segs.append(seg)
+            #else:
+                #io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_cut.tiff', np.array(imgs_pad).astype(float))
+                # seg = (self.undo_padding_stack(y) > 0.5).astype(int)
+                # segs.append(seg)
+            # if self.postprocessing == True:
+            #     clean_seg = self.postprocess_seg(seg)
+                # seg_label  = label(clean_seg, connectivity=self.connectivity)
+            #else:
+                #seg_label  = label(seg, connectivity=self.connectivity)
+            #io.imsave(path_pos + path_seg + path_imgs[i].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_seg.tiff', seg_label.astype('uint16'), check_contrast=False)
+        #io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_bin.tiff', np.array(segs))
+        #io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_prob.tiff', y_preds.astype(float))
 
     def postprocess_seg(self, seg, min_size = 6, max_size = 100): #100
         label_objects = label(seg, connectivity = self.connectivity)

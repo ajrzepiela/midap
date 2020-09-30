@@ -5,6 +5,11 @@ make_dir() {
         [ ! -d $1 ] && mkdir -p $1
 }
 
+# delete folder if it exists
+delete_folder() {
+        [ -e $1 ] && rm -r $1
+}
+
 # 0) Define parameters
 python set_parameters.py
 source settings.sh
@@ -25,6 +30,9 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
 
         # 1) Generate folder structure
         echo "generate folder structure"
+
+        # delete results folder for this position in case it already exists
+        delete_folder $PATH_FOLDER$POS
 
         RAW_IM="raw_im/"
         SEG_PATH="xy1/"
@@ -117,8 +125,8 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
                 #fi
         done
 
-
         # 6) Conversion
+
         echo "run file-conversion"
         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                 CH="CHANNEL_$i"
@@ -132,6 +140,8 @@ if [[ $DATA_TYPE == "CHAMBER" ]]
                 CH="CHANNEL_$i"
                 $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/', '$CONSTANTS' , $NEIGHBOR_FLAG, $TIME_STEP, $MIN_CELL_AGE, '$DATA_TYPE')"
                 MAT_FILE=$PATH_FOLDER$POS/${!CH}/$SEG_PATH/clist.mat
+
+                # as long as 'clist.mat' is missing (hint for failed SuperSegger) the tracking can be repeated with a reduced number of frames
                 while ! test -f "$MAT_FILE"; do
                     #rm -r $PATH_FOLDER$POS/${!CH}/$SEG_PATH/
                     rm $PATH_FOLDER$POS/${!CH}/$SEG_PATH$SEG_MAT_PATH/*_err.mat
@@ -166,11 +176,15 @@ if [[ $DATA_TYPE == "WELL" ]]
         echo $PATH_FILE_WO_EXT
         echo $FILE_NAME
 
+        # delete results folder in case it already exists
+        delete_folder $PATH_FILE_WO_EXT
+
         RAW_IM="raw_im/"
         SEG_PATH="xy1/"
         CUT_PATH="phase/"
         SEG_IM_PATH="seg_im/"
         SEG_MAT_PATH="seg/"
+        SEG_IM_TRACK_PATH="input_ilastik_tracking/"
 
         # generate folder to store the results
         make_dir $PATH_FILE_WO_EXT
@@ -187,6 +201,9 @@ if [[ $DATA_TYPE == "WELL" ]]
 
         # generate folders for segmentation images
         make_dir $PATH_FILE_WO_EXT/$SEG_IM_PATH
+
+        # generate folder seg_im_track for stacks of segmentation images for tracking
+        make_dir $PATH_FILE_WO_EXT/$SEG_IM_TRACK_PATH
 
         # generate folders for segmentation-mat files
         make_dir $PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH
@@ -210,9 +227,28 @@ if [[ $DATA_TYPE == "WELL" ]]
         $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT', '$CONSTANTS' , $NEIGHBOR_FLAG, $TIME_STEP, $MIN_CELL_AGE, '$DATA_TYPE')"
 
         MAT_FILE=$PATH_FILE_WO_EXT/$SEG_PATH/clist.mat
-        if ! test -f "$MAT_FILE"; then
-                rm -r $PATH_FILE_WO_EXT/$SEG_PATH/
+        # as long as 'clist.mat' is missing (hint for failed SuperSegger) the tracking can be repeated with a reduced number of frames
+        while ! test -f "$MAT_FILE"; do
+                rm $PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH/*_err.mat
                 rm $PATH_FILE_WO_EXT/CONST.mat
-                rm $PATH_FILE_WO_EXT/$RAW_IM/cropbox.mat 
-        fi
+                rm $PATH_FILE_WO_EXT/$SEG_PATH/$RAW_IM/cropbox.mat
+
+                python restrict_frames.py
+                source settings.sh
+                LIST_FILES=($(ls $PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH))
+                NUM_FILES=${#LIST_FILES[@]}
+                NUM_REMOVE=$NUM_FILES-$END_FRAME #number of files to remove
+
+                for FILE in ${LIST_FILES[@]:$END_FRAME:$NUM_REMOVE}; do
+                        rm $PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH/$FILE
+                done
+                $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT', '$CONSTANTS' , $NEIGHBOR_FLAG, $TIME_STEP, $MIN_CELL_AGE, '$DATA_TYPE')"
+        done 
+
+        
+        # if ! test -f "$MAT_FILE"; then
+        #         rm -r $PATH_FILE_WO_EXT/$SEG_PATH/
+        #         rm $PATH_FILE_WO_EXT/CONST.mat
+        #         rm $PATH_FILE_WO_EXT/$RAW_IM/cropbox.mat 
+        # fi
 fi

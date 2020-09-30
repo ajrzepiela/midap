@@ -119,7 +119,7 @@ if values['chamber'] == True:
     file_settings.write("NUM_CHANNEL_TYPES=" + str(len(sel_channel_types)) + "\n")
     file_settings.close()
 
-if values['well'] == True:
+elif values['well'] == True:
     window = sg.Window('Parameters', layout_well).Finalize()
     
     event, values = window.read()
