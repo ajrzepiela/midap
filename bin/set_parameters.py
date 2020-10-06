@@ -12,52 +12,63 @@ def Button(*args, **kwargs):
     return sg.Col([[sg.Button(*args, **kwargs)]], pad=(0,0))
 
 layout = [[sg.Text('Data type', font='bold')],
-          [sg.Checkbox('Chamber', key='chamber', default=False), sg.Checkbox('Well', key='well', default=False)],
+          [sg.Checkbox('Family Machine', key='family_machine', default=False), sg.Checkbox('Mother Machine', key='mother_machine', default=False),
+           sg.Checkbox('Well', key='well', default=False)],
 	        [sg.Text('')],
           [sg.Column([[sg.OK(), sg.Cancel()]], key='col_final')]]
 
-layout_chamber = [[sg.Text('Foldername', key = 'title_folder_name', font='bold')],
-                  [sg.Column([[sg.Input(key='folder_name'), sg.FolderBrowse()]], key='col_folder_name')],
-                  [sg.Text('Filetype (e.g. tif, tiff, ...)', key = 'title_file_type', font='bold')],
-                  [sg.Input(key='file_type')],
-                  [sg.Text('')],
-                #   [sg.Text('Input Files', key = 'input_files', font='bold')],
-                  [sg.Text('Identifier of phase channel (e.g. Phase, PH, ...)', key = 'phase_check', font='bold')],
-                  [sg.Input(key='ch1')],
-                  [sg.Text('')],
-                #   [sg.Text('Additional channel 1', key = 'add_channel_1', font='bold')],
-                  [sg.Text('Identifier of additional channel type 1 (e.g. eGFP, GFP, YFP, ...)', key = 'channel_1', font='bold')],
-                  [sg.Input(key='ch2')],
-                #   [sg.Text('Cell type 1', key = 'cell_type_1')],      
-                #   [sg.Column([[sg.Checkbox('13B01', key='cell_type_11'), sg.Checkbox('ZF270g', key='cell_type_12'), sg.Checkbox('FS144', key='cell_type_13')],
-                #   [sg.Checkbox('A3M17', key='cell_type_14'), sg.Checkbox('1F187', key='cell_type_15')]], key = 'col_cell_type_1')], 
-                  [sg.Text('')],
-                #   [sg.Text('Additional channel 2', key = 'add_channel_2', font='bold')],
-                  [sg.Text('Identifier of additional channel type 2 (e.g. mCheery, TXRED, ...)', key = 'channel_2', font='bold')],
-                  [sg.Input(key='ch3')],
-                #   [sg.Text('Cell type 2', key = 'cell_type_2')],      
-                #   [sg.Column([[sg.Checkbox('13B01', key='cell_type_21'), sg.Checkbox('ZF270g', key='cell_type_22'), sg.Checkbox('FS144', key='cell_type_23')],
-                #   [sg.Checkbox('A3M17', key='cell_type_24'), sg.Checkbox('1F187', key='cell_type_25')]], key = 'col_cell_type_2')], 
-                  [sg.Text('')],
-                #   [sg.Text('Matlab root folder', font='bold')],
-                  [sg.Text('Path to Matlab root folder', font='bold')],
-                  [sg.Input(key='matlab_root')],
-                  [sg.Text('SuperSegger constants', font='bold')],
-                  [sg.Text('Constants')],
-                  [sg.Input('100XPa', key='constants')],
-                  [sg.Text('Time Step')],
-                  [sg.Input('1', key='time_step')],
-                  [sg.Text('Neighbor Flag')],
-                  [sg.Input('true', key='neighbor_flag')],
-                  [sg.Text('Minimal cell age')],
-                  [sg.Input('3', key='min_cell_age')],
-	                [sg.Text('')],
-                  [sg.Column([[sg.OK(), sg.Cancel()]], key='col_final')]]
-                
-layout_well = [[sg.Text('Filename', key = 'title_file_name', font='bold')],
+# ------ Column Definition ------ #
+column1 = [[sg.Text('Part of pipeline', justification='center', size=(12, 1))],
+           [sg.T("         "), sg.Radio('Segmentation and Tracking', "RADIO1", default=True, key="segm_track")],
+           [sg.T("         "), sg.Radio('Segmentation', "RADIO1", default=False, key="segm_only")],
+           [sg.T("         "), sg.Radio('Tracking', "RADIO1", default=False, key="track_only")]]
+
+layout_family_machine = [[sg.Frame('Conditional Run',[[
+                          sg.Column(column1, background_color='white'),
+                          sg.Column(
+                          [[sg.Text('Set frame number')],
+                          [sg.Input('0', size=(5, 30), key='start_frame'), sg.Text('-')],
+                          [sg.Input('100', size=(5, 30), key='end_frame')]])
+                          ]])],
+                         [sg.Text('Foldername', key = 'title_folder_name', font='bold')],
+                         [sg.Column([[sg.Input(key='folder_name'), sg.FolderBrowse()]], key='col_folder_name')],
+                         [sg.Text('')],
+                         [sg.Text('Filetype (e.g. tif, tiff, ...)', key = 'title_file_type', font='bold')],
+                         [sg.Input(key='file_type')],
+                         [sg.Text('Identifier of phase channel (e.g. Phase, PH, ...)', key = 'phase_check', font='bold')],
+                         [sg.Input(key='ch1')],
+                         [sg.Text('')],
+                         [sg.Text('Identifier of additional channel type 1 (e.g. eGFP, GFP, YFP, ...)', key = 'channel_1', font='bold')],
+                         [sg.Input(key='ch2')],
+                         [sg.Text('')],
+                         [sg.Text('Identifier of additional channel type 2 (e.g. mCheery, TXRED, ...)', key = 'channel_2', font='bold')],
+                         [sg.Input(key='ch3')],
+                         [sg.Text('')],
+                         [sg.Text('Path to Matlab root folder', font='bold')],
+                         [sg.Input(key='matlab_root')],
+                         [sg.Text('SuperSegger constants', font='bold')],
+                         [sg.Text('')],
+                         [sg.Text('Constants'), sg.Input('100XPa', key='constants')],
+                         [sg.Text('Time Step'), sg.Input('1', key='time_step')],
+                         [sg.Text('Neighbor Flag'), sg.Input('true', key='neighbor_flag')],
+                         [sg.Text('Minimal cell age'), sg.Input('3', key='min_cell_age')],
+	                       [sg.Text('')],
+                         [sg.Column([[sg.OK(), sg.Cancel()]], key='col_final')]]
+
+column2 = [[sg.Text('Part of pipeline', justification='center', size=(12, 1))],
+           [sg.T("         "), sg.Radio('Segmentation and Tracking', "RADIO1", default=True, key="segm_track")],
+           [sg.T("         "), sg.Radio('Segmentation', "RADIO1", default=False, key="segm_only")],
+           [sg.T("         "), sg.Radio('Tracking', "RADIO1", default=False, key="track_only")]]
+layout_well = [[sg.Frame('Conditional Run',[[
+                          sg.Column(column2, background_color='white'),
+                          sg.Column(
+                          [[sg.Text('Set frame number')],
+                          [sg.Input('0', size=(5, 30), key='start_frame'), sg.Text('-')],
+                          [sg.Input('100', size=(5, 30), key='end_frame')]])
+                          ]])],
+               [sg.Text('Filename', key = 'title_file_name', font='bold')],
                [sg.Column([[sg.Input(key='file_name'), sg.FileBrowse()]], key='col_file_name')],
                [sg.Text('')],
-            #    [sg.Text('Matlab root folder', font='bold')],
                [sg.Text('Path to Matlab root folder', font='bold')],
                [sg.Input(key='matlab_root')],
                [sg.Text('SuperSegger constants', font='bold')],
@@ -77,8 +88,8 @@ window = sg.Window('Parameters', layout).Finalize()
 event, values = window.read()
 window.close()
 
-if values['chamber'] == True:
-    window = sg.Window('Parameters', layout_chamber).Finalize()
+if values['family_machine'] == True:
+    window = sg.Window('Parameters', layout_family_machine).Finalize()
 
     event, values = window.read()
 
@@ -97,11 +108,18 @@ if values['chamber'] == True:
     # dict_file = [{'FOLDERNAME' : values['folder_name']},
     # {'CHANNELS' : sel_channel_types}, {'CELL_TYPES': sel_cell_types}]
 
+    run_options = ['BOTH', 'SEGMENTATION', 'TRACKING']
+    cond_run = [values['segm_track'], values['segm_only'], values['track_only']]
+    ix_cond = np.where(np.array(cond_run))[0][0]
+
     dict_file = [{'FOLDERNAME' : values['folder_name']},
     {'CHANNELS' : sel_channel_types}]
 
     file_settings = open("settings.sh","w") 
-    file_settings.write("DATA_TYPE=CHAMBER" + "\n") 
+    file_settings.write("RUN_OPTION=" + run_options[ix_cond] + "\n") 
+    file_settings.write("START_FRAME=" + values['start_frame'] + "\n") 
+    file_settings.write("END_FRAME=" + values['end_frame'] + "\n") 
+    file_settings.write("DATA_TYPE=FAMILY_MACHINE" + "\n") 
     file_settings.write("PATH_FOLDER=" + values['folder_name'] + "/ \n") 
     file_settings.write("FILE_TYPE=" + values['file_type'] + "\n") 
     file_settings.write("MATLAB_ROOT=" + values['matlab_root'] + "\n") 
@@ -125,8 +143,15 @@ elif values['well'] == True:
     event, values = window.read()
 
     window.close()
+
+    run_options = ['BOTH', 'SEGMENTATION', 'TRACKING']
+    cond_run = [values['segm_track'], values['segm_only'], values['track_only']]
+    ix_cond = np.where(np.array(cond_run))[0][0]
     
     file_settings = open("settings.sh","w") 
+    file_settings.write("RUN_OPTION=" + run_options[ix_cond] + "\n") 
+    file_settings.write("START_FRAME=" + values['start_frame'] + "\n") 
+    file_settings.write("END_FRAME=" + values['end_frame'] + "\n") 
     file_settings.write("DATA_TYPE=WELL" + "\n") 
     file_settings.write("PATH_FILE=" + values['file_name'] + "\n") 
     file_settings.write("MATLAB_ROOT=" + values['matlab_root'] + "\n") 
