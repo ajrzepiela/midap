@@ -130,15 +130,19 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
         if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]
         then
                 echo "segment images"
-                for i in $(seq 1 $NUM_CHANNEL_TYPES); do
-                        CH="CHANNEL_$i"
-                        #if [ -z "$CHANNEL_2" ] || [ -z "$CHANNEL_3" ]
-                        #        then
-                        python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 0
-                        #else
-                        #        python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 0
-                        #fi
-                done
+                if [ "$PHASE_SEGMENTATION" == True ]
+                        then 
+                        for i in $(seq 1 $NUM_CHANNEL_TYPES); do
+                                CH="CHANNEL_$i"
+                                python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 0
+                        done
+                elif [ "$PHASE_SEGMENTATION" == False ]
+                        then
+                        for i in $(seq 2 $NUM_CHANNEL_TYPES); do
+                                CH="CHANNEL_$i"
+                                python main_prediction.py --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 0
+                        done
+                fi
         fi
 
         # 6) Conversion

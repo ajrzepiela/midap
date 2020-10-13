@@ -35,19 +35,18 @@ layout_family_machine = [[sg.Frame('Conditional Run',[[
                          [sg.Text('')],
                          [sg.Text('Filetype (e.g. tif, tiff, ...)', key = 'title_file_type', font='bold')],
                          [sg.Input(key='file_type')],
-                         [sg.Text('Identifier of phase channel (e.g. Phase, PH, ...)', key = 'phase_check', font='bold')],
-                         [sg.Input(key='ch1')],
-                         [sg.Text('')],
+                         [sg.Text('Identifier of phase channel (e.g. Phase, PH, ...)', key =  'phase_check', font='bold')],
+                         [sg.Input(key='ch1'), sg.Checkbox('Segmentation', key='phase_segmentation')],
+                         #[sg.Input(key='ch1')],
                          [sg.Text('Identifier of additional channel type 1 (e.g. eGFP, GFP, YFP, ...)', key = 'channel_1', font='bold')],
                          [sg.Input(key='ch2')],
-                         [sg.Text('')],
                          [sg.Text('Identifier of additional channel type 2 (e.g. mCheery, TXRED, ...)', key = 'channel_2', font='bold')],
                          [sg.Input(key='ch3')],
                          [sg.Text('')],
                          [sg.Text('Path to Matlab root folder', font='bold')],
                          [sg.Input(key='matlab_root')],
-                         [sg.Text('SuperSegger constants', font='bold')],
                          [sg.Text('')],
+                         [sg.Text('SuperSegger constants', font='bold')],
                          [sg.Text('Constants'), sg.Input('100XPa', key='constants')],
                          [sg.Text('Time Step'), sg.Input('1', key='time_step')],
                          [sg.Text('Neighbor Flag'), sg.Input('true', key='neighbor_flag')],
@@ -117,6 +116,7 @@ if values['family_machine'] == True:
 
     file_settings = open("settings.sh","w") 
     file_settings.write("RUN_OPTION=" + run_options[ix_cond] + "\n") 
+    file_settings.write("PHASE_SEGMENTATION=" + str(bool(values['phase_segmentation'])) + "\n")
     file_settings.write("START_FRAME=" + values['start_frame'] + "\n") 
     file_settings.write("END_FRAME=" + values['end_frame'] + "\n") 
     file_settings.write("DATA_TYPE=FAMILY_MACHINE" + "\n") 
