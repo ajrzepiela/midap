@@ -17,7 +17,8 @@ source settings.sh
 if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
     then
         echo $PATH_FOLDER
-
+        
+        # extract different positions from one dataset
         POSITIONS=()
         for i in $PATH_FOLDER*.$FILE_TYPE; do
                 POS=$(echo $i | grep -Eo "[Pp][Oo][Ss][0-9]+")
@@ -28,7 +29,7 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
         for POS in "${POS_UNIQ[@]}"; do
         echo $POS
 
-        # specify different folders needed for segmentation and trackinf
+        # specify different folders needed for segmentation and tracking
         RAW_IM="raw_im/"
         SEG_PATH="xy1/"
         CUT_PATH="phase/"
@@ -94,7 +95,7 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                 then
                 for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                         CH="CHANNEL_$i"
-                        VAR=`find $PATH_FOLDER -name *$POS*${!CH}*.tiff`
+                        VAR=`find $PATH_FOLDER -name *$POS*${!CH}*.$FILE_TYPE`
                         cp $VAR $PATH_FOLDER$POS/${!CH}/
                 done
         fi
@@ -106,7 +107,7 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                 echo "split frames"
                 for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                         CH="CHANNEL_$i"
-                        INP=$(find $PATH_FOLDER$POS/${!CH}/ -name *.tiff)
+                        INP=$(find $PATH_FOLDER$POS/${!CH}/ -name *.$FILE_TYPE)
                         python stack2frames.py --path $INP --pos $POS --channel /${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME
                 done
         fi
@@ -255,7 +256,7 @@ if [[ $DATA_TYPE == "WELL" ]]
         then
                 echo "split frames"
                 python stack2frames.py --path $PATH_FILE_WO_EXT/$FILE_NAME --pos "" --channel "" --start_frame $START_FRAME --end_frame $END_FRAME
-                cp $PATH_FILE_WO_EXT/$RAW_IM*.tif $PATH_FILE_WO_EXT/$SEG_PATH$CUT_PATH
+                cp $PATH_FILE_WO_EXT/$RAW_IM*.$FILE_TYPE $PATH_FILE_WO_EXT/$SEG_PATH$CUT_PATH
         fi
         
         # 3) Segmentation

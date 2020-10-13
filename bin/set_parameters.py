@@ -37,7 +37,6 @@ layout_family_machine = [[sg.Frame('Conditional Run',[[
                          [sg.Input(key='file_type')],
                          [sg.Text('Identifier of phase channel (e.g. Phase, PH, ...)', key =  'phase_check', font='bold')],
                          [sg.Input(key='ch1'), sg.Checkbox('Segmentation', key='phase_segmentation')],
-                         #[sg.Input(key='ch1')],
                          [sg.Text('Identifier of additional channel type 1 (e.g. eGFP, GFP, YFP, ...)', key = 'channel_1', font='bold')],
                          [sg.Input(key='ch2')],
                          [sg.Text('Identifier of additional channel type 2 (e.g. mCheery, TXRED, ...)', key = 'channel_2', font='bold')],
@@ -51,7 +50,7 @@ layout_family_machine = [[sg.Frame('Conditional Run',[[
                          [sg.Text('Time Step'), sg.Input('1', key='time_step')],
                          [sg.Text('Neighbor Flag'), sg.Input('true', key='neighbor_flag')],
                          [sg.Text('Minimal cell age'), sg.Input('3', key='min_cell_age')],
-	                       [sg.Text('')],
+	                     [sg.Text('')],
                          [sg.Column([[sg.OK(), sg.Cancel()]], key='col_final')]]
 
 column2 = [[sg.Text('Part of pipeline', justification='center', size=(12, 1))],
@@ -68,6 +67,9 @@ layout_well = [[sg.Frame('Conditional Run',[[
                [sg.Text('Filename', key = 'title_file_name', font='bold')],
                [sg.Column([[sg.Input(key='file_name'), sg.FileBrowse()]], key='col_file_name')],
                [sg.Text('')],
+               [sg.Text('Filetype (e.g. tif, tiff, ...)', key = 'title_file_type', font='bold')],
+               [sg.Input(key='file_type')],
+               [sg.Text('')],
                [sg.Text('Path to Matlab root folder', font='bold')],
                [sg.Input(key='matlab_root')],
                [sg.Text('SuperSegger constants', font='bold')],
@@ -79,7 +81,7 @@ layout_well = [[sg.Frame('Conditional Run',[[
                [sg.Input('true', key='neighbor_flag')],
                [sg.Text('Minimal cell age')],
                [sg.Input('1', key='min_cell_age')],
-	             [sg.Text('')],
+	           [sg.Text('')],
                [sg.Column([[sg.OK(), sg.Cancel()]], key='col_final')]]
 
 window = sg.Window('Parameters', layout).Finalize()
@@ -96,16 +98,6 @@ if values['family_machine'] == True:
 
     channel_type_vals = [values['ch1'], values['ch2'], values['ch3']]
     sel_channel_types = [x for x in channel_type_vals if x]
-    #sel_channel_types = channel_type_vals
-
-    # cell_types = ['13B01', 'Zf270g', 'FS144', 'A3M17', '1F187', '13B01', 'Zf270g', 'FS144', 'A3M17', '1F187']
-    # cell_type_vals = [values['cell_type_11'], values['cell_type_12'], values['cell_type_13'], values['cell_type_14'], values['cell_type_15'],\
-    #                 values['cell_type_21'], values['cell_type_22'], values['cell_type_23'], values['cell_type_24'], values['cell_type_25']]
-    # ix_cells = np.where(cell_type_vals)[0]
-    # sel_cell_types = [cell_types[i] for i in ix_cells]
-
-    # dict_file = [{'FOLDERNAME' : values['folder_name']},
-    # {'CHANNELS' : sel_channel_types}, {'CELL_TYPES': sel_cell_types}]
 
     run_options = ['BOTH', 'SEGMENTATION', 'TRACKING']
     cond_run = [values['segm_track'], values['segm_only'], values['track_only']]
@@ -154,6 +146,7 @@ elif values['well'] == True:
     file_settings.write("END_FRAME=" + values['end_frame'] + "\n") 
     file_settings.write("DATA_TYPE=WELL" + "\n") 
     file_settings.write("PATH_FILE=" + values['file_name'] + "\n") 
+    file_settings.write("FILE_TYPE=" + values['file_type'] + "\n") 
     file_settings.write("MATLAB_ROOT=" + values['matlab_root'] + "\n") 
     file_settings.write("CONSTANTS=" + values['constants'] + "\n") 
     file_settings.write("TIME_STEP=" + values['time_step'] + "\n") 
