@@ -108,7 +108,7 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                 for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                         CH="CHANNEL_$i"
                         INP=$(find $PATH_FOLDER$POS/${!CH}/ -name *.$FILE_TYPE)
-                        python stack2frames.py --path $INP --pos $POS --channel /${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME
+                        python stack2frames.py --path $INP --pos $POS --channel /${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME --deconv $DECONVOLUTION
                 done
         fi
 
