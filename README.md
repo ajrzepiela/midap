@@ -30,12 +30,12 @@ conda activate workflow
 
 #### 3. Select data type, folder path and identifiers of input files via GUI
 
-1. Select the data type
-![Screenshot_1](window_select.png)
+1. Select the data type<br/>
+![Screenshot_1](img/window_select.png)<br/>
 
-2. In case of chambers, select folder path, identifiers of input files and Matlab root folder
-![Screenshot_1](window_chamber.png)
-If only one or two out of three channels was used, specify only the identifiers of those channels and leave the other fields free. 
+2. In case of family or mother machine, select the part of the pipeline you want to run, the frame numbers to restrict the analysis to, the folder path, identifiers of input files, whether you want to deconvolve the raw images and the Matlab root folder.
+![Screenshot_1](img/window_chamber.png)<br/>
+If only one or two out of three channels were used, specify only the identifiers of those channels and leave the other fields free. 
 
 3. The matlab root folder can be found with the following Matlab-command:
 ```
