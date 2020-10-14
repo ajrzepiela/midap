@@ -12,7 +12,7 @@ def Button(*args, **kwargs):
     return sg.Col([[sg.Button(*args, **kwargs)]], pad=(0,0))
 
 layout = [[sg.Text('Data type', font='bold')],
-          [sg.Checkbox('Family Machine', key='family_machine', default=False), sg.Checkbox('Mother Machine', key='mother_machine', default=False),
+          [sg.Checkbox('Family/Mother Machine', key='family_machine', default=False),
            sg.Checkbox('Well', key='well', default=False)],
 	        [sg.Text('')],
           [sg.Column([[sg.OK(), sg.Cancel()]], key='col_final')]]
