@@ -37,6 +37,9 @@ conda activate workflow
 ![Screenshot_1](img/window_chamber.png)<br/>
 If only one or two out of three channels were used, specify only the identifiers of those channels and leave the other fields free. 
 
+3. In case of well plates, select the part of the pipeline you want to run, the frame numbers to restrict the analysis to, the file name, whether you want to deconvolve the raw images and the Matlab root folder.
+![Screenshot_1](img/window_well.png)<br/>
+
 3. The matlab root folder can be found with the following Matlab-command:
 ```
 matlabroot
