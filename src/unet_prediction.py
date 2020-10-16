@@ -18,8 +18,8 @@ from skimage.segmentation import watershed
 
 class SegmentationPredictor():
 
-    def __init__(self, postprocessing, div = 16, connectivity = 1):
-        #self.model_weights = model_weights
+    def __init__(self, path_model_weights, postprocessing, div = 16, connectivity = 1):
+        self.path_model_weights = path_model_weights
         self.postprocessing = postprocessing
         self.div = div # divisor
         self.connectivity = connectivity
@@ -30,8 +30,7 @@ class SegmentationPredictor():
         markers[img < min_val] = 1
         markers[img > max_val] = 2
         segmentation = watershed(elevation_map, markers)
-        #segmentation = binary_fill_holes(segmentation - 1)
-        return (segmentation <= 1).astype(int)#segmentation
+        return (segmentation <= 1).astype(int)
 
     def select_weights(self, path_pos, path_cut, path_seg):
         print('Select weights')
@@ -46,11 +45,11 @@ class SegmentationPredictor():
         watershed_seg = self.segment_region_based(img, 0.16, 0.19)
         
         # compute sample segmentations for all stored weights
-        model_weights = os.listdir('../model_weights/')
+        model_weights = os.listdir(self.path_model_weights)
         segs = [watershed_seg]
         for m in model_weights:
             model_pred = unet_inference(input_size = img_pad.shape[1:3] + (1,))
-            model_pred.load_weights('../model_weights/'+m)
+            model_pred.load_weights(self.path_model_weights+m)
             y_pred = model_pred.predict(img_pad)
             seg = (self.undo_padding(y_pred) > 0.5).astype(int)
             segs.append(seg)
@@ -83,7 +82,7 @@ class SegmentationPredictor():
         else:
             ix_model_weights = np.where([check.value_selected == l for l in labels])[0][0]
             sel_model_weights = model_weights[ix_model_weights - 1]
-            self.model_weights = '../model_weights/' + sel_model_weights
+            self.model_weights = self.path_model_weights + sel_model_weights
 
 
     def run_single_image(self, path_pos, path_cut, path_seg, path_img):
@@ -149,26 +148,6 @@ class SegmentationPredictor():
             io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_cut.tiff', np.array(imgs_pad).astype(float))
             io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_bin.tiff', np.array(segs))
             io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_prob.tiff', y_preds.astype(float))
-        # if not os.path.exists(path_pos + path_seg):
-        #     os.makedirs(path_pos + path_seg)
-
-        #segs = []
-        # for i, y in enumerate(y_preds):
-        #     if self.model_weights == 'watershed':
-        #         seg = y
-        #         segs.append(seg)
-            #else:
-                #io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_cut.tiff', np.array(imgs_pad).astype(float))
-                # seg = (self.undo_padding_stack(y) > 0.5).astype(int)
-                # segs.append(seg)
-            # if self.postprocessing == True:
-            #     clean_seg = self.postprocess_seg(seg)
-                # seg_label  = label(clean_seg, connectivity=self.connectivity)
-            #else:
-                #seg_label  = label(seg, connectivity=self.connectivity)
-            #io.imsave(path_pos + path_seg + path_imgs[i].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_seg.tiff', seg_label.astype('uint16'), check_contrast=False)
-        #io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_bin.tiff', np.array(segs))
-        #io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_prob.tiff', y_preds.astype(float))
 
     def postprocess_seg(self, seg, min_size = 6, max_size = 100): #100
         label_objects = label(seg, connectivity = self.connectivity)
