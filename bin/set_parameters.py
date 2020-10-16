@@ -73,6 +73,9 @@ layout_well = [[sg.Frame('Conditional Run',[[
                [sg.Text('Filetype (e.g. tif, tiff, ...)', key = 'title_file_type', font='bold')],
                [sg.Input(key='file_type')],
                [sg.Text('')],
+               [sg.Text('Preprocessing', font = 'bold')],
+               [sg.Checkbox('Deconvolution of images', key='deconv', font='bold')],
+               [sg.Text('')],
                [sg.Text('Path to Matlab root folder', font='bold')],
                [sg.Input(key='matlab_root')],
                [sg.Text('SuperSegger constants', font='bold')],
@@ -111,7 +114,8 @@ if values['family_machine'] == True:
 
     file_settings = open("settings.sh","w") 
     file_settings.write("RUN_OPTION=" + run_options[ix_cond] + "\n")
-    file_settings.write("DECONVOLUTION=" + str(bool(values['deconv'])) + "\n")
+    #file_settings.write("DECONVOLUTION=" + str(bool(values['deconv'])) + "\n")
+    file_settings.write("DECONVOLUTION=" + "deconv_family_machine" + "\n")
     file_settings.write("PHASE_SEGMENTATION=" + str(bool(values['phase_segmentation'])) + "\n")
     file_settings.write("START_FRAME=" + values['start_frame'] + "\n") 
     file_settings.write("END_FRAME=" + values['end_frame'] + "\n") 
@@ -146,6 +150,7 @@ elif values['well'] == True:
     
     file_settings = open("settings.sh","w") 
     file_settings.write("RUN_OPTION=" + run_options[ix_cond] + "\n") 
+    file_settings.write("DECONVOLUTION=" + "deconv_well" + "\n")
     file_settings.write("START_FRAME=" + values['start_frame'] + "\n") 
     file_settings.write("END_FRAME=" + values['end_frame'] + "\n") 
     file_settings.write("DATA_TYPE=WELL" + "\n") 

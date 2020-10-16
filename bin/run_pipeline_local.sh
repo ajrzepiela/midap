@@ -255,7 +255,7 @@ if [[ $DATA_TYPE == "WELL" ]]
         if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]
         then
                 echo "split frames"
-                python stack2frames.py --path $PATH_FILE_WO_EXT/$FILE_NAME --pos "" --channel "" --start_frame $START_FRAME --end_frame $END_FRAME
+                python stack2frames.py --path $PATH_FILE_WO_EXT/$FILE_NAME --pos "" --channel "" --start_frame $START_FRAME --end_frame $END_FRAME --deconv $DECONVOLUTION
                 cp $PATH_FILE_WO_EXT/$RAW_IM*.$FILE_TYPE $PATH_FILE_WO_EXT/$SEG_PATH$CUT_PATH
         fi
         

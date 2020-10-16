@@ -20,12 +20,19 @@ path_tail = os.path.split(args.path)[1]
 raw_filename = os.path.splitext(path_tail)[0]
 
 # loop over tif/tiff-stack to extract single frames and deconvolve them if wanted
-psf = loadmat('PSFmme.mat')['PSF']
+if args.deconv == "deconv_family_machine":
+    psf = loadmat('../psf/PSFmme.mat')['PSF']
+    deconvolution = True
+elif args.deconv == "deconv_well":
+    psf = io.imread('../psf/PSF_BornWolf.tif')[5,:,:]
+    deconvolution = True
+else:
+    deconvolution = False
 stack = io.imread(args.path)[int(args.start_frame):int(args.end_frame)]
 for ix, frame in enumerate(tqdm(stack)):
-        if bool(args.deconv) == True:
-            deconv = richardson_lucy(frame, psf, iterations=10, clip=False)
-            io.imsave(path_head + '/' + 'raw_im/' + raw_filename + '_frame' + str("%03d" % (ix + int(args.start_frame))) + '_deconv.tif', deconv, check_contrast=False)
+        if deconvolution == True:
+            deconvoluted = richardson_lucy(frame, psf, iterations=10, clip=False)
+            io.imsave(path_head + '/' + 'raw_im/' + raw_filename + '_frame' + str("%03d" % (ix + int(args.start_frame))) + '_deconv.tif', deconvoluted, check_contrast=False)
         else:
             io.imsave(path_head + '/' + 'raw_im/' + raw_filename + '_frame' + str("%03d" % (ix + int(args.start_frame))) + '.tif', frame, check_contrast=False)
 
