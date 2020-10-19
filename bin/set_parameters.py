@@ -115,7 +115,10 @@ if values['family_machine'] == True:
     file_settings = open("settings.sh","w") 
     file_settings.write("RUN_OPTION=" + run_options[ix_cond] + "\n")
     #file_settings.write("DECONVOLUTION=" + str(bool(values['deconv'])) + "\n")
-    file_settings.write("DECONVOLUTION=" + "deconv_family_machine" + "\n")
+    if values['deconv'] == True:
+        file_settings.write("DECONVOLUTION=" + "deconv_family_machine" + "\n")
+    else:
+        file_settings.write("DECONVOLUTION=" + "no_deconv" + "\n")
     file_settings.write("PHASE_SEGMENTATION=" + str(bool(values['phase_segmentation'])) + "\n")
     file_settings.write("START_FRAME=" + values['start_frame'] + "\n") 
     file_settings.write("END_FRAME=" + values['end_frame'] + "\n") 
@@ -149,8 +152,11 @@ elif values['well'] == True:
     ix_cond = np.where(np.array(cond_run))[0][0]
     
     file_settings = open("settings.sh","w") 
-    file_settings.write("RUN_OPTION=" + run_options[ix_cond] + "\n") 
-    file_settings.write("DECONVOLUTION=" + "deconv_well" + "\n")
+    file_settings.write("RUN_OPTION=" + run_options[ix_cond] + "\n")
+    if values['deconv'] == True:
+        file_settings.write("DECONVOLUTION=" + "deconv_well" + "\n")
+    else:
+        file_settings.write("DECONVOLUTION=" + "no_deconv" + "\n")
     file_settings.write("START_FRAME=" + values['start_frame'] + "\n") 
     file_settings.write("END_FRAME=" + values['end_frame'] + "\n") 
     file_settings.write("DATA_TYPE=WELL" + "\n") 
