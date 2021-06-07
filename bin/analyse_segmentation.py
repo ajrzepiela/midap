@@ -23,9 +23,11 @@ def count_killed(seg):
     # compute regionprops
     regions = regionprops(seg)
 
-    # compute ratio between minor and major axis
+    # compute ratio between minor and major axis 
+    # (only of major axis length is larger than 0)
+    minor_to_major = np.zeros(len(regions))
     minor_to_major = np.array(
-        [r.minor_axis_length / r.major_axis_length for r in regions])
+        [r.minor_axis_length / r.major_axis_length for r in regions if r.major_axis_length > 0])
 
     # get number of cells with ratio > 0.5
     num_killed = len(np.where(minor_to_major > 0.7)[0])
