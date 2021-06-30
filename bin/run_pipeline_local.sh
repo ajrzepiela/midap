@@ -135,14 +135,14 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                         then 
                         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                                 CH="CHANNEL_$i"
-                                python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 0
+                                python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 1
                                 python analyse_segmentation.py --path_seg $PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/ --path_result $PATH_FOLDER$POS/${!CH}/
                         done
                 elif [ "$PHASE_SEGMENTATION" == False ]
                         then
                         for i in $(seq 2 $NUM_CHANNEL_TYPES); do
                                 CH="CHANNEL_$i"
-                                python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 0
+                                python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 1
                                 python analyse_segmentation.py --path_seg $PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/ --path_result $PATH_FOLDER$POS/${!CH}/
                         done
                 fi
