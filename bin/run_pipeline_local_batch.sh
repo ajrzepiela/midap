@@ -29,14 +29,6 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
         for POS in "${POS_UNIQ[@]}"; do
                 echo $POS
 
-                # restrict frames for each position separately
-                if  [ $POS != "${POS_UNIQ[0]}" ]
-                then
-                        echo $POS
-                        python restrict_frames.py
-                        source settings.sh
-                fi
-
                 # specify different folders needed for segmentation and tracking
                 RAW_IM="raw_im/"
                 SEG_PATH="xy1/"
@@ -135,7 +127,10 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                         fi
                 fi
 
+        done
 
+        for POS in "${POS_UNIQ[@]}"; do
+                echo $POS
                 # 5) Segmentation
                 if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]
                 then
@@ -144,14 +139,14 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                                 then 
                                 for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                                         CH="CHANNEL_$i"
-                                        python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 1 --batch_mode 0
+                                        python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 1 --batch_mode 1
                                         python analyse_segmentation.py --path_seg $PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/ --path_result $PATH_FOLDER$POS/${!CH}/
                                 done
                         elif [ "$PHASE_SEGMENTATION" == False ]
                                 then
                                 for i in $(seq 2 $NUM_CHANNEL_TYPES); do
                                         CH="CHANNEL_$i"
-                                        python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 1 --batch_mode 0
+                                        python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 1 --batch_mode 1
                                         python analyse_segmentation.py --path_seg $PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/ --path_result $PATH_FOLDER$POS/${!CH}/
                                 done
                         fi
@@ -213,7 +208,7 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                 fi
 
 
-    done
+        done
 fi
 
 

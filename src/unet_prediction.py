@@ -101,10 +101,10 @@ class SegmentationPredictor():
         io.imsave(path_pos + path_seg + path_img.replace('_cut.tif', '').replace('.tif', '') + '_seg.tiff', seg_label.astype('uint16'), check_contrast=False)
 
 
-    def run_image_stack(self, path_pos, path_cut, path_seg, path_seg_track):
+    def run_image_stack(self, path_pos, path_cut, path_seg, path_seg_track, model_weights):
         path_imgs = np.sort(os.listdir(path_pos + path_cut))
 
-        if self.model_weights == 'watershed':
+        if model_weights == 'watershed':
             print('Image segmentation and storage')
             segs = []
             cuts = []
@@ -131,7 +131,7 @@ class SegmentationPredictor():
 
             print('Image segmentation')
             model_pred = unet_inference(input_size = imgs_pad.shape[1:3] + (1,))
-            model_pred.load_weights(self.model_weights)
+            model_pred.load_weights(model_weights)
             y_preds = model_pred.predict(imgs_pad, batch_size = 1, verbose = 1)
 
             print('Segmentation storage')
