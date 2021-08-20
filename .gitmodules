@@ -1,0 +1,4 @@
+[submodule "delta"]
+	path = delta
+	url = https://gitlab.com/dunloplab/delta.git
+	branch = version1
