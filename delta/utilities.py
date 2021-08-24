@@ -6,7 +6,7 @@ to minimize the risk of unforeseen bugs.
 @author: jblugagne
 '''
 #import config as cfg
-import cv2, os, re
+import cv2, os, re #cv2
 import numpy as np
 from scipy.io import savemat
 #import ffmpeg

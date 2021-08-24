@@ -1,0 +1,4 @@
+name: tracking
+channels:
+  - defaults
+prefix: /Users/franziskaoschmann/miniconda3/envs/tracking
