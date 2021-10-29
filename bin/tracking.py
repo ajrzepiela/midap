@@ -27,7 +27,7 @@ outputs_folder = DeLTA_data + 'evaluation/track_output/'
 model_file = '../delta/model_weights/unet_moma_track_multisets.hdf5'
 
 # set number of frames
-num = 30
+num = 50
 
 img_names_sort = np.sort(os.listdir(images_folder))[:num]
 seg_names_sort = np.sort(os.listdir(segmentation_folder))[:num]
@@ -99,11 +99,16 @@ for cur_frame in range(1, num_time_steps):
 
 # create input variables for lineage generation
 hf_inputs = h5py.File('inputs.h5', 'r')
+def comp(o):
+    return int(o.split('_')[1])
+keys_inputs = list(hf_inputs.keys())
+keys_inputs.sort(key=comp)
+
 timepoints=len(hf_inputs.keys()) - 1
 chamber_number = 0
-num_track_events = [hf_inputs.get(k).shape[0] for k in list(hf_inputs.keys())[:timepoints]] #[len(i) for i in inputs_all[:timepoints]]
+num_track_events = [hf_inputs.get(k).shape[0] for k in keys_inputs[:timepoints]] #[len(i) for i in inputs_all[:timepoints]]
 frame_numbers = np.concatenate([[i]*num_track_events[i] for i in range(timepoints)])
-seg = np.array([np.array(hf_inputs.get(k))[0,:,:,3] for k in list(hf_inputs.keys())[:timepoints]])
+seg = np.array([np.array(hf_inputs.get(k))[0,:,:,3] for k in keys_inputs[:timepoints]])
 
 # generate lineages
 label_stack = np.zeros([timepoints,seg.shape[1],seg.shape[2]],dtype=np.uint16)
