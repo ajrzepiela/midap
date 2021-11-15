@@ -2,6 +2,9 @@ import numpy as np
 import glob
 from tqdm import tqdm
 
+from functools import partial
+from multiprocessing import Pool
+
 from skimage.measure import label, regionprops
 import skimage.io as io
 from skimage.transform import resize
@@ -15,13 +18,13 @@ from model import unet_track
 import utilities as utils
 
 # Load data
-DeLTA_data = '../../../ackermann-bacteria-segmentation/data/tracking/trial2/pos8/mCherry/'
+DeLTA_data = '../Example_For_Tracking-Co/1_5minCo/pos7/GFP/'#'../../../ackermann-bacteria-segmentation/data/tracking/trial2/pos8/mCherry/'
 images_folder = DeLTA_data + 'xy1/phase/'
 segmentation_folder = DeLTA_data + 'seg_im/'
 outputs_folder = DeLTA_data + 'evaluation/track_output/'
 model_file = '../delta/model_weights/unet_moma_track_multisets.hdf5'
 
-num = 50 # set number of frames
+num = 20 # set number of frames
 
 img_names_sort = np.sort(glob.glob(images_folder + '*frame*'))[:num]
 seg_names_sort = np.sort(glob.glob(segmentation_folder + '*frame*'))[:num]
@@ -40,10 +43,19 @@ def gen_input(img_names_sort, seg_names_sort, cur_frame, target_shape):
 
     input_cur_frame = np.empty((target_shape[0], target_shape[1], 4))
     input_cur_frame[:,:,0] = img_prev_frame
-    input_cur_frame[:,:,1] = label(seg_prev_frame)
+    input_cur_frame[:,:,1] = label_prev_frame
     input_cur_frame[:,:,2] = img_cur_frame
     input_cur_frame[:,:,3] = seg_cur_frame
     return input_cur_frame
+
+def track_cell(cell_id, inputs):
+    seed = (inputs[:,:,1] == cell_id).astype(int)
+    inputs_cell = np.empty(inputs.shape)
+    inputs_cell[:,:,[0,2,3]] = inputs[:,:,[0,2,3]]
+    inputs_cell[:,:,1] = seed
+    results = model.predict(np.array((inputs_cell,)),verbose=0,workers=20,use_multiprocessing=True)
+
+    return results[0,:,:,:]
 
 # Parameters:
 target_size = (512, 512)
@@ -58,29 +70,66 @@ model.load_weights(model_file)
 results_all = []
 inputs_all = []
 inputs_seg = []
-time_points = []
+#time_points = []
 
-for cur_frame in tqdm(range(1, num_time_steps)):
+def track_cur_frame(cur_frame, img_names_sort, seg_names_sort, target_size):
     inputs = gen_input(img_names_sort, seg_names_sort, cur_frame, target_size)
     if inputs.any(): # If not, probably first frame only
         # Predict:
         results_ar = []
 
         cell_ids = np.unique(inputs[:,:,1])[1:].astype(int)
+        #with Pool(processes=20) as pool:
+        #    results = pool.map(partial(track_cell, inputs=inputs), cell_ids)
         for i in cell_ids:
-            seed = (inputs[:,:,1] == i).astype(int)
-            inputs_cell = np.empty(inputs.shape)
-            inputs_cell[:,:,[0,2,3]] = inputs[:,:,[0,2,3]]
-            inputs_cell[:,:,1] = seed
-            results = model.predict(np.array((inputs_cell,)),verbose=0)
-            results_ar.append(results[0,:,:,:])
+            results = track_cell(i, inputs)
+            #seed = (inputs[:,:,1] == i).astype(int)
+            #inputs_cell = np.empty(inputs.shape)
+            #inputs_cell[:,:,[0,2,3]] = inputs[:,:,[0,2,3]]
+            #inputs_cell[:,:,1] = seed
+            #results = model.predict(np.array((inputs_cell,)),verbose=0)
+            results_ar.append(results)
+
+        #print(process.memory_info().rss*1e-9)
+
+    return np.array(results_ar), inputs[:,:,3], inputs
 
 
-        results_all.append(np.array(results_ar))
-        inputs_seg.append(inputs[:,:,3])
-        inputs_all.append(inputs)
+#with Pool(processes=4) as pool:
+#    res = pool.map(partial(track_cur_frame, img_names_sort = img_names_sort, seg_names_sort = seg_names_sort, target_size = target_size), np.arange(1, num_time_steps))
+    
+#results_all = [r[0] for r in res]
+#inputs_seg = [r[1] for r in res]
+#inputs_all = [r[2] for r in res]
 
-        print(process.memory_info().rss*1e-9)
+for cur_frame in tqdm(range(1, num_time_steps)):
+    results_cur_frame, seg_cur_frame, inputs_cur_frame = track_cur_frame(cur_frame, img_names_sort, seg_names_sort, target_size)
+
+    results_all.append(results_cur_frame)
+    inputs_seg.append(seg_cur_frame)
+    inputs_all.append(inputs_cur_frame)
+
+#for cur_frame in tqdm(range(1, num_time_steps)):
+#    inputs = gen_input(img_names_sort, seg_names_sort, cur_frame, target_size)
+#    if inputs.any(): # If not, probably first frame only
+#        # Predict:
+#        results_ar = []
+#
+#        cell_ids = np.unique(inputs[:,:,1])[1:].astype(int)
+#        for i in cell_ids:
+#            seed = (inputs[:,:,1] == i).astype(int)
+#            inputs_cell = np.empty(inputs.shape)
+#            inputs_cell[:,:,[0,2,3]] = inputs[:,:,[0,2,3]]
+#            inputs_cell[:,:,1] = seed
+#            results = model.predict(np.array((inputs_cell,)),verbose=0)
+#            results_ar.append(results[0,:,:,:])
+#
+#
+#        results_all.append(np.array(results_ar))
+#        inputs_seg.append(inputs[:,:,3])
+#        inputs_all.append(inputs)
+#
+#        print(process.memory_info().rss*1e-9)
 
 # create input variables for lineage generation
 timepoints=len(inputs_all) - 1
@@ -111,6 +160,6 @@ for t in range(len(results_all)):
         results_all_red[t,cell_id[:,:,1] > 0.9, 1] = ix+1
 
 # Save data
-np.savez('inputs_all_red.npz', inputs_all=inputs_all)
-np.savez('results_all_red.npz', results_all_red=results_all_red)
-np.savez('label_stack.npz', label_stack=label_stack)
+np.savez('inputs_all_red.npz', inputs_all=np.array(inputs_all))
+np.savez('results_all_red.npz', results_all_red=np.array(results_all_red))
+np.savez('label_stack.npz', label_stack=np.array(label_stack))

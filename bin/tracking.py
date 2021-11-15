@@ -20,14 +20,14 @@ process = psutil.Process(os.getpid())
 import timeit
 start = timeit.timeit()
 
-DeLTA_data = '../data/tracking/trial2/pos8/mCherry/'
+DeLTA_data =  '../../../ackermann-bacteria-segmentation/data/tracking/trial2/pos8/mCherry/' #'../data/tracking/trial2/pos8/mCherry/'
 images_folder = DeLTA_data + 'xy1/phase/'
 segmentation_folder = DeLTA_data + 'seg_im/'
 outputs_folder = DeLTA_data + 'evaluation/track_output/'
 model_file = '../delta/model_weights/unet_moma_track_multisets.hdf5'
 
 # set number of frames
-num = 50
+num = 5
 
 img_names_sort = np.sort(os.listdir(images_folder))[:num]
 seg_names_sort = np.sort(os.listdir(segmentation_folder))[:num]
