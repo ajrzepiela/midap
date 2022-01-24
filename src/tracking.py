@@ -76,14 +76,14 @@ class Tracking():
     def track_cur_frame(self, cur_frame):
 
         inputs = self.gen_input(cur_frame)
-        if inputs.any(): # If not, probably first frame only
-            # Predict:
-            results_ar = []
+#        if inputs.any(): # If not, probably first frame only
+#            # Predict:
+        results_ar = []
 
-            cell_ids = np.unique(inputs[:,:,1])[1:].astype(int)
-            for i in cell_ids:
-                results = self.track_cell(i, inputs)
-                results_ar.append(results)
+        cell_ids = np.unique(inputs[:,:,1])[1:].astype(int)
+        for i in cell_ids:
+            results = self.track_cell(i, inputs)
+            results_ar.append(results)
 
         return np.array(results_ar), inputs[:,:,3], inputs
 
@@ -99,7 +99,7 @@ class Tracking():
         inputs_cell = np.empty(inputs.shape)
         inputs_cell[:,:,[0,2,3]] = inputs[:,:,[0,2,3]]
         inputs_cell[:,:,1] = seed
-        results = self.model.predict(np.array((inputs_cell,)),verbose=0)
+        results = self.model.predict(np.array((inputs_cell,)),verbose=1)
 
         return results[0,:,:,:]
 
