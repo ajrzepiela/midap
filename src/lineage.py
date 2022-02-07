@@ -49,17 +49,26 @@ class Lineages:
         num_time_steps = len(self.results)#-1
 
         unique_ID = 0
-        #daughter_IDs = []
+        
+        self.global2uniqueID = {}
+        self.label_dict = []
         while len(self.global_IDs) > 0:
+            cell_dict = {}
             print(len(self.global_IDs))
             start_ID = self.global_IDs[0]
             unique_ID += 1
+            cell_dict['ID'] = unique_ID
+            cell_dict['frames'] = []
+            cell_dict['mother'] = []
+            cell_dict['daughters'] = []
+            cell_dict['split'] = []
             
             # get first time frame where cell is present
             first_frame_cell = np.where(self.global_label == start_ID)[0][0]
 
             for frame_cell in range(first_frame_cell,num_time_steps):
-                
+                cell_dict['frames'].append(frame_cell)
+                self.global2uniqueID[start_ID] = unique_ID
                 # get local ID within time frame
                 local_ID = self.inputs[frame_cell,:,:,1][self.global_label[frame_cell].astype(int) == start_ID][0].astype(int)
 
@@ -75,12 +84,14 @@ class Lineages:
             
                     # find local IDs in next time frame if cell still exists in next frame
 
-                    # case 1: olny daughter 1 is present
+                    # case 1: only daughter 1 is present
                     if daughter_1.sum() > 0 and daughter_2.sum() == 0:
                         new_global_ID = self.get_new_daughter_ID(daughter_1, frame_cell)
 
                         self.remove_global_ID(start_ID)
                         start_ID = new_global_ID
+                        
+                        cell_dict['daughters'].append([new_global_ID])
 
                     # case 2: only daughter 2 is present
                     elif daughter_1.sum() == 0 and daughter_2.sum() > 0:
@@ -89,26 +100,37 @@ class Lineages:
                         self.remove_global_ID(start_ID)
                         start_ID = new_global_ID
 
+                        cell_dict['daughters'].append([new_global_ID])
+
                     # case 3: cell split: both daughters are present
                     elif daughter_1.sum() > 0 and daughter_2.sum() > 0:
                         # get new ID for daughter one to continue tracking
                         new_global_ID_d1 = self.get_new_daughter_ID(daughter_1, frame_cell)
-                        #new_global_ID_d2 = get_new_daughter_ID(daughter_2, inputs_all, global_label, frame_cell)
+                        new_global_ID_d2 = self.get_new_daughter_ID(daughter_2, frame_cell)
+                        
+                        cell_dict['split'].append(frame_cell)
+                        cell_dict['daughters'].append([new_global_ID_d1, new_global_ID_d2])
 
                         self.remove_global_ID(start_ID)
-
                         start_ID = new_global_ID_d1
-
-        #                break
-
+                        
                     # case 4: cell disappears
                     elif daughter_1.sum() == 0 and daughter_2.sum() == 0:
                         self.remove_global_ID(start_ID)
+
+                        cell_dict['daughters'].append([])
                         break
         
                 if frame_cell > num_time_steps-2:
                     self.remove_global_ID(start_ID)
-        #            break
+            self.label_dict.append(cell_dict)
+            
+        # convert cell IDs
+        for ix, cell in enumerate(self.label_dict):
+            ids = []
+            for d in cell['daughters']:
+                ids.append([self.global2uniqueID[i] for i in d])
+            self.label_dict[ix]['daughters'] = ids
 
 
     def generate_global_IDs(self):

@@ -1,4 +1,5 @@
 import numpy as np
+import pickle
 
 import sys
 sys.path.append('../src/')
@@ -18,4 +19,5 @@ lin = Lineages(inputs_all, results_all_red)
 lin.generate_lineages()
 
 np.savez('../data/label_stack.npz', label_stack=lin.label_stack)
-
+with open('../data/label_dict.pkl', 'wb') as f:
+   ...:     pickle.dump(lin.label_dict, f)
