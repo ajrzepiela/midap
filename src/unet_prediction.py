@@ -1,5 +1,6 @@
 import skimage.io as io
-from skimage.measure import label
+from skimage.measure import label, regionprops
+from skimage.morphology import area_closing
 #from scipy.ndimage.measurements import label
 import scipy.ndimage as ndi
 
@@ -149,13 +150,22 @@ class SegmentationPredictor():
             io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_bin.tiff', np.array(segs))
             io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_prob.tiff', y_preds.astype(float))
 
-    def postprocess_seg(self, seg, min_size = 20, max_size = 300): #100
+    def postprocess_seg(self, seg):
+	# remove small and big particels which are not cells
         label_objects = label(seg, connectivity = self.connectivity)
         sizes = np.bincount(label_objects.ravel())
-        mask_sizes = (sizes > min_size)&(sizes < max_size)
+        reg = regionprops(label_objects)
+        areas = [r.area for r in reg]
+        #min_size, max_size = np.quantile(areas, [0.01, 1.])
+        min_size = np.quantile(areas, [0.01])
+        #mask_sizes = (sizes > min_size)&(sizes < max_size)
+        mask_sizes = (sizes > min_size)
         mask_sizes[0] = 0
-        filtered_image = (mask_sizes[label_objects] > 0).astype(int)
-        return filtered_image
+        img_filt = (mask_sizes[label_objects] > 0).astype(int)
+	
+	# close small holes
+        img_closed = area_closing(img_filt)
+        return img_closed
 
     def scale_pixel_vals(self, img):
         img = np.array(img)
