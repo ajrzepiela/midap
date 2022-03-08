@@ -35,21 +35,22 @@ seg_names_sort = np.sort(glob.glob(segmentation_folder + '*frame*'))[:num]
 
 
 # Parameters:
-target_size = (512, 512)
+target_size = (192,192)#(256, 256)
 input_size = target_size + (4,)
 num_time_steps = len(img_names_sort)
 
 # Process
 tr = Tracking(img_names_sort, seg_names_sort, model_file, input_size, target_size)
-tr.track_all_frames()
+tr.track_all_frames_crop()
+#tr.track_all_frames()
 
 # Reduce results file for storage
-results_all_red = np.empty((len(tr.results_all), *tr.results_all[0][0,:,:,:2].shape))
+results_all_red = np.zeros((len(tr.results_all), *tr.results_all[0][0,:,:,:2].shape))
 for t in range(len(tr.results_all)):
     for ix, cell_id in enumerate(tr.results_all[t]):
         results_all_red[t,cell_id[:,:,0] > 0.5, 0] = ix+1
         results_all_red[t,cell_id[:,:,1] > 0.5, 1] = ix+1
 
-# Save data
-np.savez('../data/inputs_all_red.npz', inputs_all=np.array(tr.inputs_all))
-np.savez('../data/results_all_red.npz', results_all_red=np.array(results_all_red))
+## Save data
+#np.savez('../data/inputs_all_red_test.npz', inputs_all=np.array(tr.inputs_all))
+np.savez('../data/results_all_red_crop.npz', results_all_red=np.array(results_all_red))
