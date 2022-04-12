@@ -7,8 +7,6 @@ from skimage.segmentation import clear_border
 import numpy as np
 from tqdm import tqdm
 
-import sys
-sys.path.append('../delta')
 from model import unet_track
 
 import pdb

@@ -2,6 +2,7 @@
 This file contains model definitions and loss/metrics functions definitions
 
 @author: jblugagne
+modified by: Franziska Oschmann (using constant inputs for U-Net)
 '''
 import tensorflow as tf
 import tensorflow.keras as keras
@@ -10,51 +11,6 @@ from tensorflow.python.ops import array_ops, math_ops
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Concatenate, Conv2D, MaxPooling2D, Dropout, UpSampling2D, ZeroPadding2D, LeakyReLU, BatchNormalization, Concatenate, Add
 from tensorflow.keras.optimizers import Adam
-
-
-
-#%% Losses/metrics
-def pixelwise_weighted_binary_crossentropy(y_true, y_pred):
-    '''
-    Pixel-wise weighted binary cross-entropy loss.
-    The code is adapted from the Keras TF backend.
-    (see their github)
-    
-    Parameters
-    ----------
-    y_true : Tensor
-        Stack of groundtruth segmentation masks + weight maps.
-    y_pred : Tensor
-        Predicted segmentation masks.
-
-    Returns
-    -------
-    Tensor
-        Pixel-wise weight binary cross-entropy between inputs.
-
-    '''
-    
-    try:
-        # The weights are passed as part of the y_true tensor:
-        [seg, weight] = tf.unstack(y_true, 2, axis=-1)
-
-        seg = tf.expand_dims(seg, -1)
-        weight = tf.expand_dims(weight, -1)
-    except:
-        pass
-
-    epsilon = tf.convert_to_tensor(K.epsilon(), y_pred.dtype.base_dtype)
-    y_pred = tf.clip_by_value(y_pred, epsilon, 1. - epsilon)
-    y_pred = tf.math.log(y_pred / (1 - y_pred))
-
-    zeros = array_ops.zeros_like(y_pred, dtype=y_pred.dtype)
-    cond = (y_pred >= zeros)
-    relu_logits = math_ops.select(cond, y_pred, zeros)
-    neg_abs_logits = math_ops.select(cond, -y_pred, y_pred)
-    entropy = math_ops.add(relu_logits - y_pred * seg, math_ops.log1p(math_ops.exp(neg_abs_logits)), name=None)
-    
-    # This is essentially the only part that is different from the Keras code:
-    return K.mean(math_ops.multiply(weight, entropy), axis=-1)
 
 
 def class_weighted_categorical_crossentropy(class_weights):
@@ -94,36 +50,6 @@ def class_weighted_categorical_crossentropy(class_weights):
     return loss_function
 
 
-def unstack_acc(y_true, y_pred):
-    '''
-    Unstacks the mask from the weights in the output tensor for
-    segmentation and computes binary accuracy
-
-    Parameters
-    ----------
-    y_true : Tensor
-        Stack of groundtruth segmentation masks + weight maps.
-    y_pred : Tensor
-        Predicted segmentation masks.
-
-    Returns
-    -------
-    Tensor
-        Binary prediction accuracy.
-
-    '''
-    try:
-        [seg, weight] = tf.unstack(y_true, 2, axis=-1)
-
-        seg = tf.expand_dims(seg, -1)
-        weight = tf.expand_dims(weight, -1)
-    except:
-        pass    
-    
-    return keras.metrics.binary_accuracy(seg,y_pred)
-
-
-
 #%% Models
 # Generic unet declaration:
 def unet(input_size = (256,32,1), constant_input = None, final_activation = 'sigmoid', output_classes = 1):
@@ -156,45 +82,24 @@ def unet(input_size = (256,32,1), constant_input = None, final_activation = 'sig
         return tf.tile(myconst, [shapes[0], 1, 1, 1])
     
     inputs = Input(shape=input_size, dtype='float32')
-    #input_tensor = tf.convert_to_tensor(constants)   
-    #inputs = Input(input_size,  name='true_input')	
-    #print('Input size')
-    #print(tf.shape(inp_label)[0])
-    img_prev_frame, img_cur_frame, seg_cur_frame = constant_input
+
+    if constant_input:
+        img_prev_frame, img_cur_frame, seg_cur_frame = constant_input
     
-    img_prev_tensor = tf.convert_to_tensor(img_prev_frame, dtype='float32')
-    img_cur_tensor = tf.convert_to_tensor(img_cur_frame, dtype='float32')
-    seg_cur_tensor = tf.convert_to_tensor(seg_cur_frame, dtype='float32')
+        img_prev_tensor = tf.convert_to_tensor(img_prev_frame, dtype='float32')
+        img_cur_tensor = tf.convert_to_tensor(img_cur_frame, dtype='float32')
+        seg_cur_tensor = tf.convert_to_tensor(seg_cur_frame, dtype='float32')
 
-    img_prev_tensor2 = tf.keras.layers.Lambda(lambda x: repeat_const(x, img_prev_tensor))(inputs)
-    img_cur_tensor2 = tf.keras.layers.Lambda(lambda x: repeat_const(x, img_cur_tensor))(inputs)
-    seg_cur_tensor2 = tf.keras.layers.Lambda(lambda x: repeat_const(x, seg_cur_tensor))(inputs)
-    #img_prev_tensor = tf.tile(img_prev_tensor, [tf.shape(inp_label)[0], 1, 1, 1])
-    #img_cur_tensor = tf.tile(img_cur_tensor, [tf.shape(inp_label)[0], 1, 1, 1])
-    #seg_cur_tensor = tf.tile(seg_cur_tensor, [tf.shape(inp_label)[0], 1, 1, 1])
-    #img_prev_tensor = tf.convert_to_tensor(img_prev_frame, dtype='float32')
-    #img_cur_tensor = tf.convert_to_tensor(img_cur_frame, dtype='float32')
-    #seg_cur_tensor = tf.convert_to_tensor(seg_cur_frame, dtype='float32')
-    print(img_prev_tensor.shape)
-    print(img_cur_tensor.shape)
-    print(seg_cur_tensor.shape)
+        img_prev_tensor2 = tf.keras.layers.Lambda(lambda x: repeat_const(x, img_prev_tensor))(inputs)
+        img_cur_tensor2 = tf.keras.layers.Lambda(lambda x: repeat_const(x, img_cur_tensor))(inputs)
+        seg_cur_tensor2 = tf.keras.layers.Lambda(lambda x: repeat_const(x, seg_cur_tensor))(inputs)
 
-    #inp_img_prev = Input(tensor=img_prev_tensor)
-    #inp_img_cur = Input(tensor=img_cur_tensor)
-    #inp_seg_cur = Input(tensor=seg_cur_tensor)
+        proc_input = Concatenate(axis=-1)([img_prev_tensor2, inputs, img_cur_tensor2, seg_cur_tensor2])
+        conv1 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(proc_input)
 
-    #inp_tensor = tf.concat([img_prev_tensor, inputs, img_cur_tensor, seg_cur_tensor], axis=-1)
-    #inp_tensor = tf.stack([img_prev_tensor, inputs, img_cur_tensor, seg_cur_tensor], axis=-1)
-    
-    #inp_updated = Input(tensor=inp_tensor)
+    elif not constant_input:
+        conv1 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(inputs)
 
-    #concat = Concatenate(axis=-1)([img_prev_tensor, inputs, img_cur_tensor, seg_cur_tensor])
-   
-   # proc_input = Add()[inp_img_prev, inp_label, inp_img_cur, inp_seg_cur]
-    proc_input = Concatenate(axis=-1)([img_prev_tensor2, inputs, img_cur_tensor2, seg_cur_tensor2])
-    print(proc_input.shape)
-    #conv1 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(proc_input)
-    conv1 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(proc_input)
     conv1 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv1)
     pool1 = MaxPooling2D(pool_size=(2, 2))(conv1)
     conv2 = Conv2D(128, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(pool1)
@@ -232,34 +137,8 @@ def unet(input_size = (256,32,1), constant_input = None, final_activation = 'sig
     conv9 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(merge9)
     conv9 = Conv2D(64, 3, activation = 'relu', padding = 'same', kernel_initializer = 'he_normal')(conv9)
     conv10 = Conv2D(output_classes, 1, activation = final_activation, name = 'true_output')(conv9)
-    
 
     model = Model(inputs = inputs, outputs = conv10)
-    #model = Model(inputs = [inp_img_prev, inp_label, inp_img_cur, inp_seg_cur], outputs = conv10)
-    return model
-
-
-# Use the following model for segmentation:
-def unet_seg(input_size = (256,32,1)):
-    '''
-    Cell segmentation U-Net definition function.
-
-    Parameters
-    ----------
-    input_size : tuple of 3 ints, optional
-        Dimensions of the input tensor, without batch size.
-        The default is (256,32,1).
-
-    Returns
-    -------
-    model : Model
-        Segmentation U-Net (compiled).
-
-    '''
-    
-    model = unet(input_size = input_size, final_activation = 'sigmoid', output_classes = 1)
-    model.compile(optimizer = Adam(lr = 1e-4), loss = pixelwise_weighted_binary_crossentropy, metrics = [unstack_acc])
-
     return model
 
 
@@ -286,33 +165,13 @@ def unet_track(input_size = (256,32,4), constant_input = None, class_weights = (
         Tracking U-Net (compiled).
 
     '''
-    
-    model = unet(input_size, constant_input, final_activation = 'softmax', output_classes = 3)
+    if constant_input:
+        model = unet(input_size, constant_input, final_activation = 'softmax', output_classes = 3)
+    elif not constant_input:
+        model = unet(input_size, final_activation = 'softmax', output_classes = 3)
     model.compile(optimizer=Adam(lr = 1e-4), loss=class_weighted_categorical_crossentropy(class_weights), metrics = ['categorical_accuracy'])
 
     return model
 
 
-# Use the following model for segmentation:
-def unet_chambers(input_size = (512,512,1)):
-    '''
-    Chambers segmentation U-Net.
-
-    Parameters
-    ----------
-    input_size : tuple of 3 ints, optional
-        Dimensions of the input tensor, without batch size.
-        The default is (512,512,1).
-
-    Returns
-    -------
-    model : Model
-        Chambers ID U-Net (compiled).
-
-    '''
-    
-    model = unet(input_size = input_size, final_activation = 'sigmoid', output_classes = 1)
-    model.compile(optimizer = Adam(lr = 1e-4), loss = 'binary_crossentropy')
-
-    return model
 
