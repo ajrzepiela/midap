@@ -34,6 +34,8 @@ class Tracking():
         input size of tracking network
     target_size: tuple
         target size of tracking network
+    crop_size: tuple
+        size of cropped input image
 
     Methods
     -------
@@ -49,7 +51,7 @@ class Tracking():
         Loops over all time frames to track all cells over time
     """
 
-    def __init__(self, imgs, segs, model_weights, input_size, target_size):
+    def __init__(self, imgs, segs, model_weights, input_size, target_size, crop_size=None):
         self.imgs = imgs
         self.segs = segs
         self.num_time_steps = len(self.imgs)
@@ -57,6 +59,8 @@ class Tracking():
         self.model_weights = model_weights
         self.input_size = input_size
         self.target_size = target_size
+        if crop_size:
+            self.crop_size = crop_size
 
 
     def load_data(self, cur_frame):
@@ -133,27 +137,27 @@ class Tracking():
         input_whole_frame[:,:,3] = seg_cur_frame
         
         # Crop images/segmentations per cell and combine all images/segmentations for input
-        input_cur_frame = np.zeros((num_cells, self.target_size[0], self.target_size[1], 4))
+        input_cur_frame = np.zeros((num_cells, self.crop_size[0], self.crop_size[1], 4))
         crop_box = {}
         for cell_ix, p in enumerate(props):
             row, col = p.centroid
 
-            radius_row = self.target_size[0]/2
-            radius_col = self.target_size[1]/2
+            radius_row = self.crop_size[0]/2
+            radius_col = self.crop_size[1]/2
 
             min_row = np.max([0, int(row - radius_row)])
             min_col = np.max([0, int(col - radius_col)])
         
-            max_row = min_row + self.target_size[0]
-            max_col = min_col + self.target_size[1]
+            max_row = min_row + self.crop_size[0]
+            max_col = min_col + self.crop_size[1]
 
             if max_row > img_cur_frame.shape[0]:
                 max_row = img_cur_frame.shape[0]
-                min_row = max_row - self.target_size[0]
+                min_row = max_row - self.crop_size[0]
 
             if max_col > img_cur_frame.shape[1]:
                 max_col = img_cur_frame.shape[1]
-                min_col = max_col - self.target_size[1]
+                min_col = max_col - self.crop_size[1]
             
             seed = (label_prev_frame[min_row:max_row, min_col:max_col] == p.label).astype(int)
             label_cur_frame_crop = label_cur_frame[min_row:max_row, min_col:max_col]
@@ -348,7 +352,7 @@ class Tracking():
 
         for cur_frame in tqdm(range(1, self.num_time_steps)):
             inputs_cur_frame, input_whole_frame, crop_box = self.gen_input_crop(cur_frame)
-            self.results_cur_frame_crop = self.model.predict(inputs_cur_frame, verbose=1)
+            self.results_cur_frame_crop = self.model.predict(inputs_cur_frame, verbose=0)
             
             # Extract and clean results      
             img = io.imread(self.imgs[cur_frame])
