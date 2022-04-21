@@ -17,7 +17,7 @@ args = parser.parse_args()
 images_folder = args.path + 'xy1/phase/'
 segmentation_folder = args.path + 'seg_im/'
 output_folder = args.path + 'track_output/'
-model_file = '../model_weights/unet_moma_track_multisets.hdf5'
+model_file = '../model_weights/model_weights_tracking/unet_moma_track_multisets.hdf5'
 
 img_names_sort = np.sort(glob.glob(images_folder + '*frame*'))[:int(args.num_frames)]
 seg_names_sort = np.sort(glob.glob(segmentation_folder + '*frame*'))[:int(args.num_frames)]
