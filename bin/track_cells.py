@@ -8,7 +8,7 @@ sys.path.append('../src')
 from tracking import Tracking
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--path', help='path to folder with segmentation images')
+parser.add_argument('--path', help='path to folder for one with specific channel')
 parser.add_argument('--num_frames', help='number of time frames')
 args = parser.parse_args()
 
