@@ -7,7 +7,7 @@ from skimage.segmentation import clear_border
 import numpy as np
 from tqdm import tqdm
 
-from model import unet_track
+from model_tracking import unet_track
 
 import pdb
 

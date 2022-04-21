@@ -33,7 +33,7 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                 if  [ $POS != "${POS_UNIQ[0]}" ]
                 then
                         echo $POS
-                        python restrict_frames.py
+                        python restrict_frames.py                        
                         source settings.sh
                 fi
 
@@ -116,6 +116,17 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                         done
                 fi
 
+                # Restrict frames based on layers of tiff file
+                FRAME_NUM=$(identify $VAR | wc -l)
+                FRAME_DIFF="$(($END_FRAME-$START_FRAME))"
+                if [[ $FRAME_DIFF > $FRAME_NUM ]]
+                then
+                        END_FRAME="$(($FRAME_NUM-1))"
+                        START_FRAME=0
+                        echo $END_FRAME
+                        echo $START_FRAME
+                fi
+
 
                 # 3) Split frames
                 if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]
@@ -179,9 +190,9 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
 	        if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "TRACKING" ]]
                 then
 			echo "run cell tracking"
-			for i in $(seq 1 $NUM_CHANNEL_TYPES); do
+			for i in $(seq 2 $NUM_CHANNEL_TYPES); do
                                 CH="CHANNEL_$i"
-                                python track_cells_crop.py --path $PATH_FOLDER$POS/${!CH}/ --num_frames 5
+                                python track_cells_crop.py --path $PATH_FOLDER$POS/${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME
 				python generate_lineages.py --path $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
                         done
 

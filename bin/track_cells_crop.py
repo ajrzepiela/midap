@@ -9,7 +9,9 @@ from tracking import Tracking
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--path', help='path to folder for one with specific channel')
-parser.add_argument('--num_frames', help='number of time frames')
+#parser.add_argument('--num_frames', help='number of time frames')
+parser.add_argument('--start_frame', help='first frame to track')
+parser.add_argument('--end_frame', help='last frame to track')
 args = parser.parse_args()
 
 # Load data
@@ -19,8 +21,10 @@ segmentation_folder = args.path + 'seg_im/'
 output_folder = args.path + 'track_output/'
 model_file = '../model_weights/model_weights_tracking/unet_moma_track_multisets.hdf5'
 
-img_names_sort = np.sort(glob.glob(images_folder + '*frame*'))[:int(args.num_frames)]
-seg_names_sort = np.sort(glob.glob(segmentation_folder + '*frame*'))[:int(args.num_frames)]
+# img_names_sort = np.sort(glob.glob(images_folder + '*frame*'))[:int(args.num_frames)]
+# seg_names_sort = np.sort(glob.glob(segmentation_folder + '*frame*'))[:int(args.num_frames)]
+img_names_sort = np.sort(glob.glob(images_folder + '*frame*'))[int(args.start_frame):int(args.end_frame)]
+seg_names_sort = np.sort(glob.glob(segmentation_folder + '*frame*'))[int(args.start_frame):int(args.end_frame)]
 
 # Parameters:
 crop_size = (128,128)
@@ -41,5 +45,5 @@ for t in range(len(tr.results_all)):
         results_all_red[t,cell_id[:,:,1] > 0.5, 1] = ix+1
 
 ## Save data
-np.savez(output_folder + 'inputs_all_red_crop.npz', inputs_all=np.array(tr.inputs_all))
-np.savez(output_folder + 'results_all_red_crop.npz', results_all_red=np.array(results_all_red))
+np.savez(output_folder + 'inputs_all_red.npz', inputs_all=np.array(tr.inputs_all))
+np.savez(output_folder + 'results_all_red.npz', results_all_red=np.array(results_all_red))
