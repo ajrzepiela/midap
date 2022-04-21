@@ -32,7 +32,7 @@ stack = io.imread(args.path)[int(args.start_frame):int(args.end_frame)]
 for ix, frame in enumerate(tqdm(stack)):
         if deconvolution == True:
             deconvoluted = richardson_lucy(frame, psf, iterations=10, clip=False)
-            io.imsave(path_head + '/' + 'raw_im/' + raw_filename + '_frame' + str("%03d" % (ix + int(args.start_frame))) + '_deconv.tif', deconvoluted, check_contrast=False)
+            io.imsave(path_head + '/' + 'raw_im/' + raw_filename + '_frame' + str("%03d" % (ix + int(args.start_frame))) + '_deconv.png', deconvoluted, check_contrast=False)
         else:
-            io.imsave(path_head + '/' + 'raw_im/' + raw_filename + '_frame' + str("%03d" % (ix + int(args.start_frame))) + '.tif', frame, check_contrast=False)
+            io.imsave(path_head + '/' + 'raw_im/' + raw_filename + '_frame' + str("%03d" % (ix + int(args.start_frame))) + '.png', frame, check_contrast=False)
 

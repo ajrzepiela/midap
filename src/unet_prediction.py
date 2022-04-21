@@ -99,7 +99,7 @@ class SegmentationPredictor():
         seg_label = label(seg, connectivity=self.connectivity)
 
         print('Segmentation storage')
-        io.imsave(path_pos + path_seg + path_img.replace('_cut.tif', '').replace('.tif', '') + '_seg.tiff', seg_label.astype('uint16'), check_contrast=False)
+        io.imsave(path_pos + path_seg + path_img.replace('_cut.tif', '').replace('.tif', '') + '_seg.png', seg_label.astype('uint16'), check_contrast=False)
 
 
     def run_image_stack(self, path_pos, path_cut, path_seg, path_seg_track, model_weights):
@@ -118,8 +118,8 @@ class SegmentationPredictor():
                 segs.append(seg)
                 seg_label  = label(seg, connectivity=self.connectivity)
 
-                io.imsave(path_pos + path_seg + p.replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_seg.tiff', seg_label.astype('uint16'), check_contrast=False)
-            io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_bin.tiff', np.array(segs))
+                io.imsave(path_pos + path_seg + p.replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_seg.png', seg_label.astype('uint16'), check_contrast=False)
+            io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_bin.png', np.array(segs))
         
         else:
             print('Image padding')
