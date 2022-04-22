@@ -45,15 +45,15 @@ layout_family_machine = [[sg.Frame('Conditional Run',[[
                          [sg.Text('Preprocessing', font = 'bold')],
                          [sg.Checkbox('Deconvolution of images', key='deconv', font='bold')],
                          [sg.Text('')],
-                         [sg.Text('Path to Matlab root folder', font='bold')],
-                         [sg.Input(key='matlab_root')],
-                         [sg.Text('')],
-                         [sg.Text('SuperSegger constants', font='bold')],
-                         [sg.Text('Constants'), sg.Input('100XPa', key='constants')],
-                         [sg.Text('Time Step'), sg.Input('1', key='time_step')],
-                         [sg.Text('Neighbor Flag'), sg.Input('true', key='neighbor_flag')],
-                         [sg.Text('Minimal cell age'), sg.Input('3', key='min_cell_age')],
-	                     [sg.Text('')],
+                        #  [sg.Text('Path to Matlab root folder', font='bold')],
+                        #  [sg.Input(key='matlab_root')],
+                        #  [sg.Text('')],
+                        #  [sg.Text('SuperSegger constants', font='bold')],
+                        #  [sg.Text('Constants'), sg.Input('100XPa', key='constants')],
+                        #  [sg.Text('Time Step'), sg.Input('1', key='time_step')],
+                        #  [sg.Text('Neighbor Flag'), sg.Input('true', key='neighbor_flag')],
+                        #  [sg.Text('Minimal cell age'), sg.Input('3', key='min_cell_age')],
+	                    #  [sg.Text('')],
                          [sg.Column([[sg.OK(), sg.Cancel()]], key='col_final')]]
 
 column2 = [[sg.Text('Part of pipeline', justification='center', size=(12, 1))],
@@ -76,18 +76,18 @@ layout_well = [[sg.Frame('Conditional Run',[[
                [sg.Text('Preprocessing', font = 'bold')],
                [sg.Checkbox('Deconvolution of images', key='deconv', font='bold')],
                [sg.Text('')],
-               [sg.Text('Path to Matlab root folder', font='bold')],
-               [sg.Input(key='matlab_root')],
-               [sg.Text('SuperSegger constants', font='bold')],
-               [sg.Text('Constants')],
-               [sg.Input('100XPa', key='constants')],
-               [sg.Text('Time Step')],
-               [sg.Input('1', key='time_step')],
-               [sg.Text('Neighbor Flag')],
-               [sg.Input('true', key='neighbor_flag')],
-               [sg.Text('Minimal cell age')],
-               [sg.Input('1', key='min_cell_age')],
-	           [sg.Text('')],
+            #    [sg.Text('Path to Matlab root folder', font='bold')],
+            #    [sg.Input(key='matlab_root')],
+            #    [sg.Text('SuperSegger constants', font='bold')],
+            #    [sg.Text('Constants')],
+            #    [sg.Input('100XPa', key='constants')],
+            #    [sg.Text('Time Step')],
+            #    [sg.Input('1', key='time_step')],
+            #    [sg.Text('Neighbor Flag')],
+            #    [sg.Input('true', key='neighbor_flag')],
+            #    [sg.Text('Minimal cell age')],
+            #    [sg.Input('1', key='min_cell_age')],
+	        #    [sg.Text('')],
                [sg.Column([[sg.OK(), sg.Cancel()]], key='col_final')]]
 
 window = sg.Window('Parameters', layout).Finalize()
@@ -125,11 +125,11 @@ if values['family_machine'] == True:
     file_settings.write("DATA_TYPE=FAMILY_MACHINE" + "\n") 
     file_settings.write("PATH_FOLDER=" + values['folder_name'] + "/ \n") 
     file_settings.write("FILE_TYPE=" + values['file_type'] + "\n") 
-    file_settings.write("MATLAB_ROOT=" + values['matlab_root'] + "\n") 
-    file_settings.write("CONSTANTS=" + values['constants'] + "\n") 
-    file_settings.write("TIME_STEP=" + values['time_step'] + "\n") 
-    file_settings.write("NEIGHBOR_FLAG=" + str(int(bool(values['neighbor_flag']))) + "\n") 
-    file_settings.write("MIN_CELL_AGE=" + values['min_cell_age'] + "\n") 
+    # file_settings.write("MATLAB_ROOT=" + values['matlab_root'] + "\n") 
+    # file_settings.write("CONSTANTS=" + values['constants'] + "\n") 
+    # file_settings.write("TIME_STEP=" + values['time_step'] + "\n") 
+    # file_settings.write("NEIGHBOR_FLAG=" + str(int(bool(values['neighbor_flag']))) + "\n") 
+    # file_settings.write("MIN_CELL_AGE=" + values['min_cell_age'] + "\n") 
 
     # for i, s in enumerate(sel_cell_types):
     #     file_settings.write("CELL_TYPE_" + str(i + 1) + "=" + s + "\n")
@@ -162,9 +162,9 @@ elif values['well'] == True:
     file_settings.write("DATA_TYPE=WELL" + "\n") 
     file_settings.write("PATH_FILE=" + values['file_name'] + "\n") 
     file_settings.write("FILE_TYPE=" + values['file_type'] + "\n") 
-    file_settings.write("MATLAB_ROOT=" + values['matlab_root'] + "\n") 
-    file_settings.write("CONSTANTS=" + values['constants'] + "\n") 
-    file_settings.write("TIME_STEP=" + values['time_step'] + "\n") 
-    file_settings.write("NEIGHBOR_FLAG=" + values['neighbor_flag'] + "\n") 
-    file_settings.write("MIN_CELL_AGE=" + values['min_cell_age'] + "\n") 
+    # file_settings.write("MATLAB_ROOT=" + values['matlab_root'] + "\n") 
+    # file_settings.write("CONSTANTS=" + values['constants'] + "\n") 
+    # file_settings.write("TIME_STEP=" + values['time_step'] + "\n") 
+    # file_settings.write("NEIGHBOR_FLAG=" + values['neighbor_flag'] + "\n") 
+    # file_settings.write("MIN_CELL_AGE=" + values['min_cell_age'] + "\n") 
     file_settings.close()
