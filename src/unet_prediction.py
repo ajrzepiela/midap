@@ -119,7 +119,7 @@ class SegmentationPredictor():
                 seg_label  = label(seg, connectivity=self.connectivity)
 
                 io.imsave(path_pos + path_seg + p.replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_seg.png', seg_label.astype('uint16'), check_contrast=False)
-            io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_bin.png', np.array(segs))
+            io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_bin.png', np.array(segs), check_contrast=False)
         
         else:
             print('Image padding')
@@ -144,11 +144,11 @@ class SegmentationPredictor():
                 segs.append(seg)
                 seg_label  = label(seg, connectivity=self.connectivity)
 
-                io.imsave(path_pos + path_seg + path_imgs[i].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_seg.tiff', seg_label.astype('uint16'), check_contrast=False)
+                io.imsave(path_pos + path_seg + path_imgs[i].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_seg.png', seg_label.astype('uint16'), check_contrast=False)
 
-            io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_cut.tiff', np.array(imgs_pad).astype(float))
-            io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_bin.tiff', np.array(segs))
-            io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_prob.tiff', y_preds.astype(float))
+            io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_cut.png', np.array(imgs_pad).astype(float), check_contrast=False)
+            io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_bin.png', np.array(segs), check_contrast=False)
+            io.imsave(path_pos + path_seg_track + path_imgs[0].replace('_cut.tif', '').replace('_cut.png', '').replace('.tif', '') + '_full_stack_seg_prob.png', y_preds.astype(float), check_contrast=False)
 
     def postprocess_seg(self, seg):
 	# remove small and big particels which are not cells
