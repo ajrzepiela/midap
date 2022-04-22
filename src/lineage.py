@@ -54,6 +54,8 @@ class Lineages:
         self.label_stack = np.empty((self.results.shape[:-1]))
         self.global2uniqueID = {}
         self.label_dict = []
+        self.tracks_data = []
+        self.graph = {}
 
         # Loops over all global IDs in list and connects cells between time frames
         # with help of tracking results
@@ -79,6 +81,13 @@ class Lineages:
 
             # Loops over all time frames 
             for frame_cell in range(first_frame_cell,num_time_steps):
+                
+                # Add data to tracks data
+                cell = (self.global_label == start_ID)[frame_cell]
+                res = regionprops(label(cell))
+                coord = res[0].centroid
+                self.tracks_data.append([unique_ID, frame_cell, int(coord[1]), int(coord[0])])
+
                 cell_dict['frames'].append(frame_cell)
                 self.global2uniqueID[start_ID] = unique_ID
 
@@ -105,6 +114,9 @@ class Lineages:
                         self.remove_global_ID(start_ID)
                         start_ID = new_global_ID
                         
+                        if new_global_ID not in self.graph.keys():
+                            self.graph[new_global_ID] = [unique_ID]
+                        #self.graph[unique_ID] = unique_ID
                         cell_dict['daughters'].append([new_global_ID])
 
                     # Case 2: only daughter 2 is present
@@ -114,6 +126,10 @@ class Lineages:
                         self.remove_global_ID(start_ID)
                         start_ID = new_global_ID
 
+                        if new_global_ID not in self.graph.keys():
+                            self.graph[new_global_ID] = [unique_ID]
+                        #self.graph[unique_ID] = unique_ID
+
                         cell_dict['daughters'].append([new_global_ID])
 
                     # Case 3: cell split: both daughters are present
@@ -121,6 +137,11 @@ class Lineages:
                         # get new ID for daughter one to continue tracking
                         new_global_ID_d1 = self.get_new_daughter_ID(daughter_1, frame_cell)
                         new_global_ID_d2 = self.get_new_daughter_ID(daughter_2, frame_cell)
+
+                        if new_global_ID_d1 not in self.graph.keys():
+                            self.graph[new_global_ID_d1] = [unique_ID]
+                        if new_global_ID_d2 not in self.graph.keys():
+                            self.graph[new_global_ID_d2] = [unique_ID]
                         
                         cell_dict['split'].append(frame_cell)
                         cell_dict['daughters'].append([new_global_ID_d1, new_global_ID_d2])
@@ -149,6 +170,15 @@ class Lineages:
             for d in cell['daughters']:
                 ids.append([self.global2uniqueID[i] for i in d])
             self.label_dict[ix]['daughters'] = ids
+
+        self.graph_unique = {}
+        for k in self.graph.keys():
+            new_key = self.global2uniqueID[k]
+            self.graph_unique[new_key] = self.graph[k]
+            #del self.graph[k]
+
+        # import pdb
+        # pdb.set_trace()
 
 
     def generate_global_IDs(self):
