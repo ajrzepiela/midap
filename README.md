@@ -44,3 +44,10 @@ If only one or two out of three channels were used, specify only the identifiers
 ```
 matlabroot
 ```
+
+#### 4. Visualization of tracking results
+```
+cd bin/
+python visualize_lineages.py --path ../example_data/Glen/{Position}/{Channel}/track_output/
+```
+
