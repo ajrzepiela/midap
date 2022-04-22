@@ -39,10 +39,11 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
 
                 # specify different folders needed for segmentation and tracking
                 RAW_IM="raw_im/"
-                SEG_PATH="xy1/"
-                CUT_PATH="phase/"
+                #SEG_PATH="xy1/"
+                #CUT_PATH="phase/"
+                CUT_PATH="cut_im/"
                 SEG_IM_PATH="seg_im/"
-                SEG_MAT_PATH="seg/"
+                #SEG_MAT_PATH="seg/"
                 SEG_IM_TRACK_PATH="input_ilastik_tracking/"
 		TRACK_OUT_PATH="track_output/"
 
@@ -68,16 +69,17 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                                 make_dir $PATH_FOLDER$POS/${!CH}/$RAW_IM
                         done
 
-                        # generate folder for tracking results
-                        for i in $(seq 1 $NUM_CHANNEL_TYPES); do
-                                CH="CHANNEL_$i"
-                                make_dir $PATH_FOLDER$POS/${!CH}/$SEG_PATH
-                        done
+                        # # generate folder for tracking results
+                        # for i in $(seq 1 $NUM_CHANNEL_TYPES); do
+                        #         CH="CHANNEL_$i"
+                        #         make_dir $PATH_FOLDER$POS/${!CH}/$SEG_PATH
+                        # done
 
                         # generate folder for cutout images
                         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                                 CH="CHANNEL_$i"
-                                make_dir $PATH_FOLDER$POS/${!CH}/$SEG_PATH$CUT_PATH
+                                #make_dir $PATH_FOLDER$POS/${!CH}/$SEG_PATH$CUT_PATH
+                                make_dir $PATH_FOLDER$POS/${!CH}/$CUT_PATH
                         done
 
                         # generate folder seg_im for segmentation images
@@ -92,11 +94,11 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                                 make_dir $PATH_FOLDER$POS/${!CH}/$SEG_IM_TRACK_PATH
                         done
 
-                        # generate folders for segmentation-mat files
-                        for i in $(seq 1 $NUM_CHANNEL_TYPES); do
-                                CH="CHANNEL_$i"
-                                make_dir $PATH_FOLDER$POS/${!CH}/$SEG_PATH$SEG_MAT_PATH
-                        done
+                        # # generate folders for segmentation-mat files
+                        # for i in $(seq 1 $NUM_CHANNEL_TYPES); do
+                        #         CH="CHANNEL_$i"
+                        #         make_dir $PATH_FOLDER$POS/${!CH}/$SEG_PATH$SEG_MAT_PATH
+                        # done
 
 			# generate folder for tracking output
                         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
@@ -175,18 +177,18 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                         fi
                 fi
 
-                # 6) Conversion
-                if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]
-                then
-                        echo "run file-conversion"
-                        for i in $(seq 1 $NUM_CHANNEL_TYPES); do
-                                CH="CHANNEL_$i"
-                                python seg2mat.py --path_cut $PATH_FOLDER$POS/${!CH}/$SEG_PATH$CUT_PATH --path_seg $PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH --path_channel $PATH_FOLDER$POS/${!CH}/
-                        done
-                fi
+                # # 6) Conversion
+                # if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]
+                # then
+                #         echo "run file-conversion"
+                #         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
+                #                 CH="CHANNEL_$i"
+                #                 python seg2mat.py --path_cut $PATH_FOLDER$POS/${!CH}/$SEG_PATH$CUT_PATH --path_seg $PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH --path_channel $PATH_FOLDER$POS/${!CH}/
+                #         done
+                # fi
 
 
-                # 7) Tracking
+                # 6) Tracking
 	        if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "TRACKING" ]]
                 then
 			echo "run cell tracking"

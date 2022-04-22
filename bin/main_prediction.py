@@ -14,7 +14,7 @@ parser.add_argument("--batch_mode")
 args = parser.parse_args()
 
 pred = SegmentationPredictor(path_model_weights=args.path_model_weights, postprocessing=bool(int(args.postprocessing)))
-path_cut = '/' + args.path_channel + '/xy1/phase/'
+path_cut = '/' + args.path_channel + '/cut_im/'
 path_seg = '/' + args.path_channel + '/seg_im/'
 path_seg_track = '/' + args.path_channel + '/input_ilastik_tracking/'
 

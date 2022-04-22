@@ -16,7 +16,7 @@ args = parser.parse_args()
 
 # Load data
 #DeLTA_data = '../Example_For_Tracking-Co/1_5minCo/pos7/GFP/'
-images_folder = args.path + 'xy1/phase/'
+images_folder = args.path + 'cut_im/'
 segmentation_folder = args.path + 'seg_im/'
 output_folder = args.path + 'track_output/'
 model_file = '../model_weights/model_weights_tracking/unet_moma_track_multisets.hdf5'

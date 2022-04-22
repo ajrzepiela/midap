@@ -258,7 +258,7 @@ class CutoutImage:
         dir_name = os.path.dirname(os.path.dirname(file_names[0]))
         for f, i in zip(file_names, files):
             bname = os.path.basename(f).split('.')[0] + '_cut.png'
-            io.imsave(dir_name + '/xy1/phase/' + bname, i, check_contrast = False)
+            io.imsave(dir_name + '/cut_im/' + bname, i, check_contrast = False)
 ########## end needed methods
         
     def run_align_cutout(self): # do all at once
