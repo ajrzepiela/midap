@@ -5,8 +5,8 @@ import argparse
 
 import sys
 sys.path.append('../src/')
-
 from lineage import Lineages
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--path', help='path to folder with tracking output')
@@ -31,7 +31,3 @@ with open(args.path + 'label_dict.pkl', 'wb') as f:
 
 with open(args.path + 'tracks_data.pkl', 'wb') as f:
     pickle.dump(lin.tracks_data, f)
-
-
-
-
