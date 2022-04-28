@@ -35,8 +35,10 @@ layout_family_machine = [[sg.Frame('Conditional Run',[[
                          [sg.Text('')],
                          [sg.Text('Filetype (e.g. tif, tiff, ...)', key = 'title_file_type', font='bold')],
                          [sg.Input(key='file_type')],
+                         [sg.Text('Identifier of Position/Experiment (e.g. Pos, pos)', key = 'pos_id', font='bold')],
+                         [sg.Input(key='pos')],
                          [sg.Text('Identifier of phase channel (e.g. Phase, PH, ...)', key =  'phase_check', font='bold')],
-                         [sg.Input(key='ch1'), sg.Checkbox('Segmentation', key='phase_segmentation', font='bold')],
+                         [sg.Input(key='ch1'), sg.Checkbox('Segmentation/Tracking', key='phase_segmentation', font='bold')],
                          [sg.Text('Identifier of additional channel type 1 (e.g. eGFP, GFP, YFP, ...)', key = 'channel_1', font='bold')],
                          [sg.Input(key='ch2')],
                          [sg.Text('Identifier of additional channel type 2 (e.g. mCheery, TXRED, ...)', key = 'channel_2', font='bold')],
@@ -72,6 +74,8 @@ layout_well = [[sg.Frame('Conditional Run',[[
                [sg.Text('')],
                [sg.Text('Filetype (e.g. tif, tiff, ...)', key = 'title_file_type', font='bold')],
                [sg.Input(key='file_type')],
+               [sg.Text('Identifier of Position/Experiment (e.g. Pos, pos)', key = 'pos_id', font='bold')],
+               [sg.Input(key='pos')],
                [sg.Text('')],
                [sg.Text('Preprocessing', font = 'bold')],
                [sg.Checkbox('Deconvolution of images', key='deconv', font='bold')],
@@ -125,6 +129,7 @@ if values['family_machine'] == True:
     file_settings.write("DATA_TYPE=FAMILY_MACHINE" + "\n") 
     file_settings.write("PATH_FOLDER=" + values['folder_name'] + "/ \n") 
     file_settings.write("FILE_TYPE=" + values['file_type'] + "\n") 
+    file_settings.write("POS_IDENTIFIER=" + values['pos'] + "\n") 
     # file_settings.write("MATLAB_ROOT=" + values['matlab_root'] + "\n") 
     # file_settings.write("CONSTANTS=" + values['constants'] + "\n") 
     # file_settings.write("TIME_STEP=" + values['time_step'] + "\n") 
@@ -162,6 +167,7 @@ elif values['well'] == True:
     file_settings.write("DATA_TYPE=WELL" + "\n") 
     file_settings.write("PATH_FILE=" + values['file_name'] + "\n") 
     file_settings.write("FILE_TYPE=" + values['file_type'] + "\n") 
+    file_settings.write("POS_IDENTIFIER=" + values['pos'] + "\n") 
     # file_settings.write("MATLAB_ROOT=" + values['matlab_root'] + "\n") 
     # file_settings.write("CONSTANTS=" + values['constants'] + "\n") 
     # file_settings.write("TIME_STEP=" + values['time_step'] + "\n") 
