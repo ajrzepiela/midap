@@ -1,3 +1,4 @@
+# 1. Pipeline
 ### Setup on local machine (Mac)
 #### 1. Initialization and update of submodule (SuperSegger)
 ```
@@ -41,7 +42,16 @@ If only one or two out of three channels were used, specify only the identifiers
 3. In case of well plates, select the part of the pipeline you want to run, the frame numbers to restrict the analysis to, the file name and whether you want to deconvolve the raw images.
 ![Screenshot_1](img/window_well.png)<br/>
 
-#### 4. Visualization of tracking results
+# 2. Manual correction of segmentations
+The manual correction can be started with the following commands:
+```
+cd bin/
+python correct_segmentation.py --path_img PATH_IMG --path_seg PATH_SEG_IMG
+```
+
+The arguments PATH_IMG and PATH_SEG_IMG are passed as strings and should contain the full path name (e.g. '/Users/Documents/data/img_1.tif').
+
+# 3. Visualization of tracking results
 ```
 cd bin/
 python visualize_lineages.py --path ../example_data/Glen/{Position}/{Channel}/track_output/
