@@ -108,6 +108,15 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                         done
                 fi
 
+                # Restrict frames based on layers of tiff file
+                FRAME_NUM=$(identify $VAR | wc -l)
+                FRAME_DIFF="$(($END_FRAME-$START_FRAME))"
+                if [[ $FRAME_DIFF -gt $FRAME_NUM ]]
+                        then
+                        END_FRAME="$(($FRAME_NUM-1))"
+                        START_FRAME=0
+                fi
+
 
                 # 3) Split frames
                 if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]

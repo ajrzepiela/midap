@@ -45,7 +45,7 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                 SEG_IM_PATH="seg_im/"
                 #SEG_MAT_PATH="seg/"
                 SEG_IM_TRACK_PATH="input_ilastik_tracking/"
-		        TRACK_OUT_PATH="track_output/"
+	        TRACK_OUT_PATH="track_output/"
 
                 # 1) Generate folder structure
                 if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]
@@ -100,7 +100,7 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                         #         make_dir $PATH_FOLDER$POS/${!CH}/$SEG_PATH$SEG_MAT_PATH
                         # done
 
-			            # generate folder for tracking output
+			# generate folder for tracking output (U-Net)
                         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                                 CH="CHANNEL_$i"
                                 make_dir $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
@@ -121,12 +121,10 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                 # Restrict frames based on layers of tiff file
                 FRAME_NUM=$(identify $VAR | wc -l)
                 FRAME_DIFF="$(($END_FRAME-$START_FRAME))"
-                if [[ $FRAME_DIFF > $FRAME_NUM ]]
-                then
+                if [[ $FRAME_DIFF -gt $FRAME_NUM ]]
+                        then
                         END_FRAME="$(($FRAME_NUM-1))"
                         START_FRAME=0
-                        echo $END_FRAME
-                        echo $START_FRAME
                 fi
 
 
@@ -191,26 +189,24 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                 # 6) Tracking
 	        if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "TRACKING" ]]
                 then
-			    echo "run cell tracking"
-                if [ "$PHASE_SEGMENTATION" == True ]
-                    then 
-                	for i in $(seq 1 $NUM_CHANNEL_TYPES); do
-                        CH="CHANNEL_$i"
-                        python track_cells_crop.py --path $PATH_FOLDER$POS/${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME
-				        python generate_lineages.py --path $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
-                    done
-                elif [ "$PHASE_SEGMENTATION" == False ]
-                    then
-                    for i in $(seq 2 $NUM_CHANNEL_TYPES); do
-                        CH="CHANNEL_$i"
-                        python track_cells_crop.py --path $PATH_FOLDER$POS/${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME
-				        python generate_lineages.py --path $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
-                    done
+                        echo "run cell tracking"
+                        if [ "$PHASE_SEGMENTATION" == True ]
+                        then 
+                                for i in $(seq 1 $NUM_CHANNEL_TYPES); do
+                                CH="CHANNEL_$i"
+                                python track_cells_crop.py --path $PATH_FOLDER$POS/${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME
+                                                python generate_lineages.py --path $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
+                        done
+                        elif [ "$PHASE_SEGMENTATION" == False ]
+                        then
+                        for i in $(seq 2 $NUM_CHANNEL_TYPES); do
+                                CH="CHANNEL_$i"
+                                python track_cells_crop.py --path $PATH_FOLDER$POS/${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME
+                                                python generate_lineages.py --path $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
+                        done
 
-                fi
-
-
-		    fi
+                        fi
+		fi
 
 
     done

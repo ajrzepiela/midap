@@ -121,12 +121,10 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                 # Restrict frames based on layers of tiff file
                 FRAME_NUM=$(identify $VAR | wc -l)
                 FRAME_DIFF="$(($END_FRAME-$START_FRAME))"
-                if [[ $FRAME_DIFF > $FRAME_NUM ]]
-                then
+                if [[ $FRAME_DIFF -gt $FRAME_NUM ]]
+                        then
                         END_FRAME="$(($FRAME_NUM-1))"
                         START_FRAME=0
-                        echo $END_FRAME
-                        echo $START_FRAME
                 fi
 
 
