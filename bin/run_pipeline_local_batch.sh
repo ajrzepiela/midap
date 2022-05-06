@@ -31,11 +31,12 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
 
                 # specify different folders needed for segmentation and tracking
                 RAW_IM="raw_im/"
-                SEG_PATH="xy1/"
-                CUT_PATH="phase/"
+                #SEG_PATH="xy1/"
+                CUT_PATH="cut_im/"
                 SEG_IM_PATH="seg_im/"
-                SEG_MAT_PATH="seg/"
+                #SEG_MAT_PATH="seg/"
                 SEG_IM_TRACK_PATH="input_ilastik_tracking/"
+                TRACK_OUT_PATH="track_output/"
 
                 # 1) Generate folder structure
                 if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]
@@ -59,16 +60,16 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                                 make_dir $PATH_FOLDER$POS/${!CH}/$RAW_IM
                         done
 
-                        # generate folder for tracking results
-                        for i in $(seq 1 $NUM_CHANNEL_TYPES); do
-                                CH="CHANNEL_$i"
-                                make_dir $PATH_FOLDER$POS/${!CH}/$SEG_PATH
-                        done
+                        # # generate folder for tracking results
+                        # for i in $(seq 1 $NUM_CHANNEL_TYPES); do
+                        #         CH="CHANNEL_$i"
+                        #         make_dir $PATH_FOLDER$POS/${!CH}/$SEG_PATH
+                        # done
 
                         # generate folder for cutout images
                         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                                 CH="CHANNEL_$i"
-                                make_dir $PATH_FOLDER$POS/${!CH}/$SEG_PATH$CUT_PATH
+                                make_dir $PATH_FOLDER$POS/${!CH}/$CUT_PATH
                         done
 
                         # generate folder seg_im for segmentation images
@@ -83,10 +84,16 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                                 make_dir $PATH_FOLDER$POS/${!CH}/$SEG_IM_TRACK_PATH
                         done
 
-                        # generate folders for segmentation-mat files
+                        # # generate folders for segmentation-mat files
+                        # for i in $(seq 1 $NUM_CHANNEL_TYPES); do
+                        #         CH="CHANNEL_$i"
+                        #         make_dir $PATH_FOLDER$POS/${!CH}/$SEG_PATH$SEG_MAT_PATH
+                        # done
+
+                        # generate folder for tracking output (U-Net)
                         for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                                 CH="CHANNEL_$i"
-                                make_dir $PATH_FOLDER$POS/${!CH}/$SEG_PATH$SEG_MAT_PATH
+                                make_dir $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
                         done
                 fi
 
@@ -152,60 +159,28 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                         fi
                 fi
 
-                # 6) Conversion
-                if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]
+
+                # 6) Tracking
+	        if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "TRACKING" ]]
                 then
-                        echo "run file-conversion"
-                        for i in $(seq 1 $NUM_CHANNEL_TYPES); do
+                        echo "run cell tracking"
+                        if [ "$PHASE_SEGMENTATION" == True ]
+                        then 
+                                for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                                 CH="CHANNEL_$i"
-                                python seg2mat.py --path_cut $PATH_FOLDER$POS/${!CH}/$SEG_PATH$CUT_PATH --path_seg $PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH --path_channel $PATH_FOLDER$POS/${!CH}/
+                                python track_cells_crop.py --path $PATH_FOLDER$POS/${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME
+                                                python generate_lineages.py --path $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
                         done
-                fi
-
-
-                # 7) Tracking
-                if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "TRACKING" ]]
-                then
-                        echo "run tracking"
-                        
-                        for i in $(seq 1 $NUM_CHANNEL_TYPES); do
+                        elif [ "$PHASE_SEGMENTATION" == False ]
+                        then
+                        for i in $(seq 2 $NUM_CHANNEL_TYPES); do
                                 CH="CHANNEL_$i"
-                                echo ${!CH}
-
-                                # delete all files related to SuperSegger to ensure that SuperSegger runs
-                                rm $PATH_FOLDER$POS/${!CH}/CONST.mat
-                                rm $PATH_FOLDER$POS/${!CH}/$SEG_PATH/clist.mat
-                                rm $PATH_FOLDER$POS/${!CH}/$SEG_PATH$SEG_MAT_PATH/*_err.mat
-                                rm -r $PATH_FOLDER$POS/${!CH}/$SEG_PATH/cell
-                                rm $PATH_FOLDER$POS/${!CH}/$RAW_IM/cropbox.mat
-
-                                $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/', '$CONSTANTS' , $NEIGHBOR_FLAG, $TIME_STEP, $MIN_CELL_AGE, '$DATA_TYPE')"
-                                MAT_FILE=$PATH_FOLDER$POS/${!CH}/$SEG_PATH/clist.mat
-                                echo $MAT_FILE
-
-                                # as long as 'clist.mat' is missing (hint for failed SuperSegger) the tracking can be repeated with a reduced number of frames
-                                while ! test -f "$MAT_FILE"; do
-                                        #rm -r $PATH_FOLDER$POS/${!CH}/$SEG_PATH/
-                                        rm $PATH_FOLDER$POS/${!CH}/CONST.mat
-                                        rm $PATH_FOLDER$POS/${!CH}/$SEG_PATH$SEG_MAT_PATH/*_err.mat
-                                        rm -r $PATH_FOLDER$POS/${!CH}/$SEG_PATH/cell
-                                        rm $PATH_FOLDER$POS/${!CH}/$RAW_IM/cropbox.mat
-
-                                        python restrict_frames.py
-                                        source settings.sh
-                                        LIST_FILES=($(ls $PATH_FOLDER$POS/${!CH}/$SEG_PATH$SEG_MAT_PATH))
-                                        NUM_FILES=${#LIST_FILES[@]}
-                                        NUM_REMOVE=$NUM_FILES-$END_FRAME #number of files to remove
-
-                                        for FILE in ${LIST_FILES[@]:$END_FRAME:$NUM_REMOVE}; do
-                                                rm $PATH_FOLDER$POS/${!CH}/$SEG_PATH$SEG_MAT_PATH/$FILE
-                                        done
-                                        $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FOLDER$POS/${!CH}/', '$CONSTANTS' , $NEIGHBOR_FLAG, $TIME_STEP, $MIN_CELL_AGE, '$DATA_TYPE')"
-                                
-                                done
-
+                                python track_cells_crop.py --path $PATH_FOLDER$POS/${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME
+                                                python generate_lineages.py --path $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
                         done
-                fi
+
+                        fi
+		fi
 
 
         done
