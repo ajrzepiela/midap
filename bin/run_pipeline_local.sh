@@ -119,13 +119,13 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                 fi
 
                 # Restrict frames based on layers of tiff file
-                FRAME_NUM=$(identify $VAR | wc -l)
-                FRAME_DIFF="$(($END_FRAME-$START_FRAME))"
-                if [[ $FRAME_DIFF -gt $FRAME_NUM ]]
-                        then
-                        END_FRAME="$(($FRAME_NUM-1))"
-                        START_FRAME=0
-                fi
+                #FRAME_NUM=$(identify $VAR | wc -l)
+                #FRAME_DIFF="$(($END_FRAME-$START_FRAME))"
+                #if [[ $FRAME_DIFF -gt $FRAME_NUM ]]
+                #        then
+                #        END_FRAME="$(($FRAME_NUM-1))"
+                #        START_FRAME=0
+                #fi
 
 
                 # 3) Split frames
@@ -186,16 +186,37 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]
                 # fi
 
 
+                # # 6) Tracking
+	        # if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "TRACKING" ]]
+                # then
+		# 	echo "run cell tracking"
+		# 	for i in $(seq 2 $NUM_CHANNEL_TYPES); do
+                #                 CH="CHANNEL_$i"
+                #                 python track_cells_crop.py --path $PATH_FOLDER$POS/${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME
+		# 		python generate_lineages.py --path $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
+                #         done
+
+		# fi
                 # 6) Tracking
 	        if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "TRACKING" ]]
                 then
-			echo "run cell tracking"
-			for i in $(seq 2 $NUM_CHANNEL_TYPES); do
+                        echo "run cell tracking"
+                        if [ "$PHASE_SEGMENTATION" == True ]
+                        then 
+                                for i in $(seq 1 $NUM_CHANNEL_TYPES); do
                                 CH="CHANNEL_$i"
                                 python track_cells_crop.py --path $PATH_FOLDER$POS/${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME
-				python generate_lineages.py --path $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
+                                                python generate_lineages.py --path $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
+                        done
+                        elif [ "$PHASE_SEGMENTATION" == False ]
+                        then
+                        for i in $(seq 2 $NUM_CHANNEL_TYPES); do
+                                CH="CHANNEL_$i"
+                                python track_cells_crop.py --path $PATH_FOLDER$POS/${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME
+                                                python generate_lineages.py --path $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
                         done
 
+                        fi
 		fi
 
 

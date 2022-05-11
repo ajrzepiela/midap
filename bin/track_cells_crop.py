@@ -21,9 +21,9 @@ output_folder = args.path + 'track_output/'
 model_file = '../model_weights/model_weights_tracking/unet_moma_track_multisets.hdf5'
 
 img_names_sort = np.sort(glob.glob(images_folder + '*frame*')
-                         )[int(args.start_frame):int(args.end_frame)]
+                         )#[int(args.start_frame):int(args.end_frame)]
 seg_names_sort = np.sort(glob.glob(
-    segmentation_folder + '*frame*'))[int(args.start_frame):int(args.end_frame)]
+    segmentation_folder + '*frame*'))#[int(args.start_frame):int(args.end_frame)]
 
 # Parameters:
 crop_size = (128, 128)
@@ -37,6 +37,7 @@ tr = Tracking(img_names_sort, seg_names_sort, model_file,
 tr.track_all_frames_crop()
 
 # Reduce results file for storage
+print(len(tr.results_all))
 results_all_red = np.zeros(
     (len(tr.results_all), *tr.results_all[0][0, :, :, :2].shape))
 
