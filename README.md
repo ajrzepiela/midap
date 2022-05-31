@@ -5,16 +5,19 @@
 git submodule init
 git submodule update
 ```
+### Setup on new MacBooks (M1)
 
-#### 2. Setup of environment
+#### 1. Install Miniforge
 ```
-conda env create -f environment_mac.yml
+chmod +x install_miniforge.sh
+./install_miniforge.sh
 ```
-
-#### 3. Navigate to bin-directory and mark bash-script as executable
+#### 2. Run pipeline
+Navigate to bin-directory and mark bash-script as executable. Then run the pipeline:
 ```
 cd bin/
-chmod +x run_pipeline_test.sh
+chmod +x run_pipeline_m1.sh
+./run_pipeline_m1.sh
 ```
 
 ### Run pipeline on local machine
