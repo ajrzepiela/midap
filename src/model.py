@@ -1,7 +1,7 @@
-from keras.models import Model
-from keras.layers import Input, Conv2D, MaxPool2D, Dropout, UpSampling2D, Concatenate
-from keras.optimizers import Adam
-from keras import backend as K
+from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Conv2D, MaxPool2D, Dropout, UpSampling2D, Concatenate
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras import backend as K
 from tensorflow.python.ops import array_ops
 from tensorflow.python.ops import math_ops
 import tensorflow as tf
