@@ -1,4 +1,4 @@
-name: tf
+name: workflow
 channels:
   - apple
   - conda-forge
@@ -185,4 +185,3 @@ dependencies:
     - werkzeug==2.1.2
     - wrapt==1.14.1
     - zipp==3.8.0
-prefix: /opt/homebrew/Caskroom/miniforge/base/envs/tf
