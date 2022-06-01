@@ -1,6 +1,6 @@
 #!/bin/bash
 
-workflow_m1=$HOME'/miniforge3/envs/workflow/bin/python3.8'
+workflow_m1=$HOME'/miniforge3/envs/workflow/bin/python3'
 
 # make directory if it doesn't exist
 make_dir() {
