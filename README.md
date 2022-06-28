@@ -5,6 +5,17 @@
 git submodule init
 git submodule update
 ```
+#### 2. Download model weights from polybox
+```
+chmod +x download_weights.sh
+./download_weights.sh
+```
+
+#### 3. Install conda environment
+```
+conda env create -f environment_mac.yml
+```
+
 ### Setup on new MacBooks (M1)
 
 #### 1. Install Miniforge
