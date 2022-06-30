@@ -7,7 +7,7 @@ echo "Download example data"
 wget -O example_data.tar https://polybox.ethz.ch/index.php/s/Ub30B0ivoTdGWzK/download
 
 echo "Download psf"
-wget -O psf.tar https://polybox.ethz.ch/index.php/s/a1oLGN73UNuxwQv
+wget -O psf.tar https://polybox.ethz.ch/index.php/s/a1oLGN73UNuxwQv/download
 
 echo "Extract model weights"
 tar -xvf model_weights.tar
