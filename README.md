@@ -6,13 +6,13 @@ chmod +x download_files.sh
 ./download_files.sh
 ```
 
-## 2. Prepare virtual environment on MacBooks (instruction for users of MacBook M1 can be found below.)
+## 2. Prepare virtual environment on MacBooks (instruction for users of MacBook M1 can be found below)
 #### Install conda environment
 ```
 conda env create -f environment_mac.yml
 ```
 
-## 3. Run pipeline on local machine
+## 3. Start pipeline
 #### Navigate to bin-directory and activate conda environment
 ```
 cd bin/
@@ -30,7 +30,7 @@ conda activate workflow
 chmod +x install_miniforge.sh
 ./install_miniforge.sh
 ```
-## 2. Run pipeline
+## 2. Start pipeline
 Navigate to bin-directory and mark bash-script as executable. Then run the pipeline:
 ```
 cd bin/
