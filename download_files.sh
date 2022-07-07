@@ -18,7 +18,7 @@ tar -xvf example_data.tar
 echo "Extract psf"
 tar -xvf psf.tar
 
-echo "Remove tar-files"
+echo "Remove zip-files"
 rm model_weights.tar
 rm example_data.tar
 rm psf.tar
