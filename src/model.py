@@ -171,7 +171,7 @@ def unet(input_size = (256, 512, 1), dropout = 0.5):
     #model = Model(input = inputs, output = conv10)
     #weighted_bce = weighted_binary_crossentropy(weights_tensor)
     w_ce = weighted_binary_crossentropy(weights_tensor)
-    model.compile(optimizer = Adam(lr = 1e-4), loss = w_ce, metrics = ['accuracy'])
+    model.compile(optimizer = Adam(learning_rate = 1e-4), loss = w_ce, metrics = ['accuracy'])
     # w_ce
     #'binary_crossentropy'
     #weighted_cross_entropy(2)
@@ -202,9 +202,9 @@ def unet_reduced(input_size = (256, 512, 1), dropout = 0.5):
 
     #model = Model(input = inputs, output = conv10)
     #weighted_bce = weighted_binary_crossentropy(weights_tensor)
-    w_ce = weighted_binary_crossentropy(weights_tensor)
+    weighted_binary_crossentropy(weights_tensor)
     #w_cc = weighted_categorical_crossentropy(weights_tensor)
-    model.compile(optimizer = Adam(lr = 1e-4), loss = 'binary_crossentropy', metrics = ['accuracy'])
+    model.compile(optimizer = Adam(learning_rate = 1e-4), loss = 'binary_crossentropy', metrics = ['accuracy'])
     #'binary_crossentropy'
     #weighted_cross_entropy(2)
     #print(model.summary())
@@ -233,7 +233,7 @@ def unet_reduced_inference(input_size = (256, 512, 1), dropout = 0.5):
 
     #model = Model(input = inputs, output = conv10)
     #weighted_bce = weighted_binary_crossentropy(weights_tensor)
-    model.compile(optimizer = Adam(lr = 1e-4), loss = 'binary_crossentropy', metrics = ['accuracy'])
+    model.compile(optimizer = Adam(learning_rate = 1e-4), loss = 'binary_crossentropy', metrics = ['accuracy'])
     #'binary_crossentropy'
     #weighted_cross_entropy(2)
     #print(model.summary())
@@ -293,7 +293,7 @@ def unet_inference(input_size = (256, 512, 1), dropout = 0.5):
 
     model = Model(inputs=inp, outputs=conv10)
 
-    model.compile(optimizer = Adam(lr = 1e-4), loss = 'binary_crossentropy', metrics = ['accuracy'])
+    model.compile(optimizer = Adam(learning_rate = 1e-4), loss = 'binary_crossentropy', metrics = ['accuracy'])
     #'binary_crossentropy'
     #weighted_cross_entropy(2)
     #print(model.summary())

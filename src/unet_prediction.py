@@ -1,21 +1,18 @@
+import numpy as np
+import os
+import scipy.ndimage as ndi
+
 import skimage.io as io
 from skimage.measure import label, regionprops
 from skimage.morphology import area_closing
-#from scipy.ndimage.measurements import label
-import scipy.ndimage as ndi
-
-import numpy as np
-import os
-import re
+from skimage.filters import sobel
+from skimage.segmentation import watershed
 
 import matplotlib.pyplot as plt
 from matplotlib.widgets import CheckButtons, RadioButtons
 from matplotlib_widget import MyRadioButtons
 
 from model import unet_inference
-
-from skimage.filters import sobel
-from skimage.segmentation import watershed
 
 class SegmentationPredictor():
 
