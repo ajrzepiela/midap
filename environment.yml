@@ -1,0 +1,7 @@
+name: midap
+dependencies:
+  - python==3.8.5
+  - anaconda
+  - pip
+  - pip:
+    - -r requirements.txt
