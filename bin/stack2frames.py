@@ -1,10 +1,10 @@
-from skimage import io
 import argparse
 import os
 from tqdm import tqdm
 
 from scipy.io import loadmat
 from skimage.restoration import richardson_lucy
+from skimage import io
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--path")

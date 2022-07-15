@@ -1,14 +1,16 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import math
 import os
 from tqdm import tqdm
+
+import matplotlib.pyplot as plt
 from matplotlib.widgets  import RectangleSelector
 
 from PIL import Image, ImageEnhance, ImageSequence
 from scipy.ndimage.morphology import binary_dilation, grey_dilation
+from scipy.ndimage import gaussian_filter
+
 from skimage import util, exposure
-#from skimage.feature import register_translation
 from skimage.registration import phase_cross_correlation
 from skimage.filters import threshold_otsu, threshold_mean
 from skimage.filters import unsharp_mask
@@ -16,8 +18,7 @@ import skimage.measure as measure
 import skimage.io as io
 from skimage import img_as_float
 from skimage.morphology import reconstruction
-from scipy.ndimage import gaussian_filter
-import cv2
+
 
 # class LoadImage:
 

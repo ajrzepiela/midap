@@ -169,7 +169,7 @@ def unet_track(input_size = (256,32,4), constant_input = None, class_weights = (
         model = unet(input_size, constant_input, final_activation = 'softmax', output_classes = 3)
     elif not constant_input:
         model = unet(input_size, final_activation = 'softmax', output_classes = 3)
-    model.compile(optimizer=Adam(lr = 1e-4), loss=class_weighted_categorical_crossentropy(class_weights), metrics = ['categorical_accuracy'])
+    model.compile(optimizer=Adam(learning_rate = 1e-4), loss=class_weighted_categorical_crossentropy(class_weights), metrics = ['categorical_accuracy'])
 
     return model
 

@@ -9,7 +9,6 @@ from tqdm import tqdm
 
 from model_tracking import unet_track
 
-import pdb
 
 import os
 import psutil
@@ -114,7 +113,7 @@ class Tracking():
 
         # Label of the segmentation of the previous frame
         label_prev_frame = label(seg_prev_frame)
-        num_cells = len(np.unique(label_prev_frame)) - 1
+        len(np.unique(label_prev_frame)) - 1
 
         # Combine all images and segmentations for input of current frame
         input_cur_frame = np.empty(
@@ -394,7 +393,7 @@ class Tracking():
                 inputs_cur_frame, verbose=0)
 
             # Extract and clean results
-            img = io.imread(self.imgs[cur_frame])
+            io.imread(self.imgs[cur_frame])
             self.results_cur_frame = np.zeros(
                 (self.results_cur_frame_crop.shape[0], self.target_size[0], self.target_size[1], 2))
 

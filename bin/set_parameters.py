@@ -1,7 +1,6 @@
 import PySimpleGUI as sg
 import yaml
 import numpy as np
-import os
 
 # set layout for GUI
 sg.theme('LightGrey1')
