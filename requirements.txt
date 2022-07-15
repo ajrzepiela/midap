@@ -1,10 +1,8 @@
 matplotlib==3.3.0
-napari==0.4.15
 numpy>=1.18.5#
 pandas>=1.3.5#
 Pillow>=7.2.0#
 psutil==5.9.0
-PyQt5>=5.12.3
 PySimpleGUI>=4.26.0#
 PyYAML>=5.4.1#
 scikit-image==0.17.2

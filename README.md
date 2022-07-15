@@ -42,7 +42,17 @@ If only one or two out of three channels were used, specify only the identifiers
 <br/>
 ![Screenshot_1](img/window_well.png)<br/>
 
-### Manual correction of segmentations
+### Manual correction and visuallization of results
+
+The scripts for manual correction and visualization use the Python package napari. To use these scripts, a new environment has to be created:
+
+```
+conda create -y -n napari-env -c conda-forge python=3.9
+conda activate napari-env
+python -m pip install "napari[all]"
+```
+
+#### Manual correction of segmentations
 The manual correction can be started with the following commands:
 ```
 cd bin/
@@ -51,7 +61,7 @@ python correct_segmentation.py --path_img PATH_IMG --path_seg PATH_SEG_IMG
 
 The arguments PATH_IMG and PATH_SEG_IMG are passed as strings and should contain the full path name (e.g. '/Users/Documents/data/img_1.tif').
 
-### Visualization of tracking results
+#### Visualization of tracking results
 ```
 cd bin/
 python visualize_lineages.py --path ../example_data/Glen/{Position}/{Channel}/track_output/
