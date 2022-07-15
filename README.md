@@ -11,7 +11,7 @@ The installation was tested on macOS Big Sur (11.6.7) and Ubuntu 22.04.
 3. Navigate to bin-directory and activate conda environment
 ```
 cd bin/
-conda activate workflow
+conda activate midap
 ```
 4. Start pipeline from the command line with `./run_pipeline_test.sh`
 
