@@ -259,6 +259,126 @@ tracking_family() {
   fi
 }
 
+source_paths_well() {
+  # Sets the paths for the WELL run
+
+  # Some bash string manipulations
+  PATH_FILE_WO_EXT="${PATH_FILE%.*}"
+  FILE_NAME=${PATH_FILE##*/}
+
+  .log 6 "Extracted path without ext: $PATH_FILE_WO_EXT"
+  .log 6 "Extracted filename: $FILE_NAME"
+
+  # Set directories
+  RAW_IM="raw_im/"
+  SEG_PATH="xy1/"
+  CUT_PATH="phase/"
+  SEG_IM_PATH="seg_im/"
+  SEG_MAT_PATH="seg/"
+  SEG_IM_TRACK_PATH="input_ilastik_tracking/"
+}
+
+setup_folders_well() {
+  # creates the folder structure for the well machine
+  
+  # checkpoint, only redo if necessary
+  retry "${FUNCNAME[0]}" || return 0
+  
+  .log 6 "Generating folder structure..."
+  # delete results folder in case it already exists
+  rm -rf $PATH_FILE_WO_EXT
+
+  # generate folder to store the results
+  mkdir -p $PATH_FILE_WO_EXT
+  cp $PATH_FILE $PATH_FILE_WO_EXT
+
+  # generate folders raw_im
+  mkdir -p $PATH_FILE_WO_EXT/$RAW_IM
+  # generate folders for tracking results
+  mkdir -p $PATH_FILE_WO_EXT/$SEG_PATH
+  # generate folders for cutout images
+  mkdir -p $PATH_FILE_WO_EXT/$SEG_PATH$CUT_PATH
+  # generate folders for segmentation images
+  mkdir -p $PATH_FILE_WO_EXT/$SEG_IM_PATH
+  # generate folder seg_im_track for stacks of segmentation images for tracking
+  mkdir -p $PATH_FILE_WO_EXT/$SEG_IM_TRACK_PATH
+  # generate folders for segmentation-mat files
+  mkdir -p $PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH
+}
+
+split_frames_well() {
+  # Splits the frames for the WELL
+
+  # Checkpoint
+  retry "${FUNCNAME[0]}" || return 0
+
+  .log 6 "Spliting frames..."
+  python stack2frames.py --path $PATH_FILE_WO_EXT/$FILE_NAME --pos "" --channel "" --start_frame $START_FRAME --end_frame $END_FRAME --deconv $DECONVOLUTION
+  # Catch the copy output for debug logging
+  local COPYLOG=$(cp -v $PATH_FILE_WO_EXT/$RAW_IM*.$FILE_TYPE $PATH_FILE_WO_EXT/$SEG_PATH$CUT_PATH)
+  .log 7 "${COPYLOG}"
+}
+
+segmentation_well() {
+  # Performs the image segmentation for the WELL
+
+  # Checkpoint
+  retry "${FUNCNAME[0]}" || return 0
+
+  .log 6 "Segmenting images..."
+  python main_prediction.py --path_model_weights '../model_weights/model_weights_well/' --path_pos $PATH_FILE_WO_EXT --path_channel "" --postprocessing 1
+}
+
+conversion_well() {
+  # Performs file conversion for the WELL
+
+  # Checkpoint
+  retry "${FUNCNAME[0]}" || return 0
+
+  .log 6 "Run file-conversion..."
+  python seg2mat.py --path_cut $PATH_FILE_WO_EXT/$SEG_PATH$CUT_PATH --path_seg $PATH_FILE_WO_EXT/$SEG_IM_PATH --path_channel $PATH_FILE_WO_EXT/
+}
+
+tracking_family() {
+  # Cell tracking for the WELL
+
+  # Checkpoint
+  retry "${FUNCNAME[0]}" || return 0
+
+  .log 6 "Running the tracking..."
+  # delete all files related to SuperSegger to ensure that SuperSegger runs
+  rm -f $PATH_FILE_WO_EXT/CONST.mat
+  rm -f $PATH_FILE_WO_EXT/$SEG_PATH/clist.mat
+  rm -f $PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH/*_err.mat
+  rm -fr $PATH_FILE_WO_EXT/$SEG_PATH/cell
+  rm -f $PATH_FILE_WO_EXT/$SEG_PATH/$RAW_IM/cropbox.mat
+
+  # Run matlab
+  $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT', '$CONSTANTS' , $NEIGHBOR_FLAG, $TIME_STEP, $MIN_CELL_AGE, '$DATA_TYPE')"
+
+  MAT_FILE=$PATH_FILE_WO_EXT/$SEG_PATH/clist.mat
+  # as long as 'clist.mat' is missing (hint for failed SuperSegger) the tracking can be repeated with a reduced number of frames
+  while ! test -f "$MAT_FILE"; do
+    rm -f $PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH/*_err.mat
+    rm -f $PATH_FILE_WO_EXT/CONST.mat
+    rm -f $PATH_FILE_WO_EXT/$SEG_PATH/$RAW_IM/cropbox.mat
+
+    python restrict_frames.py
+    source settings.sh
+    LIST_FILES=($(ls $PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH))
+    NUM_FILES=${#LIST_FILES[@]}
+    NUM_REMOVE=$NUM_FILES-$END_FRAME #number of files to remove
+
+    for FILE in ${LIST_FILES[@]:$END_FRAME:$NUM_REMOVE}; do
+      rm -f $PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH/$FILE
+    done
+    $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT', '$CONSTANTS' , $NEIGHBOR_FLAG, $TIME_STEP, $MIN_CELL_AGE, '$DATA_TYPE')"
+  # END WHILE
+  done
+
+}
+
+
 # Callstack
 ###########
 
@@ -336,7 +456,32 @@ fi
 
 # Well Case
 if [[ $DATA_TYPE == "WELL" ]]; then
-  
+  source_paths_well  
+
+  # 1) Generate folder structure
+  if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+    setup_folders_well
+  fi
+
+  # 2) Split frames
+  if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+    split_frames_well
+  fi
+
+  # 3) Segmentation
+  if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+    segmentation_well
+  fi
+
+  # 4) Conversion
+  if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+    conversion_well
+  fi
+
+  # 5) Tracking
+  if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "TRACKING" ]]; then
+    tracking_family
+  fi
 
 # EMD WELL
 fi
