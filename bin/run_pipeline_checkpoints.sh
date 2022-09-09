@@ -115,7 +115,7 @@ set_parameters() {
   source settings.sh
 }
 
-restrict_frames() {
+restrict_frames_family() {
   # Starts up the script to restrict the frames (arg is pos)
   retry "${FUNCNAME[0]}_$1" || return 0
   .log 6 "Restricting frames for identifier: ${POS}"
@@ -123,13 +123,17 @@ restrict_frames() {
   source settings.sh
 }
 
-setup_folders_family() {
+source_paths_family() {
   # specify different folders needed for segmentation and tracking
   RAW_IM="raw_im/"
   CUT_PATH="cut_im/"
   SEG_IM_PATH="seg_im/"
   SEG_IM_TRACK_PATH="input_ilastik_tracking/"
   TRACK_OUT_PATH="track_output/"
+}
+
+setup_folders_family() {
+  # creates the folder structure for the family machine
   
   # only redo this if necessary (arg is POS again)
   retry "${FUNCNAME[0]}_$1" || return 0
@@ -267,7 +271,7 @@ fi
 # set the parameters
 set_parameters
 
-# Family MAchine case
+# Family Machine case
 if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]; then
   .log 7 "Working in: $PATH_FOLDER"
  
@@ -282,6 +286,9 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]; then
 
   .log 7 "Extraced Identifiers: ${POS_UNIQ[@]}"
 
+  # source the path names for all the folders
+  source_paths_family
+
   # cycle through all identifiers
   for POS in "${POS_UNIQ[@]}"; do
     .log 7 "Starting with: ${POS}"
@@ -289,7 +296,7 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]; then
     # restrict frames for each position separately
     if  [ $POS != "${POS_UNIQ[0]}" ]; then
       # TODO: The python script should create env variables that depend on POS not always the same
-      restrict_frames $POS
+      restrict_frames_family $POS
     fi
  
     # 1) Generate folder structure
@@ -324,7 +331,14 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]; then
 
   # End POS_UNIQ Loop
   done
-# END FAMILY_WELL
+# END FAMILY_MACHINE
+fi
+
+# Well Case
+if [[ $DATA_TYPE == "WELL" ]]; then
+  
+
+# EMD WELL
 fi
 
 exit 0
