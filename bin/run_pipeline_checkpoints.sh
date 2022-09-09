@@ -418,7 +418,8 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]; then
       # TODO: The python script should create env variables that depend on POS not always the same
       restrict_frames_family $POS
     fi
- 
+    
+    # TODO: Collapse these conditions
     # 1) Generate folder structure
     if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
       setup_folders_family $POS
@@ -457,7 +458,8 @@ fi
 # Well Case
 if [[ $DATA_TYPE == "WELL" ]]; then
   source_paths_well  
-
+ 
+  # TODO: Collapse these conditions
   # 1) Generate folder structure
   if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
     setup_folders_well
