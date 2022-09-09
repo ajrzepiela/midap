@@ -115,8 +115,145 @@ set_parameters() {
   source settings.sh
 }
 
+restrict_frames() {
+  # Starts up the script to restrict the frames (arg is pos)
+  retry "${FUNCNAME[0]}_$1" || return 0
+  .log 6 "Restricting frames for identifier: ${POS}"
+  python restrict_frames.py
+  source settings.sh
+}
 
+setup_folders_family() {
+  # specify different folders needed for segmentation and tracking
+  RAW_IM="raw_im/"
+  CUT_PATH="cut_im/"
+  SEG_IM_PATH="seg_im/"
+  SEG_IM_TRACK_PATH="input_ilastik_tracking/"
+  TRACK_OUT_PATH="track_output/"
+  
+  # only redo this if necessary (arg is POS again)
+  retry "${FUNCNAME[0]}_$1" || return 0
+  
+  .log 6 "Generating folder structure..."
 
+  # Delete results folder for this position in case it already exists.
+  # In this way the segmentation can be rerun
+  rm -rf $PATH_FOLDER$POS
+
+  # generate folders for different channels (phase, fluorescent)
+  mkdir -p $PATH_FOLDER$POS
+  for i in $(seq 1 $NUM_CHANNEL_TYPES); do
+    CH="CHANNEL_$i"
+    # Base folder for different channels
+    mkdir -p $PATH_FOLDER$POS/${!CH}/
+    # raw images
+    mkdir -p $PATH_FOLDER$POS/${!CH}/$RAW_IM
+    # cutouts
+    mkdir -p $PATH_FOLDER$POS/${!CH}/$CUT_PATH
+    # segmentation images
+    mkdir -p $PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH
+    # stack of segmentation images for tracking
+    mkdir -p $PATH_FOLDER$POS/${!CH}/$SEG_IM_TRACK_PATH
+    # tracking output (Unet)
+    mkdir -p $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
+  done
+}
+
+copy_files_family() {
+  # Copies the necessary files into the folder structure
+
+  # Checkpoint, arg is the pos
+  retry "${FUNCNAME[0]}_$1" || return 0
+
+  # Channel loop
+  .log 6 "Copying files for identifier: ${POS}"
+  for i in $(seq 1 $NUM_CHANNEL_TYPES); do
+    CH="CHANNEL_$i"
+    VAR=`find $PATH_FOLDER -name *$POS*${!CH}*.$FILE_TYPE`
+    # Catch the copy output for debug logging
+    local COPYLOG=$(cp -v $VAR $PATH_FOLDER$POS/${!CH}/)
+    .log 7 "$COPYLOG"
+  done
+}
+
+split_frames_family() {
+  # Splits the frames for the family machine per identifier
+
+  # Checkpoint, arg is the pos
+  retry "${FUNCNAME[0]}_$1" || return 0
+
+  # Channel loop
+  .log 6 "Splitting frames for identifier: ${POS}"
+  for i in $(seq 1 $NUM_CHANNEL_TYPES); do
+    CH="CHANNEL_$i"
+    INP=$(find $PATH_FOLDER$POS/${!CH}/ -name *.$FILE_TYPE)
+    python stack2frames.py --path $INP --pos $POS --channel /${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME --deconv $DECONVOLUTION
+  done
+}
+
+cut_chambers_family() {
+  # Cuts the chambers for the family machine per identifier
+
+  # Checkpoint, arg is the pos
+  retry "${FUNCNAME[0]}_$1" || return 0
+
+  # Split for number of channels
+  .log 6 "Cutting chambers for identifier: ${POS}"
+  if [ -z "$CHANNEL_2" ] || [ -z "$CHANNEL_3" ]; then
+    python frames2cuts.py --path_ch0 $PATH_FOLDER$POS/$CHANNEL_1/$RAW_IM
+    echo $PATH_FOLDER$POS$CHANNEL_1$RAW_IM
+  else
+    python frames2cuts.py --path_ch0 $PATH_FOLDER$POS/$CHANNEL_1/$RAW_IM --path_ch1 $PATH_FOLDER$POS/$CHANNEL_2/$RAW_IM --path_ch2 $PATH_FOLDER$POS/$CHANNEL_3/$RAW_IM
+  fi
+}
+
+segmentation_family() {
+  # Performs the image segmentation for the family machine
+
+  # Checkpoint, arg is the pos
+  retry "${FUNCNAME[0]}_$1" || return 0
+
+  # Phase segmention dependent channel loops
+  # TODO: These conditions seem identical + Should be string comparison
+  .log 6 "Segmenting images for identifier: ${POS}"
+  if [ "$PHASE_SEGMENTATION" == True ]; then
+    for i in $(seq 1 $NUM_CHANNEL_TYPES); do
+      CH="CHANNEL_$i"
+      python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 1 --batch_mode 0
+      python analyse_segmentation.py --path_seg $PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/ --path_result $PATH_FOLDER$POS/${!CH}/
+    done
+  elif [ "$PHASE_SEGMENTATION" == False ]; then
+    for i in $(seq 2 $NUM_CHANNEL_TYPES); do
+      CH="CHANNEL_$i"
+      python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 1 --batch_mode 0
+      python analyse_segmentation.py --path_seg $PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/ --path_result $PATH_FOLDER$POS/${!CH}/
+    done
+  fi
+}
+
+tracking_family() {
+  # Cell tracking for the family machine
+
+  # Checkpoint, arg is the pos
+  retry "${FUNCNAME[0]}_$1" || return 0
+
+  # Phase segmentation dependent channel loops
+  .log 6 "Running cell tracking for identifier: ${POS}"
+  # TODO: These conditions seem identical
+  if [ "$PHASE_SEGMENTATION" == True ]; then
+    for i in $(seq 1 $NUM_CHANNEL_TYPES); do
+      CH="CHANNEL_$i"
+      python track_cells_crop.py --path $PATH_FOLDER$POS/${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME
+      python generate_lineages.py --path $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
+    done
+  elif [ "$PHASE_SEGMENTATION" == False ]; then
+    for i in $(seq 2 $NUM_CHANNEL_TYPES); do
+      CH="CHANNEL_$i"
+      python track_cells_crop.py --path $PATH_FOLDER$POS/${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME
+      python generate_lineages.py --path $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
+    done
+  fi
+}
 
 # Callstack
 ###########
@@ -149,11 +286,45 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]; then
   for POS in "${POS_UNIQ[@]}"; do
     .log 7 "Starting with: ${POS}"
 
-    
+    # restrict frames for each position separately
+    if  [ $POS != "${POS_UNIQ[0]}" ]; then
+      # TODO: The python script should create env variables that depend on POS not always the same
+      restrict_frames $POS
+    fi
+ 
+    # 1) Generate folder structure
+    if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+      setup_folders_family $POS
+    fi
 
+    # 2) Copy files
+    if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+      copy_files_family $POS
+    fi 
+
+    # 3) Split frames
+    if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+      split_frames_family $POS
+    fi
+
+    # 4) Cut chambers
+    if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+      cut_chambers_family $POS
+    fi
+
+    # 5) Segmentation
+    if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+      segmentation_family $POS
+    fi
+
+    # 6) Tracking
+    if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "TRACKING" ]]; then
+      tracking_family $POS
+    fi
+
+  # End POS_UNIQ Loop
   done
- 
- 
+# END FAMILY_WELL
 fi
 
 exit 0
