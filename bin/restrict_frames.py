@@ -23,6 +23,10 @@ window = sg.Window('Frame number', layout).Finalize()
 event, values = window.read()
 window.close()
 
+# Throw an error if we pressed cancel or X
+if event == 'Cancel' or event == None:
+   exit(1)
+
 file_settings = open("settings.sh","a") 
 file_settings.write("START_FRAME=" + str(int(values['start'])) + "\n") 
 file_settings.write("END_FRAME=" + str(int(values['end'])) + "\n") 

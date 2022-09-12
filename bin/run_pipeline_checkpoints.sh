@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# necessary to catch python errors
+set -E
+
 # Argument Parsing
 ##################
 
