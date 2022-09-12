@@ -205,7 +205,6 @@ cut_chambers_family() {
   .log 6 "Cutting chambers for identifier: ${POS}"
   if [ -z "$CHANNEL_2" ] || [ -z "$CHANNEL_3" ]; then
     python frames2cuts.py --path_ch0 $PATH_FOLDER$POS/$CHANNEL_1/$RAW_IM
-    echo $PATH_FOLDER$POS$CHANNEL_1$RAW_IM
   else
     python frames2cuts.py --path_ch0 $PATH_FOLDER$POS/$CHANNEL_1/$RAW_IM --path_ch1 $PATH_FOLDER$POS/$CHANNEL_2/$RAW_IM --path_ch2 $PATH_FOLDER$POS/$CHANNEL_3/$RAW_IM
   fi
@@ -339,7 +338,7 @@ conversion_well() {
   python seg2mat.py --path_cut $PATH_FILE_WO_EXT/$SEG_PATH$CUT_PATH --path_seg $PATH_FILE_WO_EXT/$SEG_IM_PATH --path_channel $PATH_FILE_WO_EXT/
 }
 
-tracking_family() {
+tracking_well() {
   # Cell tracking for the WELL
 
   # Checkpoint
@@ -419,29 +418,20 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]; then
       restrict_frames_family $POS
     fi
     
-    # TODO: Collapse these conditions
-    # 1) Generate folder structure
     if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+      # 1) Generate folder structure
       setup_folders_family $POS
-    fi
 
-    # 2) Copy files
-    if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+      # 2) Copy files
       copy_files_family $POS
-    fi 
 
-    # 3) Split frames
-    if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+      # 3) Split frames
       split_frames_family $POS
-    fi
-
-    # 4) Cut chambers
-    if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+    
+      # 4) Cut chambers
       cut_chambers_family $POS
-    fi
 
-    # 5) Segmentation
-    if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+      # 5) Segmentation
       segmentation_family $POS
     fi
 
@@ -458,31 +448,24 @@ fi
 # Well Case
 if [[ $DATA_TYPE == "WELL" ]]; then
   source_paths_well  
- 
-  # TODO: Collapse these conditions
-  # 1) Generate folder structure
+  
   if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+    # 1) Generate folder structure
     setup_folders_well
-  fi
 
-  # 2) Split frames
-  if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+    # 2) Split frames
     split_frames_well
-  fi
 
-  # 3) Segmentation
-  if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+    # 3) Segmentation
     segmentation_well
-  fi
 
-  # 4) Conversion
-  if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+    # 4) Conversion
     conversion_well
   fi
 
   # 5) Tracking
   if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "TRACKING" ]]; then
-    tracking_family
+    tracking_well
   fi
 
 # EMD WELL
