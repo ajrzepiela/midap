@@ -98,12 +98,20 @@ window = sg.Window('Parameters', layout).Finalize()
 event, values = window.read()
 window.close()
 
+# Throw an error if we pressed cancel or X
+if event == 'Cancel' or event == None:
+   exit(1)
+
 if values['family_machine'] == True:
     window = sg.Window('Parameters', layout_family_machine).Finalize()
 
     event, values = window.read()
 
     window.close()
+
+    # Throw an error if we pressed cancel or X
+    if event == 'Cancel' or event == None:
+       exit(1)
 
     channel_type_vals = [values['ch1'], values['ch2'], values['ch3']]
     sel_channel_types = [x for x in channel_type_vals if x]
@@ -150,6 +158,10 @@ elif values['well'] == True:
     event, values = window.read()
 
     window.close()
+
+    # Throw an error if we pressed cancel or X
+    if event == 'Cancel' or event == None:
+       exit(1)
 
     run_options = ['BOTH', 'SEGMENTATION', 'TRACKING']
     cond_run = [values['segm_track'], values['segm_only'], values['track_only']]
