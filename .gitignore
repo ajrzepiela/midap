@@ -6,6 +6,8 @@ bin/settings.sh
 model_weights
 example_data
 psf
+.idea/
+*.swp
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
