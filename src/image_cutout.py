@@ -121,6 +121,11 @@ class CutoutImage:
             # interactive cutout of chambers
             corners = self.interactive_cutout()
             self.corners_cut = tuple([int(i) for i in corners])
+
+        # write the corners into the settings.sh file
+        with open("settings.sh", mode="a") as f:
+            # replace commas to create a bash array
+            f.write(f"CORNERS={corners}\n".replace(",", ""))
        
         self.cutout = self.do_cutout(self.img, self.corners_cut)
 
