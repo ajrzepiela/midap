@@ -1,7 +1,7 @@
 import numpy as np
+import pandas as pd
 from skimage.measure import label, regionprops
 from scipy.spatial import distance
-
 
 class Lineages:
     """
@@ -50,11 +50,13 @@ class Lineages:
         self.generate_global_IDs()
 
         # Generate empty label stack and dictionary to map global to unique IDs
+        self.init_dataframe()
         self.label_stack = np.empty((self.results.shape[:-1]))
         self.global2uniqueID = {}
         self.label_dict = []
         self.tracks_data = []
         self.graph = {}
+        
 
         # Loops over all global IDs in list and connects cells between time frames
         # with help of tracking results
@@ -102,6 +104,10 @@ class Lineages:
                 # Add mother with new (unique) ID to label stack
                 self.label_stack[frame_cell][self.inputs[frame_cell,
                                                          :, :, 1] == local_ID] = unique_ID
+                
+                # Add data to DataFrame
+                self.track_output.loc[start_ID, 'frame'] = frame_cell
+                self.track_output.loc[start_ID, 'labelID'] = local_ID
 
                 # For all cells which are not in the last time frame
                 if frame_cell <= num_time_steps-2:
@@ -201,6 +207,13 @@ class Lineages:
             max_val = np.max(self.global_label[i])
 
         self.global_IDs = list(np.unique(self.global_label)[1:].astype(int))
+
+    def init_dataframe(self):
+        """Initialize dataframe for tracking output.
+        """
+
+        columns = ['frame', 'labelID', 'trackID']
+        self.track_output = pd.DataFrame(columns=columns, index=self.global_IDs)
 
     def get_new_daughter_ID(self, daughter, frame_cell):
         """Extracts global ID of daughter cell in next time frame.
