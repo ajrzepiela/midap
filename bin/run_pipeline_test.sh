@@ -15,7 +15,8 @@ help()
   echo "Options:"
   echo " -h, --help    Display this help"
   echo " --restart     Restart pipeline from log file"
-  echo " --headless   Run pipeline in headless mode (no GUI)"
+  echo " --headless    Run pipeline in headless mode (no GUI)"
+  echo " --loglevel    Set logging level of script (0-7), defaults to 7 (max log)"
   echo 
   exit 2
 }
@@ -33,6 +34,16 @@ while [[ $# -gt 0 ]]; do
     --headless)
       HEADLESS="True"
       shift # past argument
+      ;;
+    --loglevel)
+      # check if we got an int by comparing the numer to its arithmetic eval
+      if [[ $(( $2 )) != $2 ]] || [ $2 -lt "0" ]; then
+        echo "--loglevel must be an int >= 0, got $2!"
+        exit 1
+      fi
+      LOGLEVEL=$2
+      shift # past argument
+      shift # past value
       ;;
     -*|--*)
       echo "Unknown option $1"
@@ -54,7 +65,11 @@ done
 #########
 
 # set verbose level
-__VERBOSE=7
+if [ -v "LOGLEVEL" ]; then
+  __VERBOSE=$LOGLEVEL
+else
+  __VERBOSE=7
+fi
 
 declare -A LOG_LEVELS
 # https://en.wikipedia.org/wiki/Syslog#Severity_level
@@ -442,7 +457,11 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]; then
     if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "TRACKING" ]]; then
       tracking_family $POS
     fi
-
+  
+    # we copy the current settings.sh into the path folder for reproducibility
+    COPYLOG=$(cp -v settings.sh ${PATH_FOLDER}/${POS}/settings.sh)
+    .log 7 "$COPYLOG"
+ 
   # End POS_UNIQ Loop
   done
 # END FAMILY_MACHINE
@@ -469,7 +488,7 @@ if [[ $DATA_TYPE == "WELL" ]]; then
   # 5) Tracking
   if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "TRACKING" ]]; then
     tracking_well
-  fi
+  fi 
 
 # EMD WELL
 fi
