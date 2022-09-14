@@ -1,3 +1,5 @@
+import re
+
 import numpy as np
 import math
 import os
@@ -123,9 +125,22 @@ class CutoutImage:
             self.corners_cut = tuple([int(i) for i in corners])
 
         # write the corners into the settings.sh file
-        with open("settings.sh", mode="a") as f:
-            # replace commas to create a bash array
-            f.write(f"CORNERS={corners}\n".replace(",", ""))
+        with open("settings.sh", mode="r+") as f:
+            # read the file content
+            content = f.read()
+
+            if "CORNERS=" in content:
+                # we replace the variable
+                content = re.sub(f"CORNERS\=.*", f"CORNERS={corners}".replace(",", ""), content)
+
+                # truncate, set stream to start and write
+                f.truncate(0)
+                f.seek(0)
+                f.write(content)
+            else:
+                # we add a new line to the file
+                # replace commas to create a bash array
+                f.write(f"CORNERS={corners}\n".replace(",", ""))
        
         self.cutout = self.do_cutout(self.img, self.corners_cut)
 
