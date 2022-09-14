@@ -3,6 +3,9 @@
 # necessary to catch python errors
 set -E
 
+# Run on CPU (only if desired)
+# export CUDA_VISIBLE_DEVICES="-1"
+
 # Argument Parsing
 ##################
 
@@ -63,6 +66,9 @@ done
 
 # Logging
 #########
+
+# reduce TF output 3 -> only errors, 0 -> print all
+export TF_CPP_MIN_LOG_LEVEL="3"
 
 # set verbose level
 if [ -v "LOGLEVEL" ]; then
