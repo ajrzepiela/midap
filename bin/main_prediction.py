@@ -3,6 +3,7 @@ import argparse
 import sys
 sys.path.append('../src')
 import os
+import re
 
 from unet_prediction import SegmentationPredictor
 
@@ -24,8 +25,23 @@ if bool(int(args.batch_mode)) == False:
     pred.select_weights(args.path_pos, path_cut, path_seg)
 
     # Save the selected weights
-    with open("settings.sh", "a") as file_settings:
-        file_settings.write(f"MODEL_WEIGHTS_{args.path_channel}={os.path.abspath(pred.model_weights)}\n")
+    with open("settings.sh", "r+") as file_settings:
+        # read the file content
+        content =file_settings.read()
+
+        # if there is no variable -> write new
+        if f"MODEL_WEIGHTS_{args.path_channel}" in content:
+            # we replace the path
+            content = re.sub(f"MODEL_WEIGHTS_{args.path_channel}\=.*",
+                             f"MODEL_WEIGHTS_{args.path_channel}={os.path.abspath(pred.model_weights)}",
+                             content)
+            # truncate, set stream to start and write
+            file_settings.truncate(0)
+            file_settings.seek(0)
+            file_settings.write(content)
+        else:
+            # we write a new variable
+            file_settings.write(f"MODEL_WEIGHTS_{args.path_channel}={os.path.abspath(pred.model_weights)}\n")
 
     pred.run_image_stack(args.path_pos, path_cut, path_seg, path_seg_track, pred.model_weights)
 
