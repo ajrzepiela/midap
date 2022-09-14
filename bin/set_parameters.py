@@ -1,6 +1,7 @@
 import PySimpleGUI as sg
-import yaml
+from datetime import datetime
 import numpy as np
+import git
 
 # set layout for GUI
 sg.theme('LightGrey1')
@@ -102,86 +103,81 @@ window.close()
 if event == 'Cancel' or event == None:
    exit(1)
 
-if values['family_machine'] == True:
-    window = sg.Window('Parameters', layout_family_machine).Finalize()
+# open file handle for settings.sh
+with open("settings.sh","w+") as file_settings:
+    # write date time header
+    current_time = datetime.now().strftime("%Y-%m-%d, %H:%M:%S")
+    file_settings.write(f"# Started run: {current_time}\n")
 
-    event, values = window.read()
+    # write the current git hash of the repo
+    repo = git.Repo(search_parent_directories=True)
+    sha = repo.head.object.hexsha
+    file_settings.write(f"# Git hash: {sha}\n")
 
-    window.close()
+    # go through cases
+    if values['family_machine'] == True:
+        window = sg.Window('Parameters', layout_family_machine).Finalize()
 
-    # Throw an error if we pressed cancel or X
-    if event == 'Cancel' or event == None:
-       exit(1)
+        event, values = window.read()
 
-    channel_type_vals = [values['ch1'], values['ch2'], values['ch3']]
-    sel_channel_types = [x for x in channel_type_vals if x]
+        window.close()
 
-    run_options = ['BOTH', 'SEGMENTATION', 'TRACKING']
-    cond_run = [values['segm_track'], values['segm_only'], values['track_only']]
-    ix_cond = np.where(np.array(cond_run))[0][0]
+        # Throw an error if we pressed cancel or X
+        if event == 'Cancel' or event == None:
+           exit(1)
 
-    dict_file = [{'FOLDERNAME' : values['folder_name']},
-    {'CHANNELS' : sel_channel_types}]
+        channel_type_vals = [values['ch1'], values['ch2'], values['ch3']]
+        sel_channel_types = [x for x in channel_type_vals if x]
 
-    file_settings = open("settings.sh","w") 
-    file_settings.write("RUN_OPTION=" + run_options[ix_cond] + "\n")
-    #file_settings.write("DECONVOLUTION=" + str(bool(values['deconv'])) + "\n")
-    if values['deconv'] == True:
-        file_settings.write("DECONVOLUTION=" + "deconv_family_machine" + "\n")
-    else:
-        file_settings.write("DECONVOLUTION=" + "no_deconv" + "\n")
-    file_settings.write("PHASE_SEGMENTATION=" + str(bool(values['phase_segmentation'])) + "\n")
-    file_settings.write("START_FRAME=" + values['start_frame'] + "\n") 
-    file_settings.write("END_FRAME=" + values['end_frame'] + "\n") 
-    file_settings.write("DATA_TYPE=FAMILY_MACHINE" + "\n") 
-    file_settings.write("PATH_FOLDER=" + values['folder_name'] + "/ \n") 
-    file_settings.write("FILE_TYPE=" + values['file_type'] + "\n") 
-    file_settings.write("POS_IDENTIFIER=" + values['pos'] + "\n") 
-    # file_settings.write("MATLAB_ROOT=" + values['matlab_root'] + "\n") 
-    # file_settings.write("CONSTANTS=" + values['constants'] + "\n") 
-    # file_settings.write("TIME_STEP=" + values['time_step'] + "\n") 
-    # file_settings.write("NEIGHBOR_FLAG=" + str(int(bool(values['neighbor_flag']))) + "\n") 
-    # file_settings.write("MIN_CELL_AGE=" + values['min_cell_age'] + "\n") 
+        run_options = ['BOTH', 'SEGMENTATION', 'TRACKING']
+        cond_run = [values['segm_track'], values['segm_only'], values['track_only']]
+        ix_cond = np.where(np.array(cond_run))[0][0]
 
-    # for i, s in enumerate(sel_cell_types):
-    #     file_settings.write("CELL_TYPE_" + str(i + 1) + "=" + s + "\n")
-    # file_settings.write("NUM_CELL_TYPES=" + str(len(sel_cell_types)) + "\n")
+        dict_file = [{'FOLDERNAME' : values['folder_name']},
+        {'CHANNELS' : sel_channel_types}]
 
-    for i, s in enumerate(sel_channel_types):
-            file_settings.write("CHANNEL_" + str(i + 1) + "=" + s + "\n")
-    file_settings.write("NUM_CHANNEL_TYPES=" + str(len(sel_channel_types)) + "\n")
-    file_settings.close()
 
-elif values['well'] == True:
-    window = sg.Window('Parameters', layout_well).Finalize()
-    
-    event, values = window.read()
+        file_settings.write("RUN_OPTION=" + run_options[ix_cond] + "\n")
+        if values['deconv'] == True:
+            file_settings.write("DECONVOLUTION=" + "deconv_family_machine" + "\n")
+        else:
+            file_settings.write("DECONVOLUTION=" + "no_deconv" + "\n")
+        file_settings.write("PHASE_SEGMENTATION=" + str(bool(values['phase_segmentation'])) + "\n")
+        file_settings.write("START_FRAME=" + values['start_frame'] + "\n")
+        file_settings.write("END_FRAME=" + values['end_frame'] + "\n")
+        file_settings.write("DATA_TYPE=FAMILY_MACHINE" + "\n")
+        file_settings.write("PATH_FOLDER=" + values['folder_name'] + "/ \n")
+        file_settings.write("FILE_TYPE=" + values['file_type'] + "\n")
+        file_settings.write("POS_IDENTIFIER=" + values['pos'] + "\n")
 
-    window.close()
+        for i, s in enumerate(sel_channel_types):
+                file_settings.write("CHANNEL_" + str(i + 1) + "=" + s + "\n")
+        file_settings.write("NUM_CHANNEL_TYPES=" + str(len(sel_channel_types)) + "\n")
 
-    # Throw an error if we pressed cancel or X
-    if event == 'Cancel' or event == None:
-       exit(1)
+    elif values['well'] == True:
+        window = sg.Window('Parameters', layout_well).Finalize()
 
-    run_options = ['BOTH', 'SEGMENTATION', 'TRACKING']
-    cond_run = [values['segm_track'], values['segm_only'], values['track_only']]
-    ix_cond = np.where(np.array(cond_run))[0][0]
-    
-    file_settings = open("settings.sh","w") 
-    file_settings.write("RUN_OPTION=" + run_options[ix_cond] + "\n")
-    if values['deconv'] == True:
-        file_settings.write("DECONVOLUTION=" + "deconv_well" + "\n")
-    else:
-        file_settings.write("DECONVOLUTION=" + "no_deconv" + "\n")
-    file_settings.write("START_FRAME=" + values['start_frame'] + "\n") 
-    file_settings.write("END_FRAME=" + values['end_frame'] + "\n") 
-    file_settings.write("DATA_TYPE=WELL" + "\n") 
-    file_settings.write("PATH_FILE=" + values['file_name'] + "\n") 
-    file_settings.write("FILE_TYPE=" + values['file_type'] + "\n") 
-    file_settings.write("POS_IDENTIFIER=" + values['pos'] + "\n") 
-    # file_settings.write("MATLAB_ROOT=" + values['matlab_root'] + "\n") 
-    # file_settings.write("CONSTANTS=" + values['constants'] + "\n") 
-    # file_settings.write("TIME_STEP=" + values['time_step'] + "\n") 
-    # file_settings.write("NEIGHBOR_FLAG=" + values['neighbor_flag'] + "\n") 
-    # file_settings.write("MIN_CELL_AGE=" + values['min_cell_age'] + "\n") 
-    file_settings.close()
+        event, values = window.read()
+
+        window.close()
+
+        # Throw an error if we pressed cancel or X
+        if event == 'Cancel' or event == None:
+           exit(1)
+
+        run_options = ['BOTH', 'SEGMENTATION', 'TRACKING']
+        cond_run = [values['segm_track'], values['segm_only'], values['track_only']]
+        ix_cond = np.where(np.array(cond_run))[0][0]
+
+        file_settings = open("settings.sh","w")
+        file_settings.write("RUN_OPTION=" + run_options[ix_cond] + "\n")
+        if values['deconv'] == True:
+            file_settings.write("DECONVOLUTION=" + "deconv_well" + "\n")
+        else:
+            file_settings.write("DECONVOLUTION=" + "no_deconv" + "\n")
+        file_settings.write("START_FRAME=" + values['start_frame'] + "\n")
+        file_settings.write("END_FRAME=" + values['end_frame'] + "\n")
+        file_settings.write("DATA_TYPE=WELL" + "\n")
+        file_settings.write("PATH_FILE=" + values['file_name'] + "\n")
+        file_settings.write("FILE_TYPE=" + values['file_type'] + "\n")
+        file_settings.write("POS_IDENTIFIER=" + values['pos'] + "\n")
