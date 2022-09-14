@@ -2,6 +2,7 @@ import argparse
 
 import sys
 sys.path.append('../src')
+import os
 
 from unet_prediction import SegmentationPredictor
 
@@ -14,14 +15,20 @@ parser.add_argument("--batch_mode")
 args = parser.parse_args()
 
 pred = SegmentationPredictor(path_model_weights=args.path_model_weights, postprocessing=bool(int(args.postprocessing)))
-path_cut = '/' + args.path_channel + '/cut_im/'
-path_seg = '/' + args.path_channel + '/seg_im/'
-path_seg_track = '/' + args.path_channel + '/input_ilastik_tracking/'
+path_cut = f"/{args.path_channel}/cut_im/"
+path_seg = f"/{args.path_channel}/seg_im/"
+path_seg_track = f"/{args.path_channel}/input_ilastik_tracking/"
 
 
 if bool(int(args.batch_mode)) == False:
     pred.select_weights(args.path_pos, path_cut, path_seg)
+
+    # Save the selected weights
+    with open("settings.sh", "a") as file_settings:
+        file_settings.write(f"MODEL_WEIGHTS_{args.path_channel}={os.path.abspath(pred.model_weights)}\n")
+
     pred.run_image_stack(args.path_pos, path_cut, path_seg, path_seg_track, pred.model_weights)
+
 elif bool(int(args.batch_mode)) == True:
     file_settings = open("settings.sh","r")
 
