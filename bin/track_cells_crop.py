@@ -7,17 +7,29 @@ import sys
 sys.path.append('../src')
 from tracking import Tracking
 
-parser = argparse.ArgumentParser()
-parser.add_argument(
-    '--path', help='path to folder for one with specific channel')
-parser.add_argument('--start_frame', help='first frame to track')
-parser.add_argument('--end_frame', help='last frame to track')
-args = parser.parse_args()
+# Uncommented for testing
+
+# parser = argparse.ArgumentParser()
+# parser.add_argument(
+#     '--path', help='path to folder for one with specific channel')
+# parser.add_argument('--start_frame', help='first frame to track')
+# parser.add_argument('--end_frame', help='last frame to track')
+# args = parser.parse_args()
+
+# # Load data
+# images_folder = args.path + 'cut_im/'
+# segmentation_folder = args.path + 'seg_im/'
+# output_folder = args.path + 'track_output/'
+# model_file = '../model_weights/model_weights_tracking/unet_moma_track_multisets.hdf5'
+
+path = '../example_data/Pos57/TXRED/'
+start_frame = 0
+end_frame = 5
 
 # Load data
-images_folder = args.path + 'cut_im/'
-segmentation_folder = args.path + 'seg_im/'
-output_folder = args.path + 'track_output/'
+images_folder = path + 'cut_im/'
+segmentation_folder = path + 'seg_im/'
+output_folder = path + 'track_output/'
 model_file = '../model_weights/model_weights_tracking/unet_moma_track_multisets.hdf5'
 
 img_names_sort = np.sort(glob.glob(images_folder + '*frame*')
