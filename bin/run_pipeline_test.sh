@@ -81,13 +81,13 @@ done
 export TF_CPP_MIN_LOG_LEVEL="3"
 
 # set verbose level
-if [ -v "LOGLEVEL" ]; then
+if [ ! -z ${LOGLEVEL+x} ]; then
   __VERBOSE=$LOGLEVEL
 else
   __VERBOSE=7
 fi
 
-declare -A LOG_LEVELS
+declare -a LOG_LEVELS
 # https://en.wikipedia.org/wiki/Syslog#Severity_level
 LOG_LEVELS=([0]="emerg" [1]="alert" [2]="crit" [3]="err" [4]="warning" [5]="notice" [6]="info" [7]="debug")
 function .log () {
@@ -435,9 +435,11 @@ tracking_well() {
 if [ "$RESTART" != "True" ]; then
   .log 7 "Clearing checkpoing file"
   clear_log
-elif [ -v "RESTARTPATH" ]; then
+elif [ ! -z ${RESTARTPATH+x} ]; then
   # get the checkout 
   RESTORE_CHECKPOINT=$(find $RESTARTPATH -type f -name $CHECKLOG)
+  echo "Restore point"
+  echo $RESTORE_CHECKPOINT
   # get the settings.sh
   if [ -f "$RESTORE_CHECKPOINT" ]; then
     RESTORE_SETTINGS=$(dirname ${RESTORE_CHECKPOINT})/settings.sh
