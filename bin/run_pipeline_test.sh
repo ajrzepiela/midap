@@ -16,10 +16,12 @@ help()
   echo "Syntax: run_pipeline_checkpoints.sh [options]"
   echo 
   echo "Options:"
-  echo " -h, --help    Display this help"
-  echo " --restart     Restart pipeline from log file"
-  echo " --headless    Run pipeline in headless mode (no GUI)"
-  echo " --loglevel    Set logging level of script (0-7), defaults to 7 (max log)"
+  echo " -h, --help         Display this help"
+  echo " --restart [PATH]   Restart pipeline from log file. If PATH is specified"
+  echo "                    the checkpoint and settings file will be restored from"
+  echo "                    PATH, otherwise the current working directory is searched"
+  echo " --headless         Run pipeline in headless mode (no GUI)"
+  echo " --loglevel         Set logging level of script (0-7), defaults to 7 (max log)"
   echo 
   exit 2
 }
@@ -32,6 +34,15 @@ while [[ $# -gt 0 ]]; do
       ;;
     --restart)
       RESTART="True"
+      # check if we got path as values
+      if [ -d "$2" ]; then
+        RESTARTPATH=$2
+        shift # one extra shift for value
+      # make sure the next one is an option, -v to check if it is set at all
+      elif [ "$2" != "--*" ] && [ -v "2" ]; then
+        echo "Restart path does not exist: $2"
+        exit 1
+      fi
       shift # past argument
       ;;
     --headless)
@@ -62,7 +73,6 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
-
 
 # Logging
 #########
@@ -96,7 +106,9 @@ trap 'clear_log' EXIT
 # If there is an error or interrupt we log
 trap 'log_checkpoint $current_func' ERR SIGINT SIGHUP SIGKILL SIGTERM
 
-CHECKLOG=checkpoints.log
+# Directory of the checkpoint for copy and file name
+CHECKDIR="./"
+CHECKLOG="checkpoints.log"
 
 clear_log() {
   # make sure the last exit code was 0
@@ -109,6 +121,11 @@ log_checkpoint() {
   # Print fail and log
   .log 2 "Error while running: $1"
   echo "$1" > $CHECKLOG
+  # copy checkpoint and setting to current path
+  # use are sync to avoid possible "are the same file" 
+  .log 2 "Copy checkpoint and settings to: ${CHECKDIR}"
+  rsync ${CHECKLOG} ${CHECKDIR}/${CHECKLOG}
+  rsync settings.sh ${CHECKDIR}/settings.sh
   exit 1
 }
 
@@ -135,8 +152,13 @@ set_parameters() {
     python set_parameters.py
   fi
   # In case of headless or checkpoint we just source the settings
-  .log 7 "Sourcing parameters 'settings.sh'"
-  source settings.sh
+  if [ -f "settings.sh" ]; then
+    .log 7 "Sourcing parameters 'settings.sh'"
+    source settings.sh
+  else
+    .log 3 "Running in headless mode, but no settings.sh found!"
+    exit 1
+  fi
 }
 
 restrict_frames_family() {
@@ -170,6 +192,10 @@ setup_folders_family() {
 
   # generate folders for different channels (phase, fluorescent)
   mkdir -p $PATH_FOLDER$POS
+
+  # Set path for checkpoints 
+  CHECKDIR=$PATH_FOLDER$POS
+
   for i in $(seq 1 $NUM_CHANNEL_TYPES); do
     CH="CHANNEL_$i"
     # Base folder for different channels
@@ -409,6 +435,27 @@ tracking_well() {
 if [ "$RESTART" != "True" ]; then
   .log 7 "Clearing checkpoing file"
   clear_log
+elif [ -v "RESTARTPATH" ]; then
+  # get the checkout 
+  RESTORE_CHECKPOINT=$(find $RESTARTPATH -type f -name $CHECKLOG)
+  # get the settings.sh
+  if [ -f "$RESTORE_CHECKPOINT" ]; then
+    RESTORE_SETTINGS=$(dirname ${RESTORE_CHECKPOINT})/settings.sh
+  fi
+  # check if single file exists
+  if [ -f "$RESTORE_CHECKPOINT" ] && [ -f "$RESTORE_SETTINGS" ]; then
+    .log 6 "Found checkpoint:  $RESTORE_CHECKPOINT"
+    .log 6 "Found settings.sh: $RESTORE_SETTINGS"
+    # restore the files, rsync in case somebode sets path to ./
+    rsync $RESTORE_CHECKPOINT $CHECKLOG
+    rsync $RESTORE_SETTINGS settings.sh
+    source settings.sh
+  else
+    .log 6 "No checkpoint or settings.sh file found, starting again..."
+    # clear log 
+    clear_log
+  fi
+# END RESTARTPATH set
 fi
 
 # set the parameters
