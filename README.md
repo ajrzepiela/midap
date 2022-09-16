@@ -13,7 +13,20 @@ The installation was tested on macOS Big Sur (11.6.7) and Ubuntu 22.04.
 cd bin/
 conda activate midap
 ```
-4. Start pipeline from the command line with `./run_pipeline_test.sh`
+4. Start pipeline from the command line with `./run_pipeline_test.sh`. The script accepts arguments and has the following signature:
+
+```
+Syntax: run_pipeline_checkpoints.sh [options]
+
+Options:
+ -h, --help         Display this help
+ --restart [PATH]   Restart pipeline from log file. If PATH is specified
+                    the checkpoint and settings file will be restored from
+                    PATH, otherwise the current working directory is searched
+ --headless         Run pipeline in headless mode (no GUI)
+ --loglevel         Set logging level of script (0-7), defaults to 7 (max log)
+```
+Note that the `--headless` option currently only skips the first GUI and expects that a `settings.sh` is provided in the working directory.
 
 ## Installation on new MacBooks with M1
 
