@@ -22,14 +22,14 @@ Fix:
 
 ## [0.0.2]
 
-2022-09-15
+2022-09-16
 
 Feature:
 - `set_parameters.py` puts a header into `setting.sh` containing the current date, time and the git hash of the repo
 - Additional metadata like the cutout corners or chosen models are saved into `settings.sh`
 - `settings.sh` is copied to each data folder in the FAMILY\_MACHINE setting for reproducibility
 - New argument `--loglevel` for the bash script to choose verbosity of output
-
+- `--restart` flag now accepting an optional path to restart from other directories
 
 Fix:
 - Tensorflow output is suppressed by default, change `TF_CPP_MIN_LOG_LEVEL` in bash script to increase
