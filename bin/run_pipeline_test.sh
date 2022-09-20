@@ -39,7 +39,7 @@ while [[ $# -gt 0 ]]; do
         RESTARTPATH=$2
         shift # one extra shift for value
       # make sure the next one is an option, -v to check if it is set at all
-      elif [ "$2" != "--*" ] && [ -v "2" ]; then
+      elif [ "$2" != "--*" ] && [ ! -z ${2+x} ]; then
         echo "Restart path does not exist: $2"
         exit 1
       fi
@@ -438,8 +438,6 @@ if [ "$RESTART" != "True" ]; then
 elif [ ! -z ${RESTARTPATH+x} ]; then
   # get the checkout 
   RESTORE_CHECKPOINT=$(find $RESTARTPATH -type f -name $CHECKLOG)
-  echo "Restore point"
-  echo $RESTORE_CHECKPOINT
   # get the settings.sh
   if [ -f "$RESTORE_CHECKPOINT" ]; then
     RESTORE_SETTINGS=$(dirname ${RESTORE_CHECKPOINT})/settings.sh
