@@ -4,7 +4,7 @@
 set -E
 
 # Run on CPU (only if desired)
-# export CUDA_VISIBLE_DEVICES="-1"
+export CUDA_VISIBLE_DEVICES="-1"
 
 # Argument Parsing
 ##################
@@ -180,7 +180,10 @@ source_paths_family() {
 
 setup_folders_family() {
   # creates the folder structure for the family machine
-  
+
+  # Set path for checkpoints 
+  CHECKDIR=$PATH_FOLDER$POS
+   
   # only redo this if necessary (arg is POS again)
   retry "${FUNCNAME[0]}_$1" || return 0
   
@@ -192,9 +195,6 @@ setup_folders_family() {
 
   # generate folders for different channels (phase, fluorescent)
   mkdir -p $PATH_FOLDER$POS
-
-  # Set path for checkpoints 
-  CHECKDIR=$PATH_FOLDER$POS
 
   for i in $(seq 1 $NUM_CHANNEL_TYPES); do
     CH="CHANNEL_$i"
