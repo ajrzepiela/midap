@@ -63,25 +63,31 @@ class Lineages:
         num_time_steps = len(self.results)  # -1
         unique_ID = 0
         while len(self.global_IDs) > 0:
-            print(len(self.global_IDs))
+            #print(len(self.global_IDs))
 
             # Picks first entry from global IDs list
             start_ID = self.global_IDs[0]
 
-            # Per cell all relevant information are stored in dictionary and collected in label_dict for all cells
-            unique_ID += 1
+            # Per cell all relevant information are stored in dictionary and collected in label_dict for all cell
             cell_dict = {}
-            cell_dict['ID'] = unique_ID
             cell_dict['frames'] = []
             cell_dict['mother'] = []
             cell_dict['daughters'] = []
             cell_dict['split'] = []
+            frames = []
 
             # Gets first time frame where cell is present
             first_frame_cell = np.where(self.global_label == start_ID)[0][0]
 
             # Loops over all time frames
             for frame_cell in range(first_frame_cell, num_time_steps):
+                print(start_ID)
+                # Check if track ID for currennt global ID was already assigned
+                if self.track_output.isna().loc[start_ID,'trackID']:
+                    unique_ID += 1
+                else:
+                    unique_ID = self.track_output.loc[start_ID,'trackID']
+                cell_dict['ID'] = unique_ID
 
                 # # Get centroid of current cell / needed?
                 # cell = (self.global_label == start_ID)[frame_cell] #binary mask for current cell
@@ -94,6 +100,7 @@ class Lineages:
                 #     [unique_ID, frame_cell, int(coord[1]), int(coord[0])])
                 # # needed?
                 cell_dict['frames'].append(frame_cell)
+                frames.append(frame_cell)
 
                 # Dict to map unique_ID to global_ID
                 self.global2uniqueID[start_ID] = unique_ID
@@ -111,10 +118,21 @@ class Lineages:
                 self.label_stack[frame_cell][self.inputs[frame_cell,
                                                          :, :, 1] == local_ID] = unique_ID
                 
+                # Computer features for cell from binary mask
+                cell = (self.global_label == start_ID)[frame_cell]
+                area, edges, minor_axis_length, major_axis_length = self.get_features(cell)
+
+                print(edges)
+
                 # Add data to DataFrame
                 self.track_output.loc[start_ID, 'frame'] = frame_cell
                 self.track_output.loc[start_ID, 'labelID'] = local_ID
                 self.track_output.loc[start_ID, 'trackID'] = unique_ID
+                self.track_output.loc[start_ID, 'area'] = area
+                self.track_output.loc[start_ID, 'edges'] = edges
+                self.track_output.loc[start_ID, 'minor_axis_length'] = minor_axis_length
+                self.track_output.loc[start_ID, 'major_axis_length'] = major_axis_length
+                self.track_output.loc[start_ID, 'frames'] = frames
 
                 # For all cells which are not in the last time frame
                 if frame_cell <= num_time_steps-2:
@@ -126,6 +144,11 @@ class Lineages:
                     if daughter_1.sum() > 0 and daughter_2.sum() == 0:
                         new_global_ID = self.get_new_daughter_ID(
                             daughter_1, frame_cell)
+
+                        # no cell split, daughter cell has same ID as mother cell
+                        self.track_output.loc[start_ID, 'trackID_d1'] = unique_ID
+                        self.track_output.loc[new_global_ID, 'trackID'] = unique_ID
+                        self.track_output.loc[new_global_ID, 'trackID_mother'] = unique_ID
 
                         self.remove_global_ID(start_ID)
                         start_ID = new_global_ID
@@ -139,6 +162,11 @@ class Lineages:
                     elif daughter_1.sum() == 0 and daughter_2.sum() > 0:
                         new_global_ID = self.get_new_daughter_ID(
                             daughter_2, frame_cell)
+
+                        # no cell split, daughter cell has same ID as mother cell
+                        self.track_output.loc[start_ID, 'trackID_d1'] = unique_ID
+                        self.track_output.loc[new_global_ID, 'trackID'] = unique_ID
+                        self.track_output.loc[new_global_ID, 'trackID_mother'] = unique_ID
 
                         self.remove_global_ID(start_ID)
                         start_ID = new_global_ID
@@ -156,6 +184,16 @@ class Lineages:
                         new_global_ID_d2 = self.get_new_daughter_ID(
                             daughter_2, frame_cell)
 
+                        # cell split, new IDs for both daughter cells
+                        self.track_output.loc[start_ID, 'trackID_d1'] = unique_ID + 1
+                        self.track_output.loc[start_ID, 'trackID_d2'] = unique_ID + 2
+
+                        self.track_output.loc[new_global_ID_d1, 'trackID'] = unique_ID + 1
+                        self.track_output.loc[new_global_ID_d2, 'trackID'] = unique_ID + 2
+
+                        self.track_output.loc[new_global_ID_d1, 'trackID_mother'] = unique_ID
+                        self.track_output.loc[new_global_ID_d2, 'trackID_mother'] = unique_ID
+
                         if new_global_ID_d1 not in self.graph.keys():
                             self.graph[new_global_ID_d1] = [unique_ID]
                         if new_global_ID_d2 not in self.graph.keys():
@@ -169,7 +207,9 @@ class Lineages:
                         # continued at later time point.
                         self.remove_global_ID(start_ID)
                         start_ID = new_global_ID_d1
-                        unique_ID += 1 #after cell split both daughter cell get their own ID
+
+                        #needed?
+                        #unique_ID += 1 #after cell split both daughter cell get their own ID
 
                     # case 4: cell disappears
                     elif daughter_1.sum() == 0 and daughter_2.sum() == 0:
@@ -219,7 +259,9 @@ class Lineages:
         """Initialize dataframe for tracking output.
         """
 
-        columns = ['frame', 'labelID', 'trackID']
+        columns = ['frame', 'labelID', 'trackID', 'lineageID', 'trackID_d1', 'trackID_d2', 
+                    'trackID_mother', 'area', 'edges', 'minor_axis_length', 'major_axis_length',
+                    'frames']
         self.track_output = pd.DataFrame(columns=columns, index=self.global_IDs)
 
     def get_new_daughter_ID(self, daughter, frame_cell):
@@ -253,7 +295,7 @@ class Lineages:
 
         return new_global_ID
 
-    def get_features(self, daughter):
+    def get_features(self, cell):
         """Extracts features for each cell.
 
         Parameters
@@ -263,10 +305,12 @@ class Lineages:
         """
 
         # get center of daughter in current frame
-        area = regionprops(daughter.astype(int))[0].area
-        edges = regionprops(daughter.astype(int))[0].bbox
+        area = regionprops(cell.astype(int))[0].area
+        edges = regionprops(cell.astype(int))[0].bbox
+        minor_axis_length = regionprops(cell.astype(int))[0].minor_axis_length
+        major_axis_length = regionprops(cell.astype(int))[0].major_axis_length
 
-        return area, edges
+        return area, edges, minor_axis_length, major_axis_length
 
     def remove_global_ID(self, current_ID):
         """Removes global ID from list of all global IDs during the lineage generation.
