@@ -36,7 +36,7 @@ while [[ $# -gt 0 ]]; do
       RESTART="True"
       # check if we got path as values
       if [ -d "$2" ]; then
-        RESTARTPATH=$2
+        RESTARTPATH="$2"
         shift # one extra shift for value
       # make sure the next one is an option, -v to check if it is set at all
       elif [ "$2" != "--*" ] && [ ! -z ${2+x} ]; then
@@ -120,12 +120,12 @@ clear_log() {
 log_checkpoint() {
   # Print fail and log
   .log 2 "Error while running: $1"
-  echo "$1" > $CHECKLOG
+  echo "$1" > "$CHECKLOG"
   # copy checkpoint and setting to current path
   # use are sync to avoid possible "are the same file" 
   .log 2 "Copy checkpoint and settings to: ${CHECKDIR}"
-  rsync ${CHECKLOG} ${CHECKDIR}/${CHECKLOG}
-  rsync settings.sh ${CHECKDIR}/settings.sh
+  rsync "${CHECKLOG}" "${CHECKDIR}/${CHECKLOG}"
+  rsync settings.sh "${CHECKDIR}/settings.sh"
   exit 1
 }
 
@@ -133,7 +133,7 @@ retry() {
   # transfer the function name into the current current_func
   current_func=$1
   # If there is no checkpoint file, there is nothing to do
-  [ ! -f $CHECKLOG ] && return 0
+  [ ! -f "$CHECKLOG" ] && return 0
   # if we have a checkpoint file we return 0 if it contains the current function
   if grep -q "$1" "$CHECKLOG"; then
     .log 6 "retry $1"; rm "$CHECKLOG"; return 0
@@ -182,7 +182,7 @@ setup_folders_family() {
   # creates the folder structure for the family machine
 
   # Set path for checkpoints 
-  CHECKDIR=$PATH_FOLDER$POS
+  CHECKDIR="$PATH_FOLDER$POS"
    
   # only redo this if necessary (arg is POS again)
   retry "${FUNCNAME[0]}_$1" || return 0
@@ -191,25 +191,25 @@ setup_folders_family() {
 
   # Delete results folder for this position in case it already exists.
   # In this way the segmentation can be rerun
-  rm -rf $PATH_FOLDER$POS
+  rm -rf "$PATH_FOLDER$POS"
 
   # generate folders for different channels (phase, fluorescent)
-  mkdir -p $PATH_FOLDER$POS
+  mkdir -p "$PATH_FOLDER$POS"
 
   for i in $(seq 1 $NUM_CHANNEL_TYPES); do
     CH="CHANNEL_$i"
     # Base folder for different channels
-    mkdir -p $PATH_FOLDER$POS/${!CH}/
+    mkdir -p "$PATH_FOLDER$POS/${!CH}/"
     # raw images
-    mkdir -p $PATH_FOLDER$POS/${!CH}/$RAW_IM
+    mkdir -p "$PATH_FOLDER$POS/${!CH}/$RAW_IM"
     # cutouts
-    mkdir -p $PATH_FOLDER$POS/${!CH}/$CUT_PATH
+    mkdir -p "$PATH_FOLDER$POS/${!CH}/$CUT_PATH"
     # segmentation images
-    mkdir -p $PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH
+    mkdir -p "$PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH"
     # stack of segmentation images for tracking
-    mkdir -p $PATH_FOLDER$POS/${!CH}/$SEG_IM_TRACK_PATH
+    mkdir -p "$PATH_FOLDER$POS/${!CH}/$SEG_IM_TRACK_PATH"
     # tracking output (Unet)
-    mkdir -p $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
+    mkdir -p "$PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH"
   done
 }
 
@@ -223,9 +223,9 @@ copy_files_family() {
   .log 6 "Copying files for identifier: ${POS}"
   for i in $(seq 1 $NUM_CHANNEL_TYPES); do
     CH="CHANNEL_$i"
-    VAR=`find $PATH_FOLDER -name *$POS*${!CH}*.$FILE_TYPE`
+    VAR=$(find "$PATH_FOLDER" -name *"$POS"*"${!CH}"*".$FILE_TYPE")
     # Catch the copy output for debug logging
-    local COPYLOG=$(cp -v $VAR $PATH_FOLDER$POS/${!CH}/)
+    local COPYLOG=$(cp -v "$VAR" "$PATH_FOLDER$POS/${!CH}/")
     .log 7 "$COPYLOG"
   done
 }
@@ -240,8 +240,8 @@ split_frames_family() {
   .log 6 "Splitting frames for identifier: ${POS}"
   for i in $(seq 1 $NUM_CHANNEL_TYPES); do
     CH="CHANNEL_$i"
-    INP=$(find $PATH_FOLDER$POS/${!CH}/ -name *.$FILE_TYPE)
-    python stack2frames.py --path $INP --pos $POS --channel /${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME --deconv $DECONVOLUTION
+    INP=$(find "$PATH_FOLDER$POS/${!CH}/" -name *".$FILE_TYPE")
+    python stack2frames.py --path "$INP" --pos "$POS" --channel "/${!CH}/" --start_frame "$START_FRAME" --end_frame "$END_FRAME" --deconv "$DECONVOLUTION"
   done
 }
 
@@ -254,9 +254,10 @@ cut_chambers_family() {
   # Split for number of channels
   .log 6 "Cutting chambers for identifier: ${POS}"
   if [ -z "$CHANNEL_2" ] || [ -z "$CHANNEL_3" ]; then
-    python frames2cuts.py --path_ch0 $PATH_FOLDER$POS/$CHANNEL_1/$RAW_IM
+    python frames2cuts.py --path_ch0 "$PATH_FOLDER$POS/$CHANNEL_1/$RAW_IM"
+    echo "FUCK"
   else
-    python frames2cuts.py --path_ch0 $PATH_FOLDER$POS/$CHANNEL_1/$RAW_IM --path_ch1 $PATH_FOLDER$POS/$CHANNEL_2/$RAW_IM --path_ch2 $PATH_FOLDER$POS/$CHANNEL_3/$RAW_IM
+    python frames2cuts.py --path_ch0 "$PATH_FOLDER$POS/$CHANNEL_1/$RAW_IM" --path_ch1 "$PATH_FOLDER$POS/$CHANNEL_2/$RAW_IM" --path_ch2 "$PATH_FOLDER$POS/$CHANNEL_3/$RAW_IM"
   fi
 }
 
@@ -272,14 +273,14 @@ segmentation_family() {
   if [ "$PHASE_SEGMENTATION" == True ]; then
     for i in $(seq 1 $NUM_CHANNEL_TYPES); do
       CH="CHANNEL_$i"
-      python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 1 --batch_mode 0
-      python analyse_segmentation.py --path_seg $PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/ --path_result $PATH_FOLDER$POS/${!CH}/
+      python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos "$PATH_FOLDER$POS" --path_channel "${!CH}" --postprocessing 1 --batch_mode 0
+      python analyse_segmentation.py --path_seg "$PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/" --path_result "$PATH_FOLDER$POS/${!CH}/"
     done
   elif [ "$PHASE_SEGMENTATION" == False ]; then
     for i in $(seq 2 $NUM_CHANNEL_TYPES); do
       CH="CHANNEL_$i"
-      python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos $PATH_FOLDER$POS --path_channel ${!CH} --postprocessing 1 --batch_mode 0
-      python analyse_segmentation.py --path_seg $PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/ --path_result $PATH_FOLDER$POS/${!CH}/
+      python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos "$PATH_FOLDER$POS" --path_channel "${!CH}" --postprocessing 1 --batch_mode 0
+      python analyse_segmentation.py --path_seg "$PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/" --path_result "$PATH_FOLDER$POS/${!CH}/"
     done
   fi
 }
@@ -296,14 +297,14 @@ tracking_family() {
   if [ "$PHASE_SEGMENTATION" == True ]; then
     for i in $(seq 1 $NUM_CHANNEL_TYPES); do
       CH="CHANNEL_$i"
-      python track_cells_crop.py --path $PATH_FOLDER$POS/${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME
-      python generate_lineages.py --path $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
+      python track_cells_crop.py --path "$PATH_FOLDER$POS/${!CH}/" --start_frame "$START_FRAME" --end_frame "$END_FRAME"
+      python generate_lineages.py --path "$PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH"
     done
   elif [ "$PHASE_SEGMENTATION" == False ]; then
     for i in $(seq 2 $NUM_CHANNEL_TYPES); do
       CH="CHANNEL_$i"
-      python track_cells_crop.py --path $PATH_FOLDER$POS/${!CH}/ --start_frame $START_FRAME --end_frame $END_FRAME
-      python generate_lineages.py --path $PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH
+      python track_cells_crop.py --path "$PATH_FOLDER$POS/${!CH}/" --start_frame "$START_FRAME" --end_frame "$END_FRAME"
+      python generate_lineages.py --path "$PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH"
     done
   fi
 }
@@ -313,7 +314,7 @@ source_paths_well() {
 
   # Some bash string manipulations
   PATH_FILE_WO_EXT="${PATH_FILE%.*}"
-  FILE_NAME=${PATH_FILE##*/}
+  FILE_NAME="${PATH_FILE##*/}"
 
   .log 6 "Extracted path without ext: $PATH_FILE_WO_EXT"
   .log 6 "Extracted filename: $FILE_NAME"
@@ -335,24 +336,24 @@ setup_folders_well() {
   
   .log 6 "Generating folder structure..."
   # delete results folder in case it already exists
-  rm -rf $PATH_FILE_WO_EXT
+  rm -rf "$PATH_FILE_WO_EXT"
 
   # generate folder to store the results
-  mkdir -p $PATH_FILE_WO_EXT
-  cp $PATH_FILE $PATH_FILE_WO_EXT
+  mkdir -p "$PATH_FILE_WO_EXT"
+  cp "$PATH_FILE" "$PATH_FILE_WO_EXT"
 
   # generate folders raw_im
-  mkdir -p $PATH_FILE_WO_EXT/$RAW_IM
+  mkdir -p "$PATH_FILE_WO_EXT/$RAW_IM"
   # generate folders for tracking results
-  mkdir -p $PATH_FILE_WO_EXT/$SEG_PATH
+  mkdir -p "$PATH_FILE_WO_EXT/$SEG_PATH"
   # generate folders for cutout images
-  mkdir -p $PATH_FILE_WO_EXT/$SEG_PATH$CUT_PATH
+  mkdir -p "$PATH_FILE_WO_EXT/$SEG_PATH$CUT_PATH"
   # generate folders for segmentation images
-  mkdir -p $PATH_FILE_WO_EXT/$SEG_IM_PATH
+  mkdir -p "$PATH_FILE_WO_EXT/$SEG_IM_PATH"
   # generate folder seg_im_track for stacks of segmentation images for tracking
-  mkdir -p $PATH_FILE_WO_EXT/$SEG_IM_TRACK_PATH
+  mkdir -p "$PATH_FILE_WO_EXT/$SEG_IM_TRACK_PATH"
   # generate folders for segmentation-mat files
-  mkdir -p $PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH
+  mkdir -p "$PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH"
 }
 
 split_frames_well() {
@@ -362,9 +363,9 @@ split_frames_well() {
   retry "${FUNCNAME[0]}" || return 0
 
   .log 6 "Spliting frames..."
-  python stack2frames.py --path $PATH_FILE_WO_EXT/$FILE_NAME --pos "" --channel "" --start_frame $START_FRAME --end_frame $END_FRAME --deconv $DECONVOLUTION
+  python stack2frames.py --path "$PATH_FILE_WO_EXT/$FILE_NAME" --pos "" --channel "" --start_frame "$START_FRAME" --end_frame "$END_FRAME" --deconv "$DECONVOLUTION"
   # Catch the copy output for debug logging
-  local COPYLOG=$(cp -v $PATH_FILE_WO_EXT/$RAW_IM*.$FILE_TYPE $PATH_FILE_WO_EXT/$SEG_PATH$CUT_PATH)
+  local COPYLOG=$(cp -v "$PATH_FILE_WO_EXT/$RAW_IM"*".$FILE_TYPE" "$PATH_FILE_WO_EXT/$SEG_PATH$CUT_PATH")
   .log 7 "${COPYLOG}"
 }
 
@@ -375,7 +376,7 @@ segmentation_well() {
   retry "${FUNCNAME[0]}" || return 0
 
   .log 6 "Segmenting images..."
-  python main_prediction.py --path_model_weights '../model_weights/model_weights_well/' --path_pos $PATH_FILE_WO_EXT --path_channel "" --postprocessing 1
+  python main_prediction.py --path_model_weights '../model_weights/model_weights_well/' --path_pos "$PATH_FILE_WO_EXT" --path_channel "" --postprocessing 1
 }
 
 conversion_well() {
@@ -385,7 +386,7 @@ conversion_well() {
   retry "${FUNCNAME[0]}" || return 0
 
   .log 6 "Run file-conversion..."
-  python seg2mat.py --path_cut $PATH_FILE_WO_EXT/$SEG_PATH$CUT_PATH --path_seg $PATH_FILE_WO_EXT/$SEG_IM_PATH --path_channel $PATH_FILE_WO_EXT/
+  python seg2mat.py --path_cut "$PATH_FILE_WO_EXT/$SEG_PATH$CUT_PATH" --path_seg "$PATH_FILE_WO_EXT/$SEG_IM_PATH" --path_channel "$PATH_FILE_WO_EXT/"
 }
 
 tracking_well() {
@@ -396,30 +397,30 @@ tracking_well() {
 
   .log 6 "Running the tracking..."
   # delete all files related to SuperSegger to ensure that SuperSegger runs
-  rm -f $PATH_FILE_WO_EXT/CONST.mat
-  rm -f $PATH_FILE_WO_EXT/$SEG_PATH/clist.mat
-  rm -f $PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH/*_err.mat
-  rm -fr $PATH_FILE_WO_EXT/$SEG_PATH/cell
-  rm -f $PATH_FILE_WO_EXT/$SEG_PATH/$RAW_IM/cropbox.mat
+  rm -f "$PATH_FILE_WO_EXT/CONST.mat"
+  rm -f "$PATH_FILE_WO_EXT/$SEG_PATH/clist.mat"
+  rm -f "$PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH/"*"_err.mat"
+  rm -fr "$PATH_FILE_WO_EXT/$SEG_PATH/cell"
+  rm -f "$PATH_FILE_WO_EXT/$SEG_PATH/$RAW_IM/cropbox.mat"
 
   # Run matlab
   $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT', '$CONSTANTS' , $NEIGHBOR_FLAG, $TIME_STEP, $MIN_CELL_AGE, '$DATA_TYPE')"
 
-  MAT_FILE=$PATH_FILE_WO_EXT/$SEG_PATH/clist.mat
+  MAT_FILE="$PATH_FILE_WO_EXT/$SEG_PATH/clist.mat"
   # as long as 'clist.mat' is missing (hint for failed SuperSegger) the tracking can be repeated with a reduced number of frames
   while ! test -f "$MAT_FILE"; do
-    rm -f $PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH/*_err.mat
-    rm -f $PATH_FILE_WO_EXT/CONST.mat
-    rm -f $PATH_FILE_WO_EXT/$SEG_PATH/$RAW_IM/cropbox.mat
+    rm -f "$PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH/"*"_err.mat"
+    rm -f "$PATH_FILE_WO_EXT/CONST.mat"
+    rm -f "$PATH_FILE_WO_EXT/$SEG_PATH/$RAW_IM/cropbox.mat"
 
     python restrict_frames.py
     source settings.sh
-    LIST_FILES=($(ls $PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH))
+    LIST_FILES=($(ls "$PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH"))
     NUM_FILES=${#LIST_FILES[@]}
     NUM_REMOVE=$NUM_FILES-$END_FRAME #number of files to remove
 
     for FILE in ${LIST_FILES[@]:$END_FRAME:$NUM_REMOVE}; do
-      rm -f $PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH/$FILE
+      rm -f "$PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH/$FILE"
     done
     $MATLAB_ROOT/bin/matlab -nodisplay -r "tracking_supersegger('$PATH_FILE_WO_EXT', '$CONSTANTS' , $NEIGHBOR_FLAG, $TIME_STEP, $MIN_CELL_AGE, '$DATA_TYPE')"
   # END WHILE
@@ -437,18 +438,18 @@ if [ "$RESTART" != "True" ]; then
   clear_log
 elif [ ! -z ${RESTARTPATH+x} ]; then
   # get the checkout 
-  RESTORE_CHECKPOINT=$(find $RESTARTPATH -type f -name $CHECKLOG)
+  RESTORE_CHECKPOINT=$(find "$RESTARTPATH" -type f -name "$CHECKLOG")
   # get the settings.sh
   if [ -f "$RESTORE_CHECKPOINT" ]; then
-    RESTORE_SETTINGS=$(dirname ${RESTORE_CHECKPOINT})/settings.sh
+    RESTORE_SETTINGS=$(dirname "${RESTORE_CHECKPOINT}")/settings.sh
   fi
   # check if single file exists
   if [ -f "$RESTORE_CHECKPOINT" ] && [ -f "$RESTORE_SETTINGS" ]; then
     .log 6 "Found checkpoint:  $RESTORE_CHECKPOINT"
     .log 6 "Found settings.sh: $RESTORE_SETTINGS"
     # restore the files, rsync in case somebode sets path to ./
-    rsync $RESTORE_CHECKPOINT $CHECKLOG
-    rsync $RESTORE_SETTINGS settings.sh
+    rsync "$RESTORE_CHECKPOINT" "$CHECKLOG"
+    rsync "$RESTORE_SETTINGS" settings.sh
     source settings.sh
   else
     .log 6 "No checkpoint or settings.sh file found, starting again..."
@@ -464,10 +465,10 @@ set_parameters
 # Family Machine case
 if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]; then
   .log 7 "Working in: $PATH_FOLDER"
- 
+
   # extract different positions from one dataset
   POSITIONS=()
-  for i in $PATH_FOLDER*.$FILE_TYPE; do
+  for i in "$PATH_FOLDER"*".$FILE_TYPE"; do
     POS=$(echo $i | grep -Eo "${POS_IDENTIFIER}[0-9]+")
     POSITIONS+=($POS)
   done
@@ -512,13 +513,15 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]; then
     fi
   
     # we copy the current settings.sh into the path folder for reproducibility
-    COPYLOG=$(cp -v settings.sh ${PATH_FOLDER}/${POS}/settings.sh)
+    COPYLOG=$(cp -v settings.sh "${PATH_FOLDER}/${POS}/settings.sh")
     .log 7 "$COPYLOG"
  
   # End POS_UNIQ Loop
   done
 # END FAMILY_MACHINE
 fi
+
+# TODO: Copy logs for WELL etc.
 
 # Well Case
 if [[ $DATA_TYPE == "WELL" ]]; then
