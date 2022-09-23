@@ -12,10 +12,10 @@ def Button(*args, **kwargs):
     return sg.Col([[sg.Button(*args, **kwargs)]], pad=(0,0))
 
 layout = [[sg.Text('Data type', font='bold')],
-        [sg.Checkbox('Family/Mother Machine', key='family_machine', default=False),
-        sg.Checkbox('Well', key='well', default=False)],
-            [sg.Text('')],
-        [sg.Column([[sg.OK(), sg.Cancel()]], key='col_final')]]
+          [sg.Radio('Family/Mother Machine', "RADIO1", default=True, key="family_machine"),
+           sg.Radio('Well', "RADIO1", default=False, key="well")],
+          [sg.Text('')],
+          [sg.Column([[sg.OK(), sg.Cancel()]], key='col_final')]]
 
 # ------ Column Definition ------ #
 column1 = [[sg.Text('Part of pipeline', justification='center', size=(12, 1))],
