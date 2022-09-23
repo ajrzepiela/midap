@@ -1,4 +1,5 @@
 #!/bin/bash
+    echo "$1" > "$CHECKLOG"
 
 # necessary to catch python errors
 set -E
@@ -478,12 +479,19 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]; then
   # extract different positions from one dataset
   POSITIONS=()
   for i in "$PATH_FOLDER"*".$FILE_TYPE"; do
-    POS=$(echo $i | grep -Eo "${POS_IDENTIFIER}[0-9]+")
+    # Command grouping {} prevents grep to throw an error if nothing was found
+    POS=$(echo $i | { grep -Eo "${POS_IDENTIFIER}[0-9]+" || true; })
     POSITIONS+=($POS)
   done
   # Keep only unique 
   POS_UNIQ=($(printf "%s\n" "${POSITIONS[@]}" | sort -u));
-
+  
+  # See if we got anything
+  if [ -z "${POS_UNIQ[@]}" ]; then
+    .log 3 "Could not extract any file matching identifier: '${POS_IDENTIFIER}'"
+    clear_log
+    exit 1
+  fi
   .log 7 "Extraced Identifiers: ${POS_UNIQ[@]}"
 
   # source the path names for all the folders
