@@ -119,7 +119,11 @@ clear_log() {
 
 log_checkpoint() {
   # Print fail and log
-  .log 2 "Error while running: $1"
+  if [ "$1" == "" ]; then
+    .log 2 "Unexpected error outside of callstack!"
+  else
+    .log 2 "Error while running: $1"
+  fi
   echo "$1" > "$CHECKLOG"
   # copy checkpoint and setting to current path
   # use are sync to avoid possible "are the same file" 
@@ -255,7 +259,6 @@ cut_chambers_family() {
   .log 6 "Cutting chambers for identifier: ${POS}"
   if [ -z "$CHANNEL_2" ] || [ -z "$CHANNEL_3" ]; then
     python frames2cuts.py --path_ch0 "$PATH_FOLDER$POS/$CHANNEL_1/$RAW_IM"
-    echo "FUCK"
   else
     python frames2cuts.py --path_ch0 "$PATH_FOLDER$POS/$CHANNEL_1/$RAW_IM" --path_ch1 "$PATH_FOLDER$POS/$CHANNEL_2/$RAW_IM" --path_ch2 "$PATH_FOLDER$POS/$CHANNEL_3/$RAW_IM"
   fi
@@ -464,7 +467,13 @@ set_parameters
 
 # Family Machine case
 if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]; then
-  .log 7 "Working in: $PATH_FOLDER"
+  # check if path folder actually exists
+  if [ -d "$PATH_FOLDER" ]; then
+    .log 7 "Working in: $PATH_FOLDER"
+  else
+    .log 3 "Path folder does not exist: $PATH_FOLDER"
+    exit 1
+  fi
 
   # extract different positions from one dataset
   POSITIONS=()
