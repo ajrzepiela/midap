@@ -258,11 +258,17 @@ cut_chambers_family() {
 
   # Split for number of channels
   .log 6 "Cutting chambers for identifier: ${POS}"
-  if [ -z "$CHANNEL_2" ] || [ -z "$CHANNEL_3" ]; then
-    python frames2cuts.py --path_ch0 "$PATH_FOLDER$POS/$CHANNEL_1/$RAW_IM"
-  else
-    python frames2cuts.py --path_ch0 "$PATH_FOLDER$POS/$CHANNEL_1/$RAW_IM" --path_ch1 "$PATH_FOLDER$POS/$CHANNEL_2/$RAW_IM" --path_ch2 "$PATH_FOLDER$POS/$CHANNEL_3/$RAW_IM"
-  fi
+  
+  # Collect the arguments
+  local ARGS=""
+  for i in $(seq 1 $NUM_CHANNEL_TYPES); do
+    CH="CHANNEL_$i"
+    ARGS="${ARGS} \"${PATH_FOLDER}${POS}/${!CH}/${RAW_IM}\""
+  done
+  
+  # We need to do the eval turn to deal with paths that have spaces!
+  CMD="python frames2cuts.py --channel $ARGS"
+  eval $CMD
 }
 
 segmentation_family() {
