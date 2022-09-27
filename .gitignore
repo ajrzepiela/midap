@@ -8,6 +8,7 @@ example_data
 psf
 .idea/
 *.swp
+*~
 *.bak
 
 # Byte-compiled / optimized / DLL files
