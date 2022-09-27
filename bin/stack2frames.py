@@ -7,6 +7,8 @@ from scipy.io import loadmat
 from skimage.restoration import richardson_lucy
 from skimage import io
 
+import sys
+sys.path.append('../src')
 from utils import get_logger
 
 # argument parsing
