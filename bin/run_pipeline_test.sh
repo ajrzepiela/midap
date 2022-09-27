@@ -246,7 +246,7 @@ split_frames_family() {
   for i in $(seq 1 $NUM_CHANNEL_TYPES); do
     CH="CHANNEL_$i"
     INP=$(find "$PATH_FOLDER$POS/${!CH}/" -name *".$FILE_TYPE")
-    python stack2frames.py --path "$INP" --pos "$POS" --channel "/${!CH}/" --start_frame "$START_FRAME" --end_frame "$END_FRAME" --deconv "$DECONVOLUTION"
+    python stack2frames.py --path "$INP" --start_frame "$START_FRAME" --end_frame "$END_FRAME" --deconv "$DECONVOLUTION" --loglevel "${__VERBOSE}"
   done
 }
 
