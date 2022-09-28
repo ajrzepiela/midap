@@ -56,7 +56,8 @@ class Lineages:
         # Loop over all global IDs in list and connects cells between time frames
         # with help of tracking results
         num_time_steps = len(self.results)
-        unique_ID = 0
+        self.trackID_list = np.arange(1, np.max(self.global_IDs)).tolist()
+
         while len(self.global_IDs) > 0:
 
             # Gets first time frame where cell is present
@@ -69,9 +70,9 @@ class Lineages:
 
                 # Check if track ID for current global ID was already assigned
                 if self.track_output.isna().loc[start_ID,'trackID']:
-                    unique_ID += 1
+                    trackID = self.set_new_trackID()
                 else:
-                    unique_ID = self.track_output.loc[start_ID,'trackID']
+                    trackID = self.track_output.loc[start_ID,'trackID']
 
                 # Get local ID from input for current start ID/global ID
                 local_ID = self.inputs[frame_cell, :, :, 1][self.global_label[frame_cell].astype(
@@ -79,19 +80,19 @@ class Lineages:
 
                 # Add mother with new (unique) ID to label stack
                 self.label_stack[frame_cell][self.inputs[frame_cell,
-                                                         :, :, 1] == local_ID] = unique_ID
+                                                         :, :, 1] == local_ID] = trackID
                 
                 # Compute features/IDs for cell
                 frames.append(frame_cell)
                 cell = (self.global_label == start_ID)[frame_cell]
                 area, edges, minor_axis_length, major_axis_length = self.get_features(cell)
                 if len(frames) == 1:
-                    lineage_ID = unique_ID
+                    lineage_ID = trackID
 
                 # Add data/features to DataFrame
                 self.track_output.loc[start_ID, 'frame'] = frame_cell
                 self.track_output.loc[start_ID, 'labelID'] = local_ID
-                self.track_output.loc[start_ID, 'trackID'] = unique_ID
+                self.track_output.loc[start_ID, 'trackID'] = trackID
                 self.track_output.loc[start_ID, 'lineageID'] = lineage_ID
                 self.track_output.loc[start_ID, 'area'] = area
                 self.track_output.loc[start_ID, 'edges'] = edges
@@ -115,7 +116,7 @@ class Lineages:
                             daughter_1, frame_cell)
 
                         # no cell split, daughter cell has same ID as mother cell
-                        self.track_output.loc[new_global_ID, 'trackID'] = unique_ID
+                        self.track_output.loc[new_global_ID, 'trackID'] = trackID
                         self.track_output.loc[start_ID, 'split'] = 0
 
                         self.remove_global_ID(start_ID)
@@ -127,7 +128,7 @@ class Lineages:
                             daughter_2, frame_cell)
 
                         # no cell split, daughter cell has same ID as mother cell
-                        self.track_output.loc[new_global_ID, 'trackID'] = unique_ID
+                        self.track_output.loc[new_global_ID, 'trackID'] = trackID
                         self.track_output.loc[start_ID, 'split'] = 0
 
                         self.remove_global_ID(start_ID)
@@ -142,14 +143,17 @@ class Lineages:
                             daughter_2, frame_cell)
 
                         # cell split, new IDs for both daughter cells
-                        self.track_output.loc[start_ID, 'trackID_d1'] = unique_ID + 1
-                        self.track_output.loc[start_ID, 'trackID_d2'] = unique_ID + 2
+                        trackID_d1 = self.set_new_trackID()
+                        trackID_d2 = self.set_new_trackID()
 
-                        self.track_output.loc[new_global_ID_d1, 'trackID'] = unique_ID + 1
-                        self.track_output.loc[new_global_ID_d2, 'trackID'] = unique_ID + 2
+                        self.track_output.loc[start_ID, 'trackID_d1'] = trackID_d1
+                        self.track_output.loc[start_ID, 'trackID_d2'] = trackID_d2
 
-                        self.track_output.loc[new_global_ID_d1, 'trackID_mother'] = unique_ID
-                        self.track_output.loc[new_global_ID_d2, 'trackID_mother'] = unique_ID
+                        self.track_output.loc[new_global_ID_d1, 'trackID'] = trackID_d1
+                        self.track_output.loc[new_global_ID_d2, 'trackID'] = trackID_d2
+
+                        self.track_output.loc[new_global_ID_d1, 'trackID_mother'] = trackID
+                        self.track_output.loc[new_global_ID_d2, 'trackID_mother'] = trackID
 
                         self.track_output.loc[start_ID, 'split'] = 1
 
@@ -164,9 +168,10 @@ class Lineages:
                         self.remove_global_ID(start_ID)
                         break
 
-                # Lineage generation is stopped in last time frame
+                # Empty list, Lineage generation is stopped in last time frame
                 if frame_cell > num_time_steps-2:
                     self.remove_global_ID(start_ID)
+
 
     def generate_global_IDs(self):
         """Generates global IDs with one ID per cell and time frame and
@@ -259,3 +264,12 @@ class Lineages:
             self.global_IDs.remove(current_ID)
         except ValueError:
             None
+
+    def set_new_trackID(self):
+        """Removes current trackID from list of all trackIDs and sets 
+        trackID to next item from list.
+        """
+
+        new_trackID = self.trackID_list[0]
+        self.trackID_list.remove(new_trackID)
+        return new_trackID
