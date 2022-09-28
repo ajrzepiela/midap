@@ -95,7 +95,10 @@ class Lineages:
                 self.track_output.loc[start_ID, 'trackID'] = trackID
                 self.track_output.loc[start_ID, 'lineageID'] = lineage_ID
                 self.track_output.loc[start_ID, 'area'] = area
-                self.track_output.loc[start_ID, 'edges'] = edges
+                self.track_output.loc[start_ID, 'edges_min_row'] = edges[0]
+                self.track_output.loc[start_ID, 'edges_min_col'] = edges[1]
+                self.track_output.loc[start_ID, 'edges_max_row'] = edges[2]
+                self.track_output.loc[start_ID, 'edges_max_col'] = edges[3]
                 self.track_output.loc[start_ID, 'minor_axis_length'] = minor_axis_length
                 self.track_output.loc[start_ID, 'major_axis_length'] = major_axis_length
                 self.track_output.loc[start_ID, 'frames'] = frames
@@ -207,7 +210,8 @@ class Lineages:
         """
 
         columns = ['frame', 'labelID', 'trackID', 'lineageID', 'trackID_d1', 'trackID_d2', 'split',
-                    'trackID_mother', 'area', 'edges', 'minor_axis_length', 'major_axis_length',
+                    'trackID_mother', 'area', 'edges_min_row', 'edges_min_col', 'edges_max_row', 
+                    'edges_max_col', 'minor_axis_length', 'major_axis_length',
                     'frames']
         self.track_output = pd.DataFrame(columns=columns, index=self.global_IDs)
 
