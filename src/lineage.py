@@ -157,6 +157,15 @@ class Lineages:
 
                         self.track_output.loc[start_ID, 'split'] = 1
 
+                        # Add trackID_mother, trackID_d1 and trackID_d2 to 
+                        # preceding cells with same trackID
+                        for f in frames:
+                            ix_prev_cell = np.where((self.track_output.frame == f) & \
+                                (self.track_output.trackID == trackID))[0][0] + 1
+                            self.track_output.loc[ix_prev_cell, 'trackID_d1'] = trackID_d1
+                            self.track_output.loc[ix_prev_cell, 'trackID_d2'] = trackID_d2
+                            self.track_output.loc[ix_prev_cell, 'trackID_mother'] = trackID
+
                         # new_global_ID_d2 will stay in self.global_IDs and lineage generation is
                         # continued at later time point.
                         self.remove_global_ID(start_ID)
