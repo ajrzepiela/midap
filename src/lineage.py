@@ -115,7 +115,6 @@ class Lineages:
                             daughter_1, frame_cell)
 
                         # no cell split, daughter cell has same ID as mother cell
-                        self.track_output.loc[start_ID, 'trackID_d1'] = unique_ID
                         self.track_output.loc[new_global_ID, 'trackID'] = unique_ID
                         self.track_output.loc[new_global_ID, 'trackID_mother'] = unique_ID
                         self.track_output.loc[start_ID, 'split'] = 0
@@ -129,7 +128,6 @@ class Lineages:
                             daughter_2, frame_cell)
 
                         # no cell split, daughter cell has same ID as mother cell
-                        self.track_output.loc[start_ID, 'trackID_d1'] = unique_ID
                         self.track_output.loc[new_global_ID, 'trackID'] = unique_ID
                         self.track_output.loc[new_global_ID, 'trackID_mother'] = unique_ID
                         self.track_output.loc[start_ID, 'split'] = 0
