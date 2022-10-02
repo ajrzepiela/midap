@@ -61,13 +61,12 @@ class Lineages:
         while len(self.global_IDs) > 0:
 
             # Gets first time frame where cell is present
-            start_ID = self.global_IDs[0]
+            start_ID = self.global_IDs[0] # globalID of currently tracked cell
             first_frame_cell = np.where(self.global_label == start_ID)[0][0]
 
             # Init list to store frame numbers where cell is present
             frames = []
             for frame_cell in range(first_frame_cell, num_time_steps):
-
                 # Check if track ID for current global ID was already assigned
                 if self.track_output.isna().loc[start_ID,'trackID']:
                     trackID = self.set_new_trackID()
@@ -162,17 +161,20 @@ class Lineages:
 
                         # Add trackID_mother, trackID_d1 and trackID_d2 to 
                         # preceding cells with same trackID
+                        #print(frames)
                         for f in frames:
-                            ix_prev_cell = np.where((self.track_output.frame == f) & \
+                            ix_prev_cell = np.where((self.track_output.frame == (f)) & \
                                 (self.track_output.trackID == trackID))[0][0] + 1
                             self.track_output.loc[ix_prev_cell, 'trackID_d1'] = trackID_d1
                             self.track_output.loc[ix_prev_cell, 'trackID_d2'] = trackID_d2
-                            self.track_output.loc[ix_prev_cell, 'trackID_mother'] = trackID
+                            if frames[0] > 0:
+                                self.track_output.loc[ix_prev_cell, 'trackID_mother'] = trackID
 
                         # new_global_ID_d2 will stay in self.global_IDs and lineage generation is
                         # continued at later time point.
                         self.remove_global_ID(start_ID)
                         start_ID = new_global_ID_d1
+                        break
 
                     # case 4: cell disappears
                     elif daughter_1.sum() == 0 and daughter_2.sum() == 0:
@@ -183,6 +185,11 @@ class Lineages:
                 # Empty list, Lineage generation is stopped in last time frame
                 if frame_cell > num_time_steps-2:
                     self.remove_global_ID(start_ID)
+        
+        for i in self.track_output.index:
+            self.track_output.loc[i, 'first_frame'] = self.track_output.loc[i, 'frames'][0]
+            self.track_output.loc[i, 'last_frame'] = self.track_output.loc[i, 'frames'][-1]
+        self.track_output.drop(['frames'],axis=1)
 
 
     def generate_global_IDs(self):
@@ -211,8 +218,8 @@ class Lineages:
 
         columns = ['frame', 'labelID', 'trackID', 'lineageID', 'trackID_d1', 'trackID_d2', 'split',
                     'trackID_mother', 'area', 'edges_min_row', 'edges_min_col', 'edges_max_row', 
-                    'edges_max_col', 'minor_axis_length', 'major_axis_length',
-                    'frames']
+                    'edges_max_col', 'minor_axis_length', 'major_axis_length', 'frames',
+                    'first_frame', 'last_frame']
         self.track_output = pd.DataFrame(columns=columns, index=self.global_IDs)
 
     def get_new_daughter_ID(self, daughter, frame_cell):
