@@ -7,33 +7,25 @@ import re
 
 from unet_prediction import SegmentationPredictor
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--path_model_weights")
-parser.add_argument("--path_pos")
-parser.add_argument("--path_channel")
-parser.add_argument("--postprocessing")
-parser.add_argument("--batch_mode")
-args = parser.parse_args()
+### Functions
+#############
 
-pred = SegmentationPredictor(path_model_weights=args.path_model_weights, postprocessing=bool(int(args.postprocessing)))
-path_cut = f"/{args.path_channel}/cut_im/"
-path_seg = f"/{args.path_channel}/seg_im/"
-path_seg_track = f"/{args.path_channel}/input_ilastik_tracking/"
-
-
-if bool(int(args.batch_mode)) == False:
-    pred.select_weights(args.path_pos, path_cut, path_seg)
-
+def save_weights(channel, weight_path):
+    """
+    Saves the path to the model weights into the settings file
+    :param channel: The channel of the weights selected
+    :param weight_path: Path to the weights
+    """
     # Save the selected weights
     with open("settings.sh", "r+") as file_settings:
         # read the file content
         content =file_settings.read()
 
         # if there is no variable -> write new
-        if f"MODEL_WEIGHTS_{args.path_channel}" in content:
+        if f"MODEL_WEIGHTS_{channel}" in content:
             # we replace the path
-            content = re.sub(f"MODEL_WEIGHTS_{args.path_channel}\=.*",
-                             f"MODEL_WEIGHTS_{args.path_channel}={os.path.abspath(pred.model_weights)}",
+            content = re.sub(f"MODEL_WEIGHTS_{channel}\=.*",
+                             f"MODEL_WEIGHTS_{channel}={weight_path}",
                              content)
             # truncate, set stream to start and write
             file_settings.truncate(0)
@@ -43,38 +35,56 @@ if bool(int(args.batch_mode)) == False:
             # we write a new variable
             file_settings.write(f"MODEL_WEIGHTS_{args.path_channel}={os.path.abspath(pred.model_weights)}\n")
 
-    pred.run_image_stack(args.path_pos, path_cut, path_seg, path_seg_track, pred.model_weights)
+# Main
+######
 
-elif bool(int(args.batch_mode)) == True:
-    file_settings = open("settings.sh","r")
+if __name__ == "__main__":
 
+    # arg parsing
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--path_model_weights", type=str, required=True, help="Path to the model weights that will be used "
+                                                                              "for the segmentation.")
+    parser.add_argument("--path_pos", type=str, required=True, help="Path to the current identifier folder to work on.")
+    parser.add_argument("--path_channel", type=str, required=True, help="Name of the current channel to process.")
+    parser.add_argument("--batch_mode", action="store_true", help="Flag for batch mode.")
+    parser.add_argument("--postprocessing", action="store_true", help="Flag for postprocessing.")
+    args = parser.parse_args()
 
-    list_params= file_settings.readlines()
+    # get the Predictor
+    pred = SegmentationPredictor(path_model_weights=args.path_model_weights, postprocessing=args.postprocessing)
 
-    list_items = [l.replace('\n', '').split('=') for l in list_params]
-    keys = [l[0] for l in list_items]
-    values = [l[1] for l in list_items]
-    params_dict = dict()
+    # set the paths
+    path_cut = os.path.join(args.path_channel, "cut_im")
+    path_seg = os.path.join(args.path_channel, "seg_im")
+    path_seg_track = os.path.join(args.path_channel, "input_ilastik_tracking")
 
-    for k, v in zip(keys, values):
-        params_dict[k]=v
+    # We use the same weight for all channels
+    path_model_weights = None
+    if args.batch_mode:
+        # Readout the parameters
+        with open("settings.sh","r") as file_settings:
+            lines = file_settings.readlines()
 
-    file_settings.close()
-    param = 'MODEL_WEIGHTS_'+args.path_channel
+        # Transform to dict, ignore comments in file
+        list_items = [l.replace('\n', '').split('=') for l in lines if not l.startswith("#")]
+        params_dict = {l[0]: l[1] for l in list_items}
 
-    if any([param in item for item in list(params_dict.keys())]):
-        if args.path_channel==params_dict['CHANNEL_2']:
-            path_model_weights = params_dict['MODEL_WEIGHTS_' + params_dict['CHANNEL_2']]
-        elif args.path_channel==params_dict['CHANNEL_3']:
-            path_model_weights = params_dict['MODEL_WEIGHTS_' + params_dict['CHANNEL_3']]
-        pred.run_image_stack(args.path_pos, path_cut, path_seg, path_seg_track, path_model_weights)
-    elif not any([param in item for item in list(params_dict.keys())]):
+        # check if the path for the weights is set in
+        param = f'MODEL_WEIGHTS_{args.path_channel}'
+        if param in params_dict and args.path_channel != params_dict['CHANNEL_1']:
+            # we set the path for the weights
+            path_model_weights = params_dict[param]
+
+            # we already have the weights set -> run the
+            pred.run_image_stack(args.path_pos, path_cut, path_seg, path_seg_track, path_model_weights)
+
+    # Select the weights if not set by the batch mode
+    if path_model_weights is None:
         pred.select_weights(args.path_pos, path_cut, path_seg)
+        path_model_weights = os.path.abspath(pred.model_weights)
 
-        file_settings = open("settings.sh","a") 
+    # Save the selected weights
+    save_weights(args.path_channel, path_model_weights)
 
-
-        file_settings.write("MODEL_WEIGHTS_" + args.path_channel + "=" + pred.model_weights + "\n")
-        file_settings.close()
-        pred.run_image_stack(args.path_pos, path_cut, path_seg, path_seg_track, pred.model_weights)
-
+    # run the stack
+    pred.run_image_stack(args.path_pos, path_cut, path_seg, path_seg_track, path_model_weights)

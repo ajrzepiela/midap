@@ -280,19 +280,17 @@ segmentation_family() {
   # Phase segmention dependent channel loops
   # TODO: These conditions seem identical + Should be string comparison
   .log 6 "Segmenting images for identifier: ${POS}"
-  if [ "$PHASE_SEGMENTATION" == True ]; then
-    for i in $(seq 1 $NUM_CHANNEL_TYPES); do
-      CH="CHANNEL_$i"
-      python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos "$PATH_FOLDER$POS" --path_channel "${!CH}" --postprocessing 1 --batch_mode 0
-      python analyse_segmentation.py --path_seg "$PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/" --path_result "$PATH_FOLDER$POS/${!CH}/"
-    done
-  elif [ "$PHASE_SEGMENTATION" == False ]; then
-    for i in $(seq 2 $NUM_CHANNEL_TYPES); do
-      CH="CHANNEL_$i"
-      python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos "$PATH_FOLDER$POS" --path_channel "${!CH}" --postprocessing 1 --batch_mode 0
-      python analyse_segmentation.py --path_seg "$PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/" --path_result "$PATH_FOLDER$POS/${!CH}/"
-    done
+  # Set the start of the loop
+  local START=2
+  if [ "$PHASE_SEGMENTATION" == "True" ]; then
+    local START=1
   fi
+  # cycle through channels
+  for i in $(seq $START $NUM_CHANNEL_TYPES); do
+    CH="CHANNEL_$i"
+    python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos "$PATH_FOLDER$POS" --path_channel "${!CH}" --postprocessing
+    python analyse_segmentation.py --path_seg "$PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/" --path_result "$PATH_FOLDER$POS/${!CH}/"
+  done
 }
 
 tracking_family() {
