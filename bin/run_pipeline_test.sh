@@ -1,5 +1,4 @@
 #!/bin/bash
-    echo "$1" > "$CHECKLOG"
 
 # necessary to catch python errors
 set -E
@@ -278,6 +277,7 @@ segmentation_family() {
   retry "${FUNCNAME[0]}_$1" || return 0
 
   # Phase segmention dependent channel loops
+  # TODO: These conditions seem identical + Should be string comparison
   .log 6 "Segmenting images for identifier: ${POS}"
   # Set the start of the loop
   local START=2
