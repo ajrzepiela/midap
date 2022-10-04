@@ -75,12 +75,9 @@ if __name__ == "__main__":
             # we set the path for the weights
             path_model_weights = params_dict[param]
 
-            # we already have the weights set -> run the
-            pred.run_image_stack(args.path_pos, path_cut, path_seg, path_seg_track, path_model_weights)
-
     # Select the weights if not set by the batch mode
     if path_model_weights is None:
-        pred.select_weights(args.path_pos, path_cut, path_seg)
+        pred.select_weights(args.path_pos, path_cut)
         path_model_weights = os.path.abspath(pred.model_weights)
 
     # Save the selected weights
