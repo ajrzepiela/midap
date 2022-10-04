@@ -278,7 +278,6 @@ segmentation_family() {
   retry "${FUNCNAME[0]}_$1" || return 0
 
   # Phase segmention dependent channel loops
-  # TODO: These conditions seem identical + Should be string comparison
   .log 6 "Segmenting images for identifier: ${POS}"
   # Set the start of the loop
   local START=2
@@ -301,20 +300,17 @@ tracking_family() {
 
   # Phase segmentation dependent channel loops
   .log 6 "Running cell tracking for identifier: ${POS}"
-  # TODO: These conditions seem identical
-  if [ "$PHASE_SEGMENTATION" == True ]; then
-    for i in $(seq 1 $NUM_CHANNEL_TYPES); do
-      CH="CHANNEL_$i"
-      python track_cells_crop.py --path "$PATH_FOLDER$POS/${!CH}/" --start_frame "$START_FRAME" --end_frame "$END_FRAME"
-      python generate_lineages.py --path "$PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH"
-    done
-  elif [ "$PHASE_SEGMENTATION" == False ]; then
-    for i in $(seq 2 $NUM_CHANNEL_TYPES); do
-      CH="CHANNEL_$i"
-      python track_cells_crop.py --path "$PATH_FOLDER$POS/${!CH}/" --start_frame "$START_FRAME" --end_frame "$END_FRAME"
-      python generate_lineages.py --path "$PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH"
-    done
+  # Set the start of the loop
+  local START=2
+  if [ "$PHASE_SEGMENTATION" == "True" ]; then
+    local START=1
   fi
+  # cycle through channels
+  for i in $(seq $START $NUM_CHANNEL_TYPES); do
+    CH="CHANNEL_$i"
+    python track_cells_crop.py --path "$PATH_FOLDER$POS/${!CH}/" --start_frame "$START_FRAME" --end_frame "$END_FRAME"
+    python generate_lineages.py --path "$PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH"
+  done
 }
 
 source_paths_well() {
