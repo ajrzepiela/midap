@@ -33,7 +33,7 @@ def save_weights(channel, weight_path):
             file_settings.write(content)
         else:
             # we write a new variable
-            file_settings.write(f"MODEL_WEIGHTS_{args.path_channel}={os.path.abspath(pred.model_weights)}\n")
+            file_settings.write(f"MODEL_WEIGHTS_{args.path_channel}={os.path.abspath(weight_path)}\n")
 
 # Main
 ######
