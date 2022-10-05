@@ -130,7 +130,7 @@ log_checkpoint() {
   .log 2 "Copy checkpoint and settings to: ${CHECKDIR}"
   rsync "${CHECKLOG}" "${CHECKDIR}/${CHECKLOG}"
   rsync settings.sh "${CHECKDIR}/settings.sh"
-  exit 1
+  exit 1 
 }
 
 retry() {
@@ -227,9 +227,11 @@ copy_files_family() {
   .log 6 "Copying files for identifier: ${POS}"
   for i in $(seq 1 $NUM_CHANNEL_TYPES); do
     CH="CHANNEL_$i"
-    VAR=$(find "$PATH_FOLDER" -name *"$POS"*"${!CH}"*".$FILE_TYPE")
+    VAR=$(find "$PATH_FOLDER" -maxdepth 1 -name *"$POS"*"${!CH}"*".$FILE_TYPE")
     # Catch the copy output for debug logging
-    local COPYLOG=$(cp -v "$VAR" "$PATH_FOLDER$POS/${!CH}/")
+    # We need to split it in two otherwise the error wont be catched correctly!
+    local COPYLOG
+    COPYLOG=$(cp -v "$VAR" "$PATH_FOLDER$POS/${!CH}/")
     .log 7 "$COPYLOG"
   done
 }
@@ -368,7 +370,9 @@ split_frames_well() {
   .log 6 "Spliting frames..."
   python stack2frames.py --path "$PATH_FILE_WO_EXT/$FILE_NAME" --pos "" --channel "" --start_frame "$START_FRAME" --end_frame "$END_FRAME" --deconv "$DECONVOLUTION"
   # Catch the copy output for debug logging
-  local COPYLOG=$(cp -v "$PATH_FILE_WO_EXT/$RAW_IM"*".$FILE_TYPE" "$PATH_FILE_WO_EXT/$SEG_PATH$CUT_PATH")
+  # We need to split it in two otherwise the error wont be catched correctly!
+  local COPYLOG
+  COPYLOG=$(cp -v "$PATH_FILE_WO_EXT/$RAW_IM"*".$FILE_TYPE" "$PATH_FILE_WO_EXT/$SEG_PATH$CUT_PATH")
   .log 7 "${COPYLOG}"
 }
 
