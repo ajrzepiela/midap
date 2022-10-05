@@ -277,7 +277,6 @@ segmentation_family() {
   retry "${FUNCNAME[0]}_$1" || return 0
 
   # Phase segmention dependent channel loops
-  # TODO: These conditions seem identical + Should be string comparison
   .log 6 "Segmenting images for identifier: ${POS}"
   # Set the start of the loop
   local START=2
@@ -288,7 +287,7 @@ segmentation_family() {
   for i in $(seq $START $NUM_CHANNEL_TYPES); do
     CH="CHANNEL_$i"
     python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos "$PATH_FOLDER$POS" --path_channel "${!CH}" --postprocessing
-    python analyse_segmentation.py --path_seg "$PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/" --path_result "$PATH_FOLDER$POS/${!CH}/"
+    python analyse_segmentation.py --path_seg "$PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/" --path_result "$PATH_FOLDER$POS/${!CH}/"  --loglevel "${__VERBOSE}"
   done
 }
 

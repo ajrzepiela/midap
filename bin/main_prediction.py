@@ -76,7 +76,7 @@ if __name__ == "__main__":
 
     # Select the weights if not set by the batch mode
     if path_model_weights is None:
-        #pred.set_segmentation_method(path_cut)
+        pred.set_segmentation_method(path_cut)
         # check if the weights are set, this might not be the case in a custom implementation
         if pred._model_weights is None:
             path_model_weights = "custom"
