@@ -54,15 +54,14 @@ if __name__ == "__main__":
     pred = SegmentationPredictor(path_model_weights=args.path_model_weights, postprocessing=args.postprocessing)
 
     # set the paths
-    path_cut = os.path.join(args.path_channel, "cut_im")
-    path_seg = os.path.join(args.path_channel, "seg_im")
-    path_seg_track = os.path.join(args.path_channel, "input_ilastik_tracking")
+    path_channel = os.path.join(args.path_pos, args.path_channel)
+    path_cut = os.path.join(path_channel, "cut_im")
 
     # We use the same weight for all channels
     path_model_weights = None
     if args.batch_mode:
         # Readout the parameters
-        with open("settings.sh","r") as file_settings:
+        with open("settings.sh", "r") as file_settings:
             lines = file_settings.readlines()
 
         # Transform to dict, ignore comments in file
@@ -77,11 +76,18 @@ if __name__ == "__main__":
 
     # Select the weights if not set by the batch mode
     if path_model_weights is None:
-        pred.select_weights(args.path_pos, path_cut)
-        path_model_weights = os.path.abspath(pred.model_weights)
+        #pred.set_segmentation_method(path_cut)
+        # check if the weights are set, this might not be the case in a custom implementation
+        if pred._model_weights is None:
+            path_model_weights = "custom"
+        # we need to make an exception for the base variant which is not a path
+        elif pred._model_weights == "watershed":
+            path_model_weights = pred._model_weights
+        else:
+            path_model_weights = os.path.abspath(pred._model_weights)
 
     # Save the selected weights
     save_weights(args.path_channel, path_model_weights)
 
     # run the stack
-    pred.run_image_stack(args.path_pos, path_cut, path_seg, path_seg_track, path_model_weights)
+    pred.run_image_stack(path_channel)
