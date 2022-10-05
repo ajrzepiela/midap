@@ -153,7 +153,7 @@ set_parameters() {
   # Start GUI only if we are not in headless mode and no retry
   if [ "$HEADLESS" != "True" ] && retry ${FUNCNAME[0]}; then
     .log 7 "Starting up the GUI"
-    python set_parameters.py
+    python apps/set_parameters.py
   fi
   # In case of headless or checkpoint we just source the settings
   if [ -f "settings.sh" ]; then
@@ -169,7 +169,7 @@ restrict_frames_family() {
   # Starts up the script to restrict the frames (arg is pos)
   retry "${FUNCNAME[0]}_$1" || return 0
   .log 6 "Restricting frames for identifier: ${POS}"
-  python restrict_frames.py
+  python apps/restrict_frames.py
   source settings.sh
 }
 
@@ -245,7 +245,7 @@ split_frames_family() {
   for i in $(seq 1 $NUM_CHANNEL_TYPES); do
     CH="CHANNEL_$i"
     INP=$(find "$PATH_FOLDER$POS/${!CH}/" -name *".$FILE_TYPE")
-    python stack2frames.py --path "$INP" --start_frame "$START_FRAME" --end_frame "$END_FRAME" --deconv "$DECONVOLUTION" --loglevel "${__VERBOSE}"
+    python apps/stack2frames.py --path "$INP" --start_frame "$START_FRAME" --end_frame "$END_FRAME" --deconv "$DECONVOLUTION" --loglevel "${__VERBOSE}"
   done
 }
 
@@ -266,7 +266,7 @@ cut_chambers_family() {
   done
   
   # We need to do the eval turn to deal with paths that have spaces!
-  CMD="python frames2cuts.py --channel $ARGS"
+  CMD="python apps/frames2cuts.py --channel $ARGS"
   eval $CMD
 }
 
@@ -286,8 +286,8 @@ segmentation_family() {
   # cycle through channels
   for i in $(seq $START $NUM_CHANNEL_TYPES); do
     CH="CHANNEL_$i"
-    python main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos "$PATH_FOLDER$POS" --path_channel "${!CH}" --postprocessing
-    python analyse_segmentation.py --path_seg "$PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/" --path_result "$PATH_FOLDER$POS/${!CH}/"  --loglevel "${__VERBOSE}"
+    python apps/main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos "$PATH_FOLDER$POS" --path_channel "${!CH}" --postprocessing
+    python apps/analyse_segmentation.py --path_seg "$PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/" --path_result "$PATH_FOLDER$POS/${!CH}/"  --loglevel "${__VERBOSE}"
   done
 }
 
