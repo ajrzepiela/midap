@@ -312,6 +312,10 @@ tracking_family() {
     python track_cells_crop.py --path "$PATH_FOLDER$POS/${!CH}/" --start_frame "$START_FRAME" --end_frame "$END_FRAME"
     python generate_lineages.py --path "$PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH"
   done
+
+  # we copy the current settings.sh into the path folder for reproducibility
+  COPYLOG=$(cp -v settings.sh "${PATH_FOLDER}/${POS}/settings.sh")
+  .log 7 "$COPYLOG"   
 }
 
 source_paths_well() {
@@ -531,11 +535,7 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]; then
     if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "TRACKING" ]]; then
       tracking_family $POS
     fi
-  
-    # we copy the current settings.sh into the path folder for reproducibility
-    COPYLOG=$(cp -v settings.sh "${PATH_FOLDER}/${POS}/settings.sh")
-    .log 7 "$COPYLOG"
- 
+
   # End POS_UNIQ Loop
   done
 # END FAMILY_MACHINE
