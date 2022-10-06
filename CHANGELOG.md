@@ -56,6 +56,8 @@ Feature:
 Fix:
 - Tensorflow output is suppressed by default, change `TF_CPP_MIN_LOG_LEVEL` in bash script to increase
 - Variables that are already set in `settings.sh` are updated instead of appended at the end
+- Moved last copy settings inside tracking function to avoid unintened overwrite for restarts
+- Fix bug in cut images where an alignment offset of 0 caused a crash
 
 ## [0.0.1]
 
