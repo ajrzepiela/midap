@@ -288,7 +288,11 @@ class CutoutImage:
         :param shift: The shift to perform
         :returns: The shifted image
         """
-        return im[(self.off-shift[0]):(-self.off-shift[0]), (self.off-shift[1]):(-self.off-shift[1])]
+        if self.off-shift[0] != 0:
+            im = im[(self.off - shift[0]):(-self.off - shift[0]), :]
+        if self.off - shift[1] != 0:
+            im = im[:, (self.off - shift[1]):(-self.off - shift[1])]
+        return im
 
     def save_cutout(self, files, file_names):
         """
@@ -320,7 +324,10 @@ class CutoutImage:
             # get the first image
             src = self.open_tiff(files[0])
             # offset of 1st image
-            src_off = src[self.off:-self.off, self.off:-self.off]
+            if self.off == 0:
+                src_off = src
+            else:
+                src_off = src[self.off:-self.off, self.off:-self.off]
 
             # We get the corners using the PH channel
             if channel_id == 0:
