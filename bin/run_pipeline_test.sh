@@ -494,7 +494,7 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]; then
   POS_UNIQ=($(printf "%s\n" "${POSITIONS[@]}" | sort -u));
   
   # See if we got anything
-  if [ -z "${POS_UNIQ[@]}" ]; then
+  if [ ${#POS_UNIQ[@]} -eq 0 ]; then
     .log 3 "Could not extract any file matching identifier: '${POS_IDENTIFIER}'"
     clear_log
     exit 1
