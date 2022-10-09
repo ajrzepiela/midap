@@ -51,7 +51,7 @@ class Lineages:
 
         # Init dataframe and generate empty label stack
         self.__init_dataframe()
-        self.label_stack = np.empty((self.results.shape[:-1]))
+        self.label_stack = np.zeros((self.results.shape[:-1]))
 
         # Loop over all global IDs in list and connects cells between time frames
         # with help of tracking results
@@ -96,6 +96,9 @@ class Lineages:
                 self.track_output.loc[start_ID, 'edges_min_col'] = cell_props.bbox[1]
                 self.track_output.loc[start_ID, 'edges_max_row'] = cell_props.bbox[2]
                 self.track_output.loc[start_ID, 'edges_max_col'] = cell_props.bbox[3]
+                self.track_output.loc[start_ID, 'intensity_max'] = cell_props.intensity_max
+                self.track_output.loc[start_ID, 'intensity_mean'] = cell_props.intensity_mean
+                self.track_output.loc[start_ID, 'intensity_min'] = cell_props.intensity_min
                 self.track_output.loc[start_ID, 'minor_axis_length'] = cell_props.minor_axis_length
                 self.track_output.loc[start_ID, 'major_axis_length'] = cell_props.major_axis_length
                 self.track_output.loc[start_ID, 'frames'] = frames
@@ -206,7 +209,8 @@ class Lineages:
 
         columns = ['frame', 'labelID', 'trackID', 'lineageID', 'trackID_d1', 'trackID_d2', 'split',
                     'trackID_mother', 'area', 'edges_min_row', 'edges_min_col', 'edges_max_row', 
-                    'edges_max_col', 'minor_axis_length', 'major_axis_length', 'frames',
+                    'edges_max_col', 'intensity_max', 'intensity_mean', 'intensity_min', 
+                    'minor_axis_length', 'major_axis_length', 'frames',
                     'first_frame', 'last_frame']
         self.track_output = pd.DataFrame(columns=columns, index=self.global_IDs)
 
@@ -270,7 +274,7 @@ class Lineages:
 
         # get center of daughter in current frame
         cell = (self.global_label == start_ID)[frame_cell]
-        cell_props = regionprops(cell.astype(int))[0]
+        cell_props = regionprops(cell.astype(int), intensity_image = self.inputs[frame_cell,:, :, 0])[0]
 
         return cell_props
 
