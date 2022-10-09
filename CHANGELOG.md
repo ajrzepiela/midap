@@ -19,6 +19,28 @@ Efficiency:
 Fix:
 - ...
 
+## [0.0.3]
+
+2022-10-05
+
+Feature:
+- Pipeline supports running PH + N Channels via comma separated list of channels in the GUI
+- Changed backend of matplolib to be compatible with CentOS clusters
+- Added logging utils for standardized logging
+- Started moving scripts to apps folder
+
+Fix:
+- Added quotes to support file names with spaces
+- Fix bug where local bash variables with interpolated commands (`local VAR=$(...)`) are not trapped when written on one line
+- Set -maxdepth of find command in copy_files to 1 to avoid finding more than one file in the datasets
+- Catch Error if no identifier was found
+- Added an exeption if error was out of callstack
+
+Efficiency:
+- Cleanup of files in apps folder and their related imports in src
+- Preparation of cut chambers and segmentation for user defined subclasses
+
+
 
 ## [0.0.2]
 
@@ -34,6 +56,8 @@ Feature:
 Fix:
 - Tensorflow output is suppressed by default, change `TF_CPP_MIN_LOG_LEVEL` in bash script to increase
 - Variables that are already set in `settings.sh` are updated instead of appended at the end
+- Moved last copy settings inside tracking function to avoid unintened overwrite for restarts
+- Fix bug in cut images where an alignment offset of 0 caused a crash
 
 ## [0.0.1]
 
