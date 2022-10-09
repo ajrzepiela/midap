@@ -27,8 +27,16 @@ lin.generate_lineages()
 # Save data
 lin.track_output.to_csv(args.path + 'track_output.csv', index = True)
 
-hf = h5py.File(args.path + 'track_output.h5', 'w')
-hf.create_dataset('inputs_all', data=inputs_all)
-hf.create_dataset('results_all', data=results_all_red)
+hf = h5py.File(args.path + 'raw_inputs.h5', 'w')
+raw_inputs = inputs_all[:,:,:,0]
+hf.create_dataset('raw_inputs', data=raw_inputs)
+hf.close()
+
+hf = h5py.File(args.path + 'segmentations.h5', 'w')
+segs = inputs_all[0,:,:,3]
+hf.create_dataset('segmentations', data=segs)
+hf.close()
+
+hf = h5py.File(args.path + 'label_stack.h5', 'w')
 hf.create_dataset('label_stack', data=lin.label_stack)
 hf.close()
