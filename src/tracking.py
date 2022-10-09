@@ -3,12 +3,14 @@ from skimage.measure import label, regionprops
 from skimage.transform import resize
 from skimage.util import img_as_float
 from skimage.segmentation import clear_border
+from skimage.morphology import remove_small_objects
 
 import numpy as np
 from tqdm import tqdm
 
-from model_tracking import unet_track
+from model_trackingv2 import unet_track
 
+import matplotlib.pyplot as plt
 
 import os
 import psutil
@@ -281,8 +283,11 @@ class Tracking():
             Array containing the constant input (whole raw image and segmentation image) per time frame.
         """
 
-        self.model = unet_track(self.input_size, constant_input)
-        self.model.load_weights(self.model_weights)
+        #self.model = unet_track(self.input_size, constant_input)
+        #self.model.load_weights(self.model_weights)
+        
+        self.model = unet_track(self.model_weights, self.input_size)
+        
 
     def track_cell(self, cell_id, inputs):
         """Tracks single cell by using the U-Net.
@@ -392,20 +397,23 @@ class Tracking():
             self.results_cur_frame_crop = self.model.predict(
                 inputs_cur_frame, verbose=0)
 
-            # Extract and clean results
-            io.imread(self.imgs[cur_frame])
+           
+            # Combine cropped results in one image
             self.results_cur_frame = np.zeros(
-                (self.results_cur_frame_crop.shape[0], self.target_size[0], self.target_size[1], 2))
+                (self.results_cur_frame_crop.shape[0], self.target_size[0], self.target_size[1], 1))
 
+            
             for i in range(len(crop_box)):
                 row_min, col_min, row_max, col_max = crop_box[i]
                 self.results_cur_frame[i, row_min:row_max, col_min:col_max,
-                                       :] = self.results_cur_frame_crop[i][:, :, :2]
-
+                                       :] = self.results_cur_frame_crop[i]
+            
+            # Clean results
             self.results_cur_frame_clean = self.clean_cur_frame(
                 input_whole_frame[:, :, 3], self.results_cur_frame)
             self.inputs_all.append(input_whole_frame)
             self.results_all.append(self.results_cur_frame_clean)
+            
             print(process.memory_info().rss*1e-9)
 
     def clean_cur_frame(self, inp, res):
@@ -423,25 +431,23 @@ class Tracking():
         # Labeling of the segmentation.
         inp_label = label(inp)
 
-        # Compare cell from tracking with cell from segmentation.
-        res_clean = []
-        for r in res:
-            r_clean = np.zeros(r.shape)
+        # Compare cell from tracking with cell from segmentation and
+        # find cells which are overlapping most.
+        res_clean = np.zeros(res.shape[:-1] + (2,))
+        for ri, r in enumerate(res):
 
-            ix_mother = np.where(r[:, :, 0] > 0.8)
-            ix_daughter = np.where(r[:, :, 1] > 0.8)
+            r_label = label(r[:,:,0] > 0.9)
+            r_label = remove_small_objects(r_label,min_size=5)
 
-            if len(ix_mother[0]) > 0:
-                row_m = ix_mother[0][0]
-                col_m = ix_mother[1][0]
-                r_clean[:, :, 0][inp_label == inp_label[row_m, col_m]] = 1
+            overl = inp_label[np.multiply(inp, r_label) > 0]
+            cell_labels = np.unique(overl)
+            overl_areas = [np.count_nonzero(overl == l) for l in cell_labels]
+            ix_max_overl = np.argsort(overl_areas)[-2:]
+            label_max_overl = cell_labels[ix_max_overl]
 
-            if len(ix_daughter[0]) > 0:
-                row_d = ix_daughter[0][0]
-                col_d = ix_daughter[1][0]
-                r_clean[:, :, 1][inp_label == inp_label[row_d, col_d]] = 1
+            for i, c in enumerate(label_max_overl):
+                res_clean[ri,:,:,i][inp_label == c] = 1
 
-            res_clean.append(r_clean)
         res_clean = np.array(res_clean)
         return res_clean
 
