@@ -8,8 +8,7 @@ from skimage.restoration import richardson_lucy
 from skimage import io
 
 import sys
-sys.path.append('../src')
-from utils import get_logger
+from midap.utils import get_logger
 
 # argument parsing
 parser = argparse.ArgumentParser()

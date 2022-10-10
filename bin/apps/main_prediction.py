@@ -1,11 +1,10 @@
 import argparse
 
 import sys
-sys.path.append('../src')
 import os
 import re
 
-from unet_prediction import SegmentationPredictor
+from midap.segmentation.unet_prediction import SegmentationPredictor
 
 ### Functions
 #############

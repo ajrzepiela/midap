@@ -4,8 +4,7 @@ import glob
 import argparse
 
 import sys
-sys.path.append('../src')
-from tracking import Tracking
+from midap.tracking.tracking import Tracking
 
 parser = argparse.ArgumentParser()
 parser.add_argument(

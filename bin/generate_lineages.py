@@ -5,8 +5,7 @@ import h5py
 import argparse
 
 import sys
-sys.path.append('../src/')
-from lineage import Lineages
+from midap.tracking.lineage import Lineages
 
 
 parser = argparse.ArgumentParser()

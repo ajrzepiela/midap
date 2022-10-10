@@ -27,7 +27,7 @@ if event == 'Cancel' or event == None:
    exit(1)
 
 # replace the current start and end frame with the selected one
-with open("settings.sh","r+") as file_settings:
+with open("settings.sh", "r+") as file_settings:
     # read file
     content = file_settings.read()
 

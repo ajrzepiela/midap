@@ -1,7 +1,6 @@
 import argparse
 import sys
-sys.path.append('../src')
-from image_cutout import CutoutImage
+from midap.imcut.image_cutout import CutoutImage
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--channel", type=str, nargs="+", required=True,

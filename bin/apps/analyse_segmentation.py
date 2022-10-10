@@ -10,8 +10,7 @@ import pandas as pd
 import argparse
 
 import sys
-sys.path.append('../src')
-from utils import get_logger
+from midap.utils import get_logger
 
 # Functions
 ###########
