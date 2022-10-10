@@ -268,7 +268,7 @@ cut_chambers_family() {
   done
   
   # We need to do the eval turn to deal with paths that have spaces!
-  CMD="python apps/frames2cuts.py --channel $ARGS"
+  CMD="python apps/frames2cuts.py --cutout_class $CHAMBER_CUTOUT --channel $ARGS"
   eval $CMD
 }
 
