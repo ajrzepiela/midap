@@ -4,7 +4,9 @@ import sys
 import os
 import re
 
-from midap.segmentation.unet_prediction import SegmentationPredictor
+# to get all subclasses
+from midap.segmentation import *
+from midap.segmentation import base_segmentator
 
 ### Functions
 #############
@@ -45,12 +47,25 @@ if __name__ == "__main__":
                                                                               "for the segmentation.")
     parser.add_argument("--path_pos", type=str, required=True, help="Path to the current identifier folder to work on.")
     parser.add_argument("--path_channel", type=str, required=True, help="Name of the current channel to process.")
+    parser.add_argument("--segmentation_class", type=str,
+                        help="Name of the class used for the cell segmentation. Must be defined in a file of "
+                             "midap.segmentation and a subclass of midap.imcut.segmentation.SegmentationPredictor")
     parser.add_argument("--batch_mode", action="store_true", help="Flag for batch mode.")
     parser.add_argument("--postprocessing", action="store_true", help="Flag for postprocessing.")
     args = parser.parse_args()
 
+    # get the right subclass
+    segmentation_class = None
+    for subclass in base_segmentator.SegmentationPredictor.__subclasses__():
+        if subclass.__name__ == args.segmentation_class:
+            segmentation_class = subclass
+
+    # throw an error if we did not find anything
+    if segmentation_class == None:
+        raise ValueError(f"Chosen class does not exist: {args.cutout_class}")
+
     # get the Predictor
-    pred = SegmentationPredictor(path_model_weights=args.path_model_weights, postprocessing=args.postprocessing)
+    pred = segmentation_class(path_model_weights=args.path_model_weights, postprocessing=args.postprocessing)
 
     # set the paths
     path_channel = os.path.join(args.path_pos, args.path_channel)

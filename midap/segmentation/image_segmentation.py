@@ -5,13 +5,13 @@ from skimage import feature
 from skimage import exposure
 from skimage.filters import sobel, threshold_otsu, threshold_minimum, threshold_local
 from skimage.measure import regionprops
-from skimage.morphology import watershed
+#from skimage.morphology import watershed
 from skimage.segmentation.boundaries import find_boundaries
 from skimage.util import img_as_ubyte
 from tqdm import tqdm
 
-from sklearn.cluster import KMeans
-from sklearn.utils import shuffle
+#from sklearn.cluster import KMeans
+#from sklearn.utils import shuffle
 from skimage.exposure import is_low_contrast, adjust_sigmoid
 from skimage.feature import canny
 from skimage.filters import unsharp_mask
@@ -22,7 +22,7 @@ from skimage.filters import rank
 from skimage.morphology import disk
 from scipy.ndimage.morphology import binary_fill_holes
 
-from image_preprocessing import Preprocessing
+from .image_preprocessing import Preprocessing
 
 import matplotlib.pyplot as plt
 

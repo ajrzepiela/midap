@@ -288,7 +288,7 @@ segmentation_family() {
   # cycle through channels
   for i in $(seq $START $NUM_CHANNEL_TYPES); do
     CH="CHANNEL_$i"
-    python apps/main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos "$PATH_FOLDER$POS" --path_channel "${!CH}" --postprocessing
+    python apps/main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos "$PATH_FOLDER$POS" --path_channel "${!CH}" --segmentation_class "${SEGMENTATION_METHOD}" --postprocessing
     python apps/analyse_segmentation.py --path_seg "$PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/" --path_result "$PATH_FOLDER$POS/${!CH}/"  --loglevel "${__VERBOSE}"
   done
 }
