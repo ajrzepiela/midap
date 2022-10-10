@@ -92,3 +92,31 @@ cd bin/
 python visualize_lineages.py --path ../example_data/Glen/{Position}/{Channel}/track_output/
 ```
 
+### Modularity of the Pipeline
+
+It is possible to define custom methods for the chamber cutout, the cell segmentation and the tracking. 
+
+#### Chamber cutout
+
+To define a custom method for the chamber cutout, you can start by copying the `interactive_cutout.py` file in the `midap` package:
+
+```
+cd midap/imcut
+cp interactive_cutout.py <your_filename>.py
+```
+In the copied file, change the name of the class from `InteractiveCutout` to your own class. Choose a descriptive name as the name of this class will be shown in the dropdown menu of the GUI to select the method. Then you can overwrite the `cut_corners` method with your own method. Note that you should not add additional arguments to the method and the method has to set the attribute `self.corners_cut` the cutout corners.
+
+#### Cell Segmentation
+
+To define a custom method for the cell segmentation, you can start by copying the `unet_segmentator.py` file in the `midap` package:
+
+```
+cd midap/segmentation
+cp unet_segmentator.py <your_filename>.py
+```
+In the copied file, change the name of the class from `UNetSegmentation` to your own class. Choose a descriptive name as the name of this class will be shown in the dropdown menu of the GUI to select the method. Then you can overwrite the `set_segmentation_method` method with your own method. Note that you should not add additional arguments to the method and the method has to set the attribute `self.segmentation_method` to a method that performs the cell segmentation.
+
+#### Tracking
+
+To be added...
+
