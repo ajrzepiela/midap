@@ -18,12 +18,14 @@ args = parser.parse_args()
 images_folder = args.path + 'cut_im/'
 segmentation_folder = args.path + 'seg_im/'
 output_folder = args.path + 'track_output/'
-model_file = '../model_weights/model_weights_tracking/unet_moma_track_multisets.hdf5'
+#model_file = '../model_weights/model_weights_tracking/unet_moma_track_v2.hdf5'
+model_file = '../model_weights/model_weights_tracking/unet_pads_track.hdf5'
+#model_file = '../model_weights/model_weights_tracking/unet_agarpads_track_optimized.hdf5'
 
 img_names_sort = np.sort(glob.glob(images_folder + '*frame*')
-                         )#[int(args.start_frame):int(args.end_frame)]
+                         )[int(args.start_frame):int(args.end_frame)]
 seg_names_sort = np.sort(glob.glob(
-    segmentation_folder + '*frame*'))#[int(args.start_frame):int(args.end_frame)]
+    segmentation_folder + '*frame*'))[int(args.start_frame):int(args.end_frame)]
 
 # Parameters:
 crop_size = (128, 128)
@@ -43,8 +45,10 @@ results_all_red = np.zeros(
 
 for t in range(len(tr.results_all)):
     for ix, cell_id in enumerate(tr.results_all[t]):
-        results_all_red[t, cell_id[:, :, 0] > 0.5, 0] = ix+1
-        results_all_red[t, cell_id[:, :, 1] > 0.5, 1] = ix+1
+        if cell_id[:, :, 0].sum() > 0:
+            results_all_red[t, cell_id[:, :, 0] > 0, 0] = ix+1
+        if cell_id[:, :, 1].sum() > 0:
+            results_all_red[t, cell_id[:, :, 1] > 0, 1] = ix+1
 
 # Save data
 np.savez(output_folder + 'inputs_all_red.npz',

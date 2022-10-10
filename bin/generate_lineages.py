@@ -1,5 +1,6 @@
 import numpy as np
 import pickle
+import h5py
 
 import argparse
 
@@ -24,10 +25,18 @@ lin = Lineages(inputs_all, results_all_red)
 lin.generate_lineages()
 
 # Save data
-np.savez(args.path + 'label_stack.npz', label_stack=lin.label_stack)
+lin.track_output.to_csv(args.path + 'track_output.csv', index = True)
 
-with open(args.path + 'label_dict.pkl', 'wb') as f:
-    pickle.dump(lin.label_dict, f)
+hf = h5py.File(args.path + 'raw_inputs.h5', 'w')
+raw_inputs = inputs_all[:,:,:,0]
+hf.create_dataset('raw_inputs', data=raw_inputs)
+hf.close()
 
-with open(args.path + 'tracks_data.pkl', 'wb') as f:
-    pickle.dump(lin.tracks_data, f)
+hf = h5py.File(args.path + 'segmentations.h5', 'w')
+segs = inputs_all[0,:,:,3]
+hf.create_dataset('segmentations', data=segs)
+hf.close()
+
+hf = h5py.File(args.path + 'label_stack.h5', 'w')
+hf.create_dataset('label_stack', data=lin.label_stack)
+hf.close()

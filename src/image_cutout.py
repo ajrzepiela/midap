@@ -68,7 +68,9 @@ class CutoutImage:
         :returns: shifts as vector for the alignment
         """
         # aligns a source image in comparison to a reference image
-        return phase_cross_correlation(src_img, ref_img)[0].astype(int)
+        return phase_cross_correlation(src_img, ref_img, normalization=None)[0].astype(int)
+        #return register_translation(src_img, ref_img)[0].astype(int)
+
 
     def align_all_images(self):
         """
