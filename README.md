@@ -13,7 +13,13 @@ The installation was tested on macOS Big Sur (11.6.7) and Ubuntu 22.04.
 cd bin/
 conda activate midap
 ```
-4. Start pipeline from the command line with `./run_pipeline_test.sh`. The script accepts arguments and has the following signature:
+4. Install the package:
+
+```
+pip install -e .
+```
+
+6. Start pipeline from the command line with `./run_pipeline_test.sh`. The script accepts arguments and has the following signature:
 
 ```
 Syntax: run_pipeline_checkpoints.sh [options]
@@ -32,7 +38,13 @@ Note that the `--headless` option currently only skips the first GUI and expects
 
 1. Install Miniforge `./install_miniforge.sh`
 
-2. Navigate to bin-directory and run the pipeline:
+2. Install the package:
+
+```
+pip install -e .
+```
+
+3. Navigate to bin-directory and run the pipeline:
 ```
 cd bin/
 ./run_pipeline_m1.sh
