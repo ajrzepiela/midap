@@ -27,6 +27,7 @@ Feature:
 - Integrated M1 workflow into the main script such that one can run everything from one script
 - Added support for Euler setup
 - Add instruction for both to README, for now Euler only with LSF
+- Removed matlab suppersegger and modules
 
 Fix:
 - Open CV dependency was not in the requirements
