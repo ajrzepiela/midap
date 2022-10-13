@@ -1,7 +1,6 @@
 import cv2
 from PIL import Image, ImageEnhance
 from skimage.filters import unsharp_mask
-from skimage import io
 
 from multiprocessing import Pool
 import numpy as np

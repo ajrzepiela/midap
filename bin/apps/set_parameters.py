@@ -3,6 +3,18 @@ from datetime import datetime
 import numpy as np
 import git
 
+# get all subclasses from the imcut
+from midap.imcut import *
+from midap.imcut import base_cutout
+
+imcut_subclasses = [subclass.__name__ for subclass in base_cutout.CutoutImage.__subclasses__()]
+
+# get all subclasses from the segmentations
+from midap.segmentation import *
+from midap.segmentation import base_segmentator
+
+segmentation_subclasses = [subclass.__name__ for subclass in base_segmentator.SegmentationPredictor.__subclasses__()]
+
 # set layout for GUI
 sg.theme('LightGrey1')
 appFont = ("Arial", 12)
@@ -71,6 +83,13 @@ with open("settings.sh", "w+") as file_settings:
                                           'channels (e.g. eGFP,GFP,YFP,mCheery,TXRED, ...)',
                                           key='channel_1', font='bold')],
                                  [sg.Input(key='ch2')],
+                                 [sg.Text('Select how the chamber cutout should be performed: ',
+                                          key='imcut_text', font='bold')],
+                                 [sg.DropDown(key='imcut', values=imcut_subclasses, default_value="InteractiveCutout")],
+                                 [sg.Text('Select how the cell segmentation should be performed: ',
+                                          key='seg_method_text', font='bold')],
+                                 [sg.DropDown(key='seg_method', values=segmentation_subclasses,
+                                              default_value="UNetSegmentation")],
                                  [sg.Text('')],
                                  [sg.Text('Preprocessing', font='bold')],
                                  [sg.Checkbox('Deconvolution of images', key='deconv', font='bold')],
@@ -112,6 +131,8 @@ with open("settings.sh", "w+") as file_settings:
         file_settings.write(f"PATH_FOLDER={values['folder_name']}/\n")
         file_settings.write(f"FILE_TYPE={values['file_type']}\n")
         file_settings.write(f"POS_IDENTIFIER={values['pos']}\n")
+        file_settings.write(f"CHAMBER_CUTOUT={values['imcut']}\n")
+        file_settings.write(f"SEGMENTATION_METHOD={values['seg_method']}\n")
 
         for i, s in enumerate(channel_type_vals):
             file_settings.write(f"CHANNEL_{i + 1}={s}\n")

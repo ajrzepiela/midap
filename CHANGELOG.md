@@ -19,6 +19,17 @@ Efficiency:
 Fix:
 - ...
 
+## [0.0.4]
+
+2022-10-10
+
+Feature:
+- Changes the `src` folder to `midap` and transformed the repo into packages
+- Added modularity support for chamber cutting and cell segmentation
+
+Fix:
+- Minor fix in tracking to ensure that trackID_list is at least as long as global_IDs
+
 ## [0.0.3]
 
 2022-10-05

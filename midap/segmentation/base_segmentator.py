@@ -10,8 +10,8 @@ from skimage.measure import label, regionprops
 from skimage.morphology import area_closing
 from skimage.segmentation import watershed
 
-from model import unet_inference
-from utils import get_logger
+from .model import unet_inference
+from ..utils import get_logger
 
 # get the logger we readout the variable or set it to max output
 if "__VERBOSE" in os.environ:

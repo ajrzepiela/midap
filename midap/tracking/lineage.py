@@ -56,7 +56,7 @@ class Lineages:
         # Loop over all global IDs in list and connects cells between time frames
         # with help of tracking results
         num_time_steps = len(self.results)
-        self.trackID_list = np.arange(1, np.max(self.global_IDs)).tolist()
+        self.trackID_list = np.arange(1, np.max(self.global_IDs) + 1).tolist()
 
         while len(self.global_IDs) > 0:
             # Gets first time frame where cell is present

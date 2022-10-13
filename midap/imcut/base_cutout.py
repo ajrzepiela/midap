@@ -17,7 +17,7 @@ import cv2
 
 from tqdm import tqdm
 
-from utils import get_logger
+from ..utils import get_logger
 
 # get the logger we readout the variable or set it to max output
 if "__VERBOSE" in os.environ:
