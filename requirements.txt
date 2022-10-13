@@ -9,3 +9,4 @@ scikit-image==0.19.3
 tensorflow>=2.3.0#
 tqdm>=4.64.0#
 gitpython
+opencv-python
