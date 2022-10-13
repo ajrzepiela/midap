@@ -19,6 +19,18 @@ Efficiency:
 Fix:
 - ...
 
+## [0.0.5]
+
+2022-10-13
+
+Feature:
+- Integrated M1 workflow into the main script such that one can run everything from one script
+- Added support for Euler setup
+- Add instruction for both to README, for now Euler only with LSF
+
+Fix:
+- Open CV dependency was not in the requirements
+
 ## [0.0.4]
 
 2022-10-10
