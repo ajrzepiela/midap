@@ -2,24 +2,36 @@
 
 ## Installation on Mac and Linux
 
-The installation was tested on macOS Big Sur (11.6.7) and Ubuntu 22.04.
+The installation was tested on macOS Big Sur (11.6.7), Ubuntu 22.04 and WSL II on Win 11.
 
 1. Download model weights and example files from polybox `./download_files.sh`
 
-2. Create virtual environment `conda env create -f environment.yml`
+2. Create the virtual environment:
+    
+    1. **For Macs with an M1 chip:**
 
-3. Navigate to bin-directory and activate conda environment
+       If you are not sure if your Mac has an M1 chip, open a terminal an run
+       ```
+       if [[ ${OSTYPE} = darwin* ]] && [[ $(uname -m) == "arm64" ]]; then echo "M1"; fi 
+       ```
+       if it prints "M1" in your terminal, install Miniforge via `./install_miniforge.sh` and proceed to step 3, otherwise proceed with step 2.2.
+
+    
+    2.  **For Linux and older Macs:**
+    
+        You can create a conda environment with: `conda env create -f environment.yml`
+
+3. Activate conda environment:
 ```
-cd bin/
 conda activate midap
 ```
-4. Install the package:
 
+4. Install the package:
 ```
 pip install -e .
 ```
 
-6. Start pipeline from the command line with `./run_pipeline_test.sh`. The script accepts arguments and has the following signature:
+6. Navigate to the bin directory with `cd bin/`. You can start pipeline from the command line with `./run_pipeline.sh`. The script accepts arguments and has the following signature:
 
 ```
 Syntax: run_pipeline_checkpoints.sh [options]
@@ -34,21 +46,38 @@ Options:
 ```
 Note that the `--headless` option currently only skips the first GUI and expects that a `settings.sh` is provided in the working directory.
 
-## Installation on new MacBooks with M1
+## Installation on the Euler cluster
 
-1. Install Miniforge `./install_miniforge.sh`
+1. **[Mac only]**: Install [XQuartz](https://www.xquartz.org/) for X11 support (GUI forwarding from Euler) and start the software.
 
-2. Install the package:
+2. Log into Euler with activated X11 forwarding: `ssh -X <username>@euler.ethz.ch`
+
+3. Clone the repo, navigate to the directory containing the pipeline `cd ackermann-bacteria-segmentation` and download model weights and example files from polybox `./download_files.sh`.
+
+4. Navigate to the Euler directory in the repo `cd ./euler` and create the virtual environment
+```
+./create_venv.sh
+```
+
+5. Source the environment
 
 ```
-pip install -e .
+source source_venv.sh
+```
+This step has to be repeated everytime you log into Euler before starting the pipeline. If you want this to happen automatically add the following line 
+to your `$HOME/.bash_profile`:
+```
+source <path/to/your>/source_venv.sh
+```
+where you fill in the absolute path to your source file.
+
+6. Navigate to the bin and start an interactive job with X11 forwarding
+```
+cd ../bin/
+bsub -XF -n 8 -R "rusage[ngpus_excl_p=1]" -Is bash
 ```
 
-3. Navigate to bin-directory and run the pipeline:
-```
-cd bin/
-./run_pipeline_m1.sh
-```
+7. After the job starts you can run the pipeline in the same way as on your local machine (see step 6 above)
 
 ## User Guide
 

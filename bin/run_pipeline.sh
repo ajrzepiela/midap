@@ -98,6 +98,24 @@ function .log () {
   fi
 }
 
+# Mac M1 Handling
+#################
+
+# Check if we are on a Mac and if there is an M1
+if [[ ${OSTYPE} = darwin* ]] && [[ $(uname -m) == "arm64" ]]; then
+  # Check if there is the right miniforge installation
+  if [[ -d $HOME'/miniforge3/envs/workflow/bin' ]]; then
+    PYTHON_EXE=$HOME'/miniforge3/envs/workflow/bin/python3'
+  else
+    # Exit
+    .log 2 "You are using an M1 Mac but there is no miniforge installtion in: $HOME/miniforge3/envs/workflow/bin!"
+    .log 2 "Please install the correct environment. Exiting..."
+    exit 1
+  fi
+else
+  PYTHON_EXE=python
+fi
+
 # Checkpointing
 ###############
 
@@ -153,7 +171,7 @@ set_parameters() {
   # Start GUI only if we are not in headless mode and no retry
   if [ "$HEADLESS" != "True" ] && retry ${FUNCNAME[0]}; then
     .log 7 "Starting up the GUI"
-    python apps/set_parameters.py
+    ${PYTHON_EXE} apps/set_parameters.py
   fi
   # In case of headless or checkpoint we just source the settings
   if [ -f "settings.sh" ]; then
@@ -169,7 +187,7 @@ restrict_frames_family() {
   # Starts up the script to restrict the frames (arg is pos)
   retry "${FUNCNAME[0]}_$1" || return 0
   .log 6 "Restricting frames for identifier: ${POS}"
-  python apps/restrict_frames.py
+  ${PYTHON_EXE} apps/restrict_frames.py
   source settings.sh
 }
 
@@ -247,7 +265,7 @@ split_frames_family() {
   for i in $(seq 1 $NUM_CHANNEL_TYPES); do
     CH="CHANNEL_$i"
     INP=$(find "$PATH_FOLDER$POS/${!CH}/" -name *".$FILE_TYPE")
-    python apps/stack2frames.py --path "$INP" --start_frame "$START_FRAME" --end_frame "$END_FRAME" --deconv "$DECONVOLUTION" --loglevel "${__VERBOSE}"
+    ${PYTHON_EXE} apps/stack2frames.py --path "$INP" --start_frame "$START_FRAME" --end_frame "$END_FRAME" --deconv "$DECONVOLUTION" --loglevel "${__VERBOSE}"
   done
 }
 
@@ -268,7 +286,7 @@ cut_chambers_family() {
   done
   
   # We need to do the eval turn to deal with paths that have spaces!
-  CMD="python apps/frames2cuts.py --cutout_class $CHAMBER_CUTOUT --channel $ARGS"
+  CMD="${PYTHON_EXE} apps/frames2cuts.py --cutout_class $CHAMBER_CUTOUT --channel $ARGS"
   eval $CMD
 }
 
@@ -288,8 +306,8 @@ segmentation_family() {
   # cycle through channels
   for i in $(seq $START $NUM_CHANNEL_TYPES); do
     CH="CHANNEL_$i"
-    python apps/main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos "$PATH_FOLDER$POS" --path_channel "${!CH}" --segmentation_class "${SEGMENTATION_METHOD}" --postprocessing
-    python apps/analyse_segmentation.py --path_seg "$PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/" --path_result "$PATH_FOLDER$POS/${!CH}/"  --loglevel "${__VERBOSE}"
+    ${PYTHON_EXE} apps/main_prediction.py --path_model_weights '../model_weights/model_weights_family_mother_machine/' --path_pos "$PATH_FOLDER$POS" --path_channel "${!CH}" --segmentation_class "${SEGMENTATION_METHOD}" --postprocessing
+    ${PYTHON_EXE} apps/analyse_segmentation.py --path_seg "$PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH/" --path_result "$PATH_FOLDER$POS/${!CH}/"  --loglevel "${__VERBOSE}"
   done
 }
 
@@ -309,8 +327,8 @@ tracking_family() {
   # cycle through channels
   for i in $(seq $START $NUM_CHANNEL_TYPES); do
     CH="CHANNEL_$i"
-    python track_cells_crop.py --path "$PATH_FOLDER$POS/${!CH}/" --start_frame "$START_FRAME" --end_frame "$END_FRAME"
-    python generate_lineages.py --path "$PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH"
+    ${PYTHON_EXE} track_cells_crop.py --path "$PATH_FOLDER$POS/${!CH}/" --start_frame "$START_FRAME" --end_frame "$END_FRAME"
+    ${PYTHON_EXE} generate_lineages.py --path "$PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH"
   done
 
   # we copy the current settings.sh into the path folder for reproducibility
@@ -372,7 +390,7 @@ split_frames_well() {
   retry "${FUNCNAME[0]}" || return 0
 
   .log 6 "Spliting frames..."
-  python stack2frames.py --path "$PATH_FILE_WO_EXT/$FILE_NAME" --pos "" --channel "" --start_frame "$START_FRAME" --end_frame "$END_FRAME" --deconv "$DECONVOLUTION"
+  ${PYTHON_EXE} stack2frames.py --path "$PATH_FILE_WO_EXT/$FILE_NAME" --pos "" --channel "" --start_frame "$START_FRAME" --end_frame "$END_FRAME" --deconv "$DECONVOLUTION"
   # Catch the copy output for debug logging
   # We need to split it in two otherwise the error wont be catched correctly!
   local COPYLOG
@@ -387,7 +405,7 @@ segmentation_well() {
   retry "${FUNCNAME[0]}" || return 0
 
   .log 6 "Segmenting images..."
-  python main_prediction.py --path_model_weights '../model_weights/model_weights_well/' --path_pos "$PATH_FILE_WO_EXT" --path_channel "" --postprocessing 1
+  ${PYTHON_EXE} main_prediction.py --path_model_weights '../model_weights/model_weights_well/' --path_pos "$PATH_FILE_WO_EXT" --path_channel "" --postprocessing 1
 }
 
 conversion_well() {
@@ -397,7 +415,7 @@ conversion_well() {
   retry "${FUNCNAME[0]}" || return 0
 
   .log 6 "Run file-conversion..."
-  python seg2mat.py --path_cut "$PATH_FILE_WO_EXT/$SEG_PATH$CUT_PATH" --path_seg "$PATH_FILE_WO_EXT/$SEG_IM_PATH" --path_channel "$PATH_FILE_WO_EXT/"
+  ${PYTHON_EXE} seg2mat.py --path_cut "$PATH_FILE_WO_EXT/$SEG_PATH$CUT_PATH" --path_seg "$PATH_FILE_WO_EXT/$SEG_IM_PATH" --path_channel "$PATH_FILE_WO_EXT/"
 }
 
 tracking_well() {
@@ -424,7 +442,7 @@ tracking_well() {
     rm -f "$PATH_FILE_WO_EXT/CONST.mat"
     rm -f "$PATH_FILE_WO_EXT/$SEG_PATH/$RAW_IM/cropbox.mat"
 
-    python restrict_frames.py
+    ${PYTHON_EXE} restrict_frames.py
     source settings.sh
     LIST_FILES=($(ls "$PATH_FILE_WO_EXT/$SEG_PATH$SEG_MAT_PATH"))
     NUM_FILES=${#LIST_FILES[@]}
@@ -510,7 +528,6 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]; then
 
     # restrict frames for each position separately
     if  [ $POS != "${POS_UNIQ[0]}" ]; then
-      # TODO: The python script should create env variables that depend on POS not always the same
       restrict_frames_family $POS
     fi
     
