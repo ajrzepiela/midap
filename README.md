@@ -50,7 +50,7 @@ Note that the `--headless` option currently only skips the first GUI and expects
 
 1. Log into Euler with activated X11 forwarding: `ssh -X <username>@euler.ethz.ch`
 
-2. Clone the repo and download model weights and example files from polybox `./download_files.sh`
+2. Clone the repo, navigate to the directory containing the pipeline `cd ackermann-bacteria-segmentation` and download model weights and example files from polybox `./download_files.sh`.
 
 3. Navigate to the Euler directory in the repo `cd ./euler` and create the virtual environment
 ```
