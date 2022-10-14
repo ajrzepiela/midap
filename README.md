@@ -48,16 +48,18 @@ Note that the `--headless` option currently only skips the first GUI and expects
 
 ## Installation on the Euler cluster
 
-1. Log into Euler with activated X11 forwarding: `ssh -X <username>@euler.ethz.ch`
+1. **[Mac only]**: Install [XQuartz](https://www.xquartz.org/) for X11 support (GUI forwarding from Euler) and start the software.
 
-2. Clone the repo, navigate to the directory containing the pipeline `cd ackermann-bacteria-segmentation` and download model weights and example files from polybox `./download_files.sh`.
+2. Log into Euler with activated X11 forwarding: `ssh -X <username>@euler.ethz.ch`
 
-3. Navigate to the Euler directory in the repo `cd ./euler` and create the virtual environment
+3. Clone the repo, navigate to the directory containing the pipeline `cd ackermann-bacteria-segmentation` and download model weights and example files from polybox `./download_files.sh`.
+
+4. Navigate to the Euler directory in the repo `cd ./euler` and create the virtual environment
 ```
 ./create_venv.sh
 ```
 
-4. Source the environment
+5. Source the environment
 
 ```
 source source_venv.sh
@@ -69,13 +71,13 @@ source <path/to/your>/source_venv.sh
 ```
 where you fill in the absolute path to your source file.
 
-5. Navigate to the bin and start an interactive job with X11 forwarding
+6. Navigate to the bin and start an interactive job with X11 forwarding
 ```
 cd ../bin/
 bsub -XF -n 8 -R "rusage[ngpus_excl_p=1]" -Is bash
 ```
 
-6. After the job starts you can run the pipeline in the same way as on your local machine (see step 6 above)
+7. After the job starts you can run the pipeline in the same way as on your local machine (see step 6 above)
 
 ## User Guide
 
