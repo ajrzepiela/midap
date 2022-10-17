@@ -19,6 +19,23 @@ Efficiency:
 Fix:
 - ...
 
+
+## [0.0.6]
+
+2022-10-17
+
+Feature:
+- Segmentation postprocessing removes noise in the segmentation based on the average size of the segmented object instead
+of the percentile. It is now possible to keep all objects.
+
+Fix:
+- Tracking and lineage can now deal with emtpy files/results
+
+Efficiency:
+- RAM usage integrated in progressbar in tracking
+- Some cleanup
+
+
 ## [0.0.5]
 
 2022-10-13
