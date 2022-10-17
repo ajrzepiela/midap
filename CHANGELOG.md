@@ -30,6 +30,7 @@ of the percentile. It is now possible to keep all objects.
 
 Fix:
 - Tracking and lineage can now deal with emtpy files/results
+- Moved frame restriction in bash file such that is runs after the CHECKDIR is sourced in the setup
 
 Efficiency:
 - RAM usage integrated in progressbar in tracking
