@@ -232,8 +232,8 @@ class SegmentationPredictor(object):
         sizes = np.bincount(label_objects.ravel())
         reg = regionprops(label_objects)
         areas = [r.area for r in reg]
-        # min_size, max_size = np.quantile(areas, [0.01, 1.])
-        min_size = np.quantile(areas, [0.01])
+        # We take everything that is larger than 1% of the average size
+        min_size = np.mean(areas)*0.01
         # mask_sizes = (sizes > min_size)&(sizes < max_size)
         mask_sizes = (sizes > min_size)
         mask_sizes[0] = 0
