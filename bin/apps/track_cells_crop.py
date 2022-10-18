@@ -10,8 +10,6 @@ from midap.utils import get_logger
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--path', type=str, required=True, help='path to folder for one with specific channel')
-parser.add_argument('--start_frame', type=int, required=True, help='First frame to track.')
-parser.add_argument('--end_frame', type=int, required=True, help='Last frame to track.')
 parser.add_argument("--loglevel", type=int, default=7, help="Loglevel of the script.")
 args = parser.parse_args()
 
@@ -28,12 +26,6 @@ model_file = '../model_weights/model_weights_tracking/unet_pads_track.hdf5'
 # glob all the cut images and segmented images
 img_names_sort = np.sort(glob.glob(os.path.join(images_folder, '*frame*')))
 seg_names_sort = np.sort(glob.glob(os.path.join(segmentation_folder, '*frame*')))
-
-# use only the frames that were declared
-img_names_sort = [f for f in img_names_sort if
-                  args.start_frame <= int(re.search('\d+(?=_cut.png)', f).group(0)) < args.end_frame]
-seg_names_sort = [f for f in seg_names_sort if
-                  args.start_frame <= int(re.search('\d+(?=_seg.png)', f).group(0)) < args.end_frame]
 
 # Parameters:
 crop_size = (128, 128)
