@@ -88,17 +88,21 @@ if __name__ == "__main__":
             # we set the path for the weights
             path_model_weights = params_dict[param]
 
+            # if we don't use a custom method, we set the _model_weights
+            if path_model_weights != "custom":
+                pred.model_weights = path_model_weights
+
     # Select the weights if not set by the batch mode
     if path_model_weights is None:
         pred.set_segmentation_method(path_cut)
         # check if the weights are set, this might not be the case in a custom implementation
-        if pred._model_weights is None:
+        if pred.model_weights is None:
             path_model_weights = "custom"
         # we need to make an exception for the base variant which is not a path
-        elif pred._model_weights == "watershed":
-            path_model_weights = pred._model_weights
+        elif pred.model_weights == "watershed":
+            path_model_weights = pred.model_weights
         else:
-            path_model_weights = os.path.abspath(pred._model_weights)
+            path_model_weights = os.path.abspath(pred.model_weights)
 
     # Save the selected weights
     save_weights(args.path_channel, path_model_weights)

@@ -49,7 +49,7 @@ class SegmentationPredictor(object):
         self.require_padding = False
 
         # params that will be set later
-        self._model_weights = None
+        self.model_weights = None
         self.segmentation_method = None
 
     def segment_region_based(self, img, min_val=40., max_val=50.):
@@ -126,12 +126,12 @@ class SegmentationPredictor(object):
 
         # extract selected segmentation method from output of RadioButton
         if check.value_selected == 'watershed':
-            self._model_weights = 'watershed'
+            self.model_weights = 'watershed'
         else:
             # extract the path
             ix_model_weights = np.where([check.value_selected == l for l in labels])[0][0]
             sel_model_weights = model_weights[ix_model_weights - 1]
-            self._model_weights = os.path.join(self.path_model_weights, sel_model_weights)
+            self.model_weights = os.path.join(self.path_model_weights, sel_model_weights)
 
     def run_image_stack(self, channel_path):
         """
@@ -145,7 +145,7 @@ class SegmentationPredictor(object):
         # get all the images to segment
         path_imgs = np.sort(os.listdir(path_cut))
 
-        if self._model_weights is None or self._model_weights == 'watershed':
+        if self.model_weights is None or self.model_weights == 'watershed':
             self.logger.info('Image segmentation and storage')
             segs = []
             for p in path_imgs:
@@ -153,7 +153,7 @@ class SegmentationPredictor(object):
                 img_in = io.imread(os.path.join(path_cut, p))
 
                 # in case of custom method, we run it
-                if self._model_weights is None:
+                if self.model_weights is None:
                     seg = self.segmentation_method(img_in)
                 # otherwise we use watershed
                 else:
@@ -189,7 +189,7 @@ class SegmentationPredictor(object):
 
             self.logger.info('Image segmentation...')
             model_pred = unet_inference(input_size=imgs_pad.shape[1:3] + (1,))
-            model_pred.load_weights(self._model_weights)
+            model_pred.load_weights(self.model_weights)
             y_preds = model_pred.predict(imgs_pad, batch_size=1, verbose=1)
 
             self.logger.info('Postprocessing and storage...')
@@ -232,8 +232,8 @@ class SegmentationPredictor(object):
         sizes = np.bincount(label_objects.ravel())
         reg = regionprops(label_objects)
         areas = [r.area for r in reg]
-        # min_size, max_size = np.quantile(areas, [0.01, 1.])
-        min_size = np.quantile(areas, [0.01])
+        # We take everything that is larger than 1% of the average size
+        min_size = np.mean(areas)*0.01
         # mask_sizes = (sizes > min_size)&(sizes < max_size)
         mask_sizes = (sizes > min_size)
         mask_sizes[0] = 0

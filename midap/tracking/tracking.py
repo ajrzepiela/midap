@@ -9,13 +9,18 @@ import numpy as np
 from tqdm import tqdm
 
 from .model_trackingv2 import unet_track
-
-import matplotlib.pyplot as plt
+from ..utils import get_logger
 
 import os
 import psutil
 process = psutil.Process(os.getpid())
 
+# get the logger we readout the variable or set it to max output
+if "__VERBOSE" in os.environ:
+    loglevel = os.environ["__VERBOSE"]
+else:
+    loglevel = 7
+logger = get_logger(__file__, loglevel)
 
 class Tracking():
     """
@@ -69,6 +74,9 @@ class Tracking():
         Clean result from cropped image by comparing the segmentation with the result from the tracking.
     """
 
+    # this logger will be shared by all instances and subclasses
+    logger = logger
+
     def __init__(self, imgs, segs, model_weights, input_size, target_size, crop_size=None):
         self.imgs = imgs
         self.segs = segs
@@ -88,7 +96,6 @@ class Tracking():
         cur_frame: int
             Number of the current frame.
         """
-
         img_cur_frame = resize(
             io.imread(self.imgs[cur_frame]), self.target_size, order=1)
         img_prev_frame = resize(
@@ -391,12 +398,17 @@ class Tracking():
         self.results_all = []
         self.inputs_all = []
 
-        for cur_frame in tqdm(range(1, self.num_time_steps)):
+        ram_usg = process.memory_info().rss * 1e-9
+        for cur_frame in (pbar := tqdm(range(1, self.num_time_steps), postfix={"RAM": f"{ram_usg:.1f} GB"})):
             inputs_cur_frame, input_whole_frame, crop_box = self.gen_input_crop(
                 cur_frame)
-            self.results_cur_frame_crop = self.model.predict(
-                inputs_cur_frame, verbose=0)
 
+            # check if there is a segmentation
+            if inputs_cur_frame.size > 0:
+                self.results_cur_frame_crop = self.model.predict(
+                    inputs_cur_frame, verbose=0)
+            else:
+                self.results_cur_frame_crop = np.empty_like(inputs_cur_frame)
            
             # Combine cropped results in one image
             self.results_cur_frame = np.zeros(
@@ -414,7 +426,8 @@ class Tracking():
             self.inputs_all.append(input_whole_frame)
             self.results_all.append(self.results_cur_frame_clean)
             
-            print(process.memory_info().rss*1e-9)
+            ram_usg = process.memory_info().rss*1e-9
+            pbar.set_postfix({"RAM": f"{ram_usg:.1f} GB"})
 
     def clean_cur_frame(self, inp, res):
         """Clean result from cropped image by comparing the segmentation with the result from the tracking.

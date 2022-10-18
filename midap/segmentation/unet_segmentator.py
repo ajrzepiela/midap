@@ -83,9 +83,9 @@ class UNetSegmentation(SegmentationPredictor):
 
         # extract selected segmentation method from output of RadioButton
         if check.value_selected == 'watershed':
-            self._model_weights = 'watershed'
+            self.model_weights = 'watershed'
         else:
             # extract the path
             ix_model_weights = np.where([check.value_selected == l for l in labels])[0][0]
             sel_model_weights = model_weights[ix_model_weights - 1]
-            self._model_weights = os.path.join(self.path_model_weights, sel_model_weights)
+            self.model_weights = os.path.join(self.path_model_weights, sel_model_weights)

@@ -327,8 +327,8 @@ tracking_family() {
   # cycle through channels
   for i in $(seq $START $NUM_CHANNEL_TYPES); do
     CH="CHANNEL_$i"
-    ${PYTHON_EXE} track_cells_crop.py --path "$PATH_FOLDER$POS/${!CH}/" --start_frame "$START_FRAME" --end_frame "$END_FRAME"
-    ${PYTHON_EXE} generate_lineages.py --path "$PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH"
+    ${PYTHON_EXE} apps/track_cells_crop.py --path "$PATH_FOLDER$POS/${!CH}/" --loglevel "${__VERBOSE}"
+    ${PYTHON_EXE} apps/generate_lineages.py --path "$PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH" --loglevel "${__VERBOSE}"
   done
 
   # we copy the current settings.sh into the path folder for reproducibility
@@ -526,16 +526,16 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]; then
   for POS in "${POS_UNIQ[@]}"; do
     .log 7 "Starting with: ${POS}"
 
-    # restrict frames for each position separately
-    if  [ $POS != "${POS_UNIQ[0]}" ]; then
-      restrict_frames_family $POS
-    fi
-    
-    if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+   if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
       # 1) Generate folder structure
       setup_folders_family $POS
 
-      # 2) Copy files
+      # 1.1) restrict frames for each position separately
+      if  [ $POS != "${POS_UNIQ[0]}" ]; then
+        restrict_frames_family $POS
+      fi
+    
+       # 2) Copy files
       copy_files_family $POS
 
       # 3) Split frames
