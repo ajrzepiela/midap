@@ -1,6 +1,5 @@
 import PySimpleGUI as sg
-import yaml
-import numpy as np
+import re
 
 # set layout for GUI
 sg.theme('LightGrey1')
@@ -23,7 +22,20 @@ window = sg.Window('Frame number', layout).Finalize()
 event, values = window.read()
 window.close()
 
-file_settings = open("settings.sh","a") 
-file_settings.write("START_FRAME=" + str(int(values['start'])) + "\n") 
-file_settings.write("END_FRAME=" + str(int(values['end'])) + "\n") 
-file_settings.close()
+# Throw an error if we pressed cancel or X
+if event == 'Cancel' or event == None:
+   exit(1)
+
+# replace the current start and end frame with the selected one
+with open("settings.sh", "r+") as file_settings:
+    # read file
+    content = file_settings.read()
+
+    # replace
+    content = re.sub("START_FRAME\=.*", f"START_FRAME={values['start']}", content)
+    content = re.sub("END_FRAME\=.*", f"END_FRAME={values['end']}", content)
+
+    # truncate, set stream to start and write
+    file_settings.truncate(0)
+    file_settings.seek(0)
+    file_settings.write(content)
