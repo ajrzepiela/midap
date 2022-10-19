@@ -13,7 +13,7 @@ help()
 {
   echo "Runs the cell segmentation and tracking pipeline"
   echo 
-  echo "Syntax: run_pipeline_checkpoints.sh [options]"
+  echo "Syntax: run_pipeline.sh [options]"
   echo 
   echo "Options:"
   echo " -h, --help         Display this help"

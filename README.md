@@ -4,7 +4,7 @@
 
 The installation was tested on macOS Big Sur (11.6.7), Ubuntu 22.04 and WSL II on Win 11.
 
-1. Download model weights and example files from polybox `./download_files.sh`
+1. Clone the repo, navigate to the directory containing the pipeline `cd midap` and download model weights and example files from polybox `./download_files.sh`.
 
 2. Create the virtual environment:
     
@@ -31,10 +31,10 @@ conda activate midap
 pip install -e .
 ```
 
-6. Navigate to the bin directory with `cd bin/`. You can start pipeline from the command line with `./run_pipeline.sh`. The script accepts arguments and has the following signature:
+6. Navigate to the bin directory with `cd bin/`. You can start the pipeline from the command line with `./run_pipeline.sh`. The script accepts arguments and has the following signature:
 
 ```
-Syntax: run_pipeline_checkpoints.sh [options]
+Syntax: run_pipeline.sh [options]
 
 Options:
  -h, --help         Display this help
@@ -52,7 +52,7 @@ Note that the `--headless` option currently only skips the first GUI and expects
 
 2. Log into Euler with activated X11 forwarding: `ssh -X <username>@euler.ethz.ch`
 
-3. Clone the repo, navigate to the directory containing the pipeline `cd ackermann-bacteria-segmentation` and download model weights and example files from polybox `./download_files.sh`.
+3. Clone the repo, navigate to the directory containing the pipeline `cd midap` and download model weights and example files from polybox `./download_files.sh`.
 
 4. Navigate to the Euler directory in the repo `cd ./euler` and create the virtual environment
 ```
@@ -64,7 +64,7 @@ Note that the `--headless` option currently only skips the first GUI and expects
 ```
 source source_venv.sh
 ```
-This step has to be repeated everytime you log into Euler before starting the pipeline. If you want this to happen automatically add the following line 
+This step has to be **repeated everytime you log into Euler before starting the pipeline**. If you want this to happen automatically add the following line 
 to your `$HOME/.bash_profile`:
 ```
 source <path/to/your>/source_venv.sh
@@ -85,16 +85,21 @@ bsub -XF -n 8 -R "rusage[ngpus_excl_p=1]" -Is bash
 1. Start pipeline as described above.
 
 2. Select the data type<br/>
-![Screenshot_1](img/window_select.png)<br/>
+<img src="img/window_select.png" alt="drawing" width="300"/><br>
 
-3. In case of family or mother machine, select the part of the pipeline you want to run, the frame numbers to restrict the analysis to, the folder path, identifiers of input files, identifiers of position/experiment and whether you want to deconvolve the raw images.
-![Screenshot_1](img/window_chamber_new.png)<br/>
+3. In case of family or mother machine, please select/add:
+- the **part of the pipeline** you want to run
+- the **frame numbers** to be analyzed
+- **path** to the folder containing the data (tiff-stacks)
+- **filetype** of the input files
+- **identifiers** of position/experiment
+- a comma separated **list of additional channels**
+- [optional] **modified methods** for chamber cutout and segmentation (more information: [Modularity](#modularity-of-the-pipeline))
+- whether **deconvolution** of the raw images should be applied.<br/>
+<img src="img/window_chamber_new.png" alt="drawing" width="500"/><br>
 The pipeline requires grayscale tiff-stacks as input files.
-If only one or two out of three channels were used, specify only the identifiers of those channels and leave the other fields free. By default the phase images are not segmented. In case you would like to do cell segmentation and tracking for your phase images, place click the box next to the respective field.
+By default the phase images are not segmented. In case you would like to do cell segmentation and tracking for your phase images, place click the box next to the respective field.
 **Please note:** all input fields are case sensitive!
-4. In case of well plates, select the part of the pipeline you want to run, the frame numbers to restrict the analysis to, the file name and whether you want to deconvolve the raw images.
-<br/>
-![Screenshot_1](img/window_well.png)<br/>
 
 ### Manual correction and visuallization of results
 
