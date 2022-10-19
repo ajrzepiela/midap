@@ -57,6 +57,10 @@ Fix:
 Feature:
 - Changes the `src` folder to `midap` and transformed the repo into packages
 - Added modularity support for chamber cutting and cell segmentation
+- Tracking output, segmentation output and raw images are stores as separate h5-files
+- Cell lineages are stored in csv-file containing labelID, lineageID, trackID, IDs of mother and daughter cells, and features (area, length, intensity etc) per cell
+- Update of cell tracking algorithm to DELTA2.0 and application of model weights generated during training on patches
+- Improved postprocessing of tracking: cleaning of tracking results by finding segmented cell which has largest overlap
 
 Fix:
 - Minor fix in tracking to ensure that trackID_list is at least as long as global_IDs
@@ -81,7 +85,6 @@ Fix:
 Efficiency:
 - Cleanup of files in apps folder and their related imports in src
 - Preparation of cut chambers and segmentation for user defined subclasses
-
 
 
 ## [0.0.2]
