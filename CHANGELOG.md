@@ -19,6 +19,16 @@ Efficiency:
 Fix:
 - ...
 
+## [0.1.1]
+
+2022-10-27
+
+Feature:
+- Integrate package install into the env creation, update README accordingly
+
+Fix:
+- Update requirements for the M1 Mac
+
 
 ## [0.1.0]
 
