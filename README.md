@@ -19,7 +19,7 @@ The installation was tested on macOS Big Sur (11.6.7), Ubuntu 22.04 and WSL II o
     
     2.  **For Linux and older Macs:**
     
-        You can create a conda environment with: `conda env create -f environment.yml` and then activate it via
+        You can create a conda environment with: `conda env update -f environment.yml` and then activate it via
 
          ```
          conda activate midap
