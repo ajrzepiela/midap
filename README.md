@@ -7,31 +7,25 @@ The installation was tested on macOS Big Sur (11.6.7), Ubuntu 22.04 and WSL II o
 1. Clone the repo, navigate to the directory containing the pipeline `cd midap` and download model weights and example files from polybox `./download_files.sh`.
 
 2. Create the virtual environment:
-    
+
     1. **For Macs with an M1 chip:**
 
        If you are not sure if your Mac has an M1 chip, open a terminal an run
        ```
        if [[ ${OSTYPE} = darwin* ]] && [[ $(uname -m) == "arm64" ]]; then echo "M1"; fi 
        ```
-       if it prints "M1" in your terminal, install Miniforge via `./install_miniforge.sh` and proceed to step 3, otherwise proceed with step 2.2.
+       if it prints "M1" in your terminal, install Miniforge via `./install_miniforge.sh` and proceed to step 3, otherwise proceed with step 2 .
 
     
     2.  **For Linux and older Macs:**
     
-        You can create a conda environment with: `conda env create -f environment.yml`
+        You can create a conda environment with: `conda env update -f environment.yml` and then activate it via
 
-3. Activate conda environment:
-```
-conda activate midap
-```
+         ```
+         conda activate midap
+         ```
 
-4. Install the package:
-```
-pip install -e .
-```
-
-6. Navigate to the bin directory with `cd bin/`. You can start the pipeline from the command line with `./run_pipeline.sh`. The script accepts arguments and has the following signature:
+3. Navigate to the bin directory with `cd bin/`. You can start the pipeline from the command line with `./run_pipeline.sh`. The script accepts arguments and has the following signature:
 
 ```
 Syntax: run_pipeline.sh [options]
