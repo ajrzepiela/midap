@@ -49,7 +49,7 @@ if __name__ == "__main__":
     parser.add_argument("--path_channel", type=str, required=True, help="Name of the current channel to process.")
     parser.add_argument("--segmentation_class", type=str,
                         help="Name of the class used for the cell segmentation. Must be defined in a file of "
-                             "midap.segmentation and a subclass of midap.imcut.segmentation.SegmentationPredictor")
+                             "midap.segmentation and a subclass of midap.segmentation.SegmentationPredictor")
     parser.add_argument("--batch_mode", action="store_true", help="Flag for batch mode.")
     parser.add_argument("--postprocessing", action="store_true", help="Flag for postprocessing.")
     args = parser.parse_args()
