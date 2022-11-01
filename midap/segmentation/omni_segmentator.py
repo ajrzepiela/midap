@@ -60,10 +60,7 @@ class OmniSegmentation(SegmentationPredictor):
             plt.subplot(num_subplots, num_subplots, i + 1)
             plt.imshow(img)
             plt.contour(s, [0.5], colors='r', linewidths=0.5)
-            if i == 0:
-                plt.title('watershed')
-            else:
-                plt.title('model trained for ' + labels[i])
+            plt.title('model trained for ' + labels[i])
             plt.xticks([])
             plt.yticks([])
         channel = os.path.basename(os.path.dirname(path_to_cutouts))

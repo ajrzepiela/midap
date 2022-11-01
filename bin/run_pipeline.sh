@@ -4,7 +4,7 @@
 set -E
 
 # Run on CPU (only if desired)
-# export CUDA_VISIBLE_DEVICES="-1"
+export CUDA_VISIBLE_DEVICES="-1"
 
 # Argument Parsing
 ##################
