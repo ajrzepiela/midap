@@ -331,7 +331,7 @@ tracking_family() {
   # cycle through channels
   for i in $(seq $START $NUM_CHANNEL_TYPES); do
     CH="CHANNEL_$i"
-    ${PYTHON_EXE} apps/track_cells_crop.py --path "$PATH_FOLDER$POS/${!CH}/" --loglevel "${__VERBOSE}"
+    ${PYTHON_EXE} apps/track_cells_crop.py --path "$PATH_FOLDER$POS/${!CH}/" --loglevel "${__VERBOSE}" --tracking_class "${TRACKING_METHOD}"
     ${PYTHON_EXE} apps/generate_lineages.py --path "$PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH" --loglevel "${__VERBOSE}"
   done
 
