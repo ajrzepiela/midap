@@ -1,14 +1,11 @@
 import skimage.io as io
 from skimage.measure import label, regionprops
 from skimage.transform import resize
-from skimage.util import img_as_float
-from skimage.segmentation import clear_border
 from skimage.morphology import remove_small_objects
 
 import numpy as np
 from tqdm import tqdm
 
-from .model_tracking import unet_track
 from ..utils import get_logger
 
 import os
@@ -58,8 +55,6 @@ class Tracking():
     areas2dict(self, regs)
         Generates dictionary based on regionsprops of segmentation.
         The dictionary contains cell indices as keys and the areas as values.
-    load_model(self, constant_input=None)
-        Loads model for inference/tracking.
     track_cell()
         Tracks single cell within current time frame by using a U-Net.
     track_cur_frame(cur_frame)
@@ -78,6 +73,26 @@ class Tracking():
     logger = logger
 
     def __init__(self, imgs, segs, model_weights, input_size, target_size, crop_size=None):
+        """
+        Initializes the class instance
+
+        Parameters
+        ----------
+        imgs: list
+            List of files containing the cut out images ordered chronological in time
+        segs: list
+            List of files containing the segmentation ordered in the same way as imgs
+        model_weights: str
+            Path to the tracking model weights
+        input_size: tuple
+            A tuple of ints indicating the shape of the input
+        target_size: tuple
+            A tuple of ints indicating the shape of the target size
+        crop_size: tuple
+            A tuple of ints indicating the shape of the crop size
+        """
+
+        # set the variables
         self.imgs = imgs
         self.segs = segs
         self.num_time_steps = len(self.imgs)
@@ -85,7 +100,7 @@ class Tracking():
         self.model_weights = model_weights
         self.input_size = input_size
         self.target_size = target_size
-        if crop_size:
+        if crop_size is not None:
             self.crop_size = crop_size
 
     def load_data(self, cur_frame):
@@ -280,21 +295,6 @@ class Tracking():
             areas[r.label] = r.area
 
         return areas
-
-    def load_model(self, constant_input=None):
-        """Loads model for inference/tracking.
-
-        Parameters
-        ----------
-        constant_input: array, optional
-            Array containing the constant input (whole raw image and segmentation image) per time frame.
-        """
-
-        #self.model = unet_track(self.input_size, constant_input)
-        #self.model.load_weights(self.model_weights)
-        
-        self.model = unet_track(self.model_weights, self.input_size)
-        
 
     def track_cell(self, cell_id, inputs):
         """Tracks single cell by using the U-Net.
