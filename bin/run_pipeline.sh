@@ -207,9 +207,6 @@ source_paths_family() {
 setup_folders_family() {
   # creates the folder structure for the family machine
 
-  # Set path for checkpoints 
-  CHECKDIR="$PATH_FOLDER$POS"
-   
   # only redo this if necessary (arg is POS again)
   retry "${FUNCNAME[0]}_$1" || return 0
   
@@ -530,7 +527,10 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]; then
   for POS in "${POS_UNIQ[@]}"; do
     .log 7 "Starting with: ${POS}"
 
-   if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+    # Set path for checkpoints 
+    CHECKDIR="$PATH_FOLDER$POS"
+   
+    if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
       # 1) Generate folder structure
       setup_folders_family $POS
 

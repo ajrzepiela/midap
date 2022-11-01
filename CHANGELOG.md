@@ -19,6 +19,28 @@ Efficiency:
 Fix:
 - ...
 
+## [0.1.2]
+
+2022-11-01
+
+Feature:
+- Omnipose support for non M1 local machines.
+
+Fix:
+- Updated the creation scripts of the euler env to use python 3.8.5, similar to the conda env
+- Minor change in `run_pipeline.sh` such that the pipeline runs with tracking only
+
+## [0.1.1]
+
+2022-10-27
+
+Feature:
+- Integrate package install into the env creation, update README accordingly
+- Notebook with visualization examples of tracking results
+
+Fix:
+- Update requirements for the M1 Mac
+
 
 ## [0.1.0]
 
