@@ -8,7 +8,7 @@
 # gcc 8.2 stack
 module load gcc/8.2.0
 # python 3.9.9 and the proxy
-module load python_gpu/3.9.9 eth_proxy
+module load python_gpu/3.8.5 eth_proxy
 
 # activate the env, use realpath and dir name to make it sourable from everywhere
 source $(realpath $BASH_SOURCE | xargs dirname)/midap/bin/activate

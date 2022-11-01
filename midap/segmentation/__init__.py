@@ -9,4 +9,5 @@ __all__ = [os.path.basename(f)[:-3] for f in modules if os.path.isfile(f) and no
 try:
     from cellpose import models
 except ImportError:
-    __all__.remove("omni_segmentator.py")
+    __all__.remove("omni_segmentator")
+
