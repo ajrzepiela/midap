@@ -8,7 +8,7 @@ from skimage.morphology import remove_small_objects
 import numpy as np
 from tqdm import tqdm
 
-from .model_trackingv2 import unet_track
+from .model_tracking import unet_track
 from ..utils import get_logger
 
 import os
