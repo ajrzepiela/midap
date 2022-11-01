@@ -19,6 +19,16 @@ Efficiency:
 Fix:
 - ...
 
+## [0.1.2]
+
+2022-11-01
+
+Feature:
+- Omnipose support for non M1 local machines.
+
+Fix:
+- Updated the creation scripts of the euler env to use python 3.8.5, similar to the conda env
+
 ## [0.1.1]
 
 2022-10-27
