@@ -28,6 +28,7 @@ Feature:
 
 Fix:
 - Updated the creation scripts of the euler env to use python 3.8.5, similar to the conda env
+- Minor change in `run_pipeline.sh` such that the pipeline runs with tracking only
 
 ## [0.1.1]
 
