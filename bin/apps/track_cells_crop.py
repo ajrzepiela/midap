@@ -3,19 +3,33 @@ import glob
 
 import argparse
 import os
-import re
 
-from midap.tracking.tracking import Tracking
+# to get all subclasses
+from midap.tracking import *
+from midap.tracking import base_tracking
 from midap.utils import get_logger
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--path', type=str, required=True, help='path to folder for one with specific channel')
+parser.add_argument("--tracking_class", type=str, required=True,
+                    help="Name of the class used for the cell tracking. Must be defined in a file of "
+                         "midap.tracking and a subclass of midap.tracking.Tracking")
 parser.add_argument("--loglevel", type=int, default=7, help="Loglevel of the script.")
 args = parser.parse_args()
 
 # logging
 logger = get_logger(__file__, args.loglevel)
 logger.info(f"Starting tracking for: {args.path}")
+
+# get the right subclass
+tracking_class = None
+for subclass in base_tracking.Tracking.__subclasses__():
+    if subclass.__name__ == args.tracking_class:
+        tracking_class = subclass
+
+# throw an error if we did not find anything
+if tracking_class == None:
+    raise ValueError(f"Chosen class does not exist: {args.tracking_class}")
 
 # Load data
 images_folder = os.path.join(args.path, 'cut_im')
@@ -34,8 +48,8 @@ input_size = crop_size + (4,)
 num_time_steps = len(img_names_sort)
 
 # Process
-tr = Tracking(img_names_sort, seg_names_sort, model_file,
-              input_size, target_size, crop_size)
+tr = tracking_class(img_names_sort, seg_names_sort, model_file,
+                    input_size, target_size, crop_size)
 tr.track_all_frames_crop()
 
 # Reduce results file for storage if there is a tracking result

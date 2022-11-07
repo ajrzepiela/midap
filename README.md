@@ -37,6 +37,8 @@ Options:
                     PATH, otherwise the current working directory is searched
  --headless         Run pipeline in headless mode (no GUI)
  --loglevel         Set logging level of script (0-7), defaults to 7 (max log)
+ --cpu_only         Sets CUDA_VISIBLE_DEVICES to -1 which will cause most!
+                    applications to use CPU only.
 ```
 Note that the `--headless` option currently only skips the first GUI and expects that a `settings.sh` is provided in the working directory.
 
@@ -71,7 +73,7 @@ cd ../bin/
 bsub -XF -n 8 -R "rusage[ngpus_excl_p=1]" -Is bash
 ```
 
-7. After the job starts you can run the pipeline in the same way as on your local machine (see step 6 above)
+7. After the job starts you can run the pipeline in the same way as on your local machine (see step 3 above)
 
 ## User Guide
 
@@ -146,5 +148,11 @@ In the copied file, change the name of the class from `UNetSegmentation` to your
 
 #### Tracking
 
-To be added...
+To define a custom method for the cell tracking, you can start by copying the `deltav2_tracking.py` file in the `midap` package:
+
+```
+cd midap/tracking
+cp deltav2_tracking.py <your_filename>.py
+```
+In the copied file, change the name of the class from `DeltaV2Tracking` to your own class. Choose a descriptive name as the name of this class will be shown in the dropdown menu of the GUI to select the method. Then you can overwrite the `load_model` method with your own method. Note that you should not add additional arguments to the method and the method has to set the attribute `self.model` to a model that performs the cell tracking. This model should be callable like the DeltaV2 model (see the [paper](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1009797) for more information). You can make use of all the attributes that the base class (`Tracking` defined in `base_tracking.py`) sets in its constructor.
 

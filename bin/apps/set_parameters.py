@@ -15,6 +15,12 @@ from midap.segmentation import base_segmentator
 
 segmentation_subclasses = [subclass.__name__ for subclass in base_segmentator.SegmentationPredictor.__subclasses__()]
 
+# get all subclasses from the tracking
+from midap.tracking import *
+from midap.tracking import base_tracking
+
+tracking_subclasses = [subclass.__name__ for subclass in base_tracking.Tracking.__subclasses__()]
+
 # set layout for GUI
 sg.theme('LightGrey1')
 appFont = ("Arial", 12)
@@ -90,6 +96,10 @@ with open("settings.sh", "w+") as file_settings:
                                           key='seg_method_text', font='bold')],
                                  [sg.DropDown(key='seg_method', values=segmentation_subclasses,
                                               default_value="UNetSegmentation")],
+                                 [sg.Text('Select how the cell tracking should be performed: ',
+                                          key='track_method_text', font='bold')],
+                                 [sg.DropDown(key='track_method', values=tracking_subclasses,
+                                              default_value="DeltaV2Tracking")],
                                  [sg.Text('')],
                                  [sg.Text('Preprocessing', font='bold')],
                                  [sg.Checkbox('Deconvolution of images', key='deconv', font='bold')],
@@ -133,6 +143,7 @@ with open("settings.sh", "w+") as file_settings:
         file_settings.write(f"POS_IDENTIFIER={values['pos']}\n")
         file_settings.write(f"CHAMBER_CUTOUT={values['imcut']}\n")
         file_settings.write(f"SEGMENTATION_METHOD={values['seg_method']}\n")
+        file_settings.write(f"TRACKING_METHOD={values['track_method']}\n")
 
         for i, s in enumerate(channel_type_vals):
             file_settings.write(f"CHANNEL_{i + 1}={s}\n")
