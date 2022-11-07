@@ -52,7 +52,7 @@ class DeltaV1Tracking(Tracking):
         model = unet_track(self.input_size, constant_input=None)
         model.load_weights("../model_weights/model_weights_tracking/unet_moma_track_multisets.hdf5")
 
-        # now we create a Delta2 conform model
+        # now we create a Delta2 conform model, this is similiar to what was done before DeltaV2
         inputs = tf.keras.layers.Input(shape=self.input_size, dtype='float32')
         intermediate = model(inputs)
         outputs = tf.reduce_sum(tf.where(intermediate[...,:2] > 0.8, 1.0, 0.0), keepdims=True, axis=-1)
