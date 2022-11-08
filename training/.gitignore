@@ -1,4 +1,10 @@
-# the training data
+# the training data 
 training_data/
-test_notebook.ipynb
+# saved models
+saved_models/
+checkpoint
+# temp dirs
 tmp/
+# test notebook
+test_notebook.ipynb
+

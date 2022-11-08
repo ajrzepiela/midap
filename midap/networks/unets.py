@@ -122,7 +122,12 @@ class UNetv1(UNetBaseClass):
     """
 
     def __init__(self, input_size=(256, 512, 1), dropout=0.5, inference=False):
-
+        """
+        Initializes the UNet
+        :param input_size: Size of the input
+        :param dropout: Dropout factor for the dropout layers
+        :param inference: If False, model is compiled for training
+        """
 
         # define the layers
         inp = tf.keras.layers.Input(input_size)
@@ -174,13 +179,18 @@ class UNetv1(UNetBaseClass):
 
         # do the super init depending on inference or not
         if inference:
-            model = super().__init__(inputs=inp, outputs=conv10)
+            super().__init__(inputs=inp, outputs=conv10)
         else:
             # addtional weight tensor for the lass
             weights_tensor = tf.keras.layers.Input(input_size)
-            model = super().__init__(inputs=[inp, weights_tensor], outputs=conv10)
+            targets_tensor = tf.keras.layers.Input(input_size)
+            super().__init__(inputs=[inp, weights_tensor, targets_tensor], outputs=conv10)
 
             # now we compile the model
             self.optimizer = tf.keras.optimizers.Adam(learning_rate=1e-4)
-            self.loss = lambda y_true, y_pred: self.weighted_binary_crossentropy(y_true=y_true, y_pred=y_pred)
-            self.compile(optimizer=self.optimizer, loss=self.loss, metrics=['accuracy'])
+
+            # We add the loss with the add_loss method because keras input layers are no longer allowed in
+            # loss functions
+            self.add_loss(self.weighted_binary_crossentropy(y_true=targets_tensor, y_pred=conv10,
+                                                            weights=weights_tensor))
+            self.compile(optimizer=self.optimizer, loss=None, metrics=['accuracy'])

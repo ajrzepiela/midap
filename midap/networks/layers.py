@@ -63,7 +63,7 @@ class UNetLayerClassicUp(tf.keras.layers.Layer):
     """
 
     def __init__(self, filters: int, kernel_size: Union[int, tuple], activation='relu', padding='same', dropout=None,
-                 kernel_initializer='he_normal'):
+                 kernel_initializer='he_normal', upsize=(2,2)):
         """
         Initializes the layer
         :param filters: The number of filters for the convolution
@@ -72,13 +72,14 @@ class UNetLayerClassicUp(tf.keras.layers.Layer):
         :param padding: The padding type
         :param dropout: The dropout rate applied after the two convolutions, defaults to no dropout
         :param kernel_initializer: The kernel initialization method
+        :param upsize: The kernel size to use for the upsampling
         """
 
         # This line is mandatory for all Layer subclasses
         super(UNetLayerClassicUp, self).__init__()
 
         # up smpling
-        self.upsampling = tf.keras.layers.UpSampling2D(size=(2,2))
+        self.upsampling = tf.keras.layers.UpSampling2D(size=upsize)
         self.conv0 = tf.keras.layers.Conv2D(filters=filters, activation=activation, kernel_size=2,
                                             padding=padding, kernel_initializer=kernel_initializer)
         # convolutions
