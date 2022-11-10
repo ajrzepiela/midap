@@ -6,11 +6,14 @@ Correct a segmentation generated with Midap
 """
 import argparse
 import skimage.io as io
+from skimage import measure
+from skimage.segmentation import mark_boundaries
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 import re
 import os
 import numpy as np
+import pdb
 
 from midap.correction.napari_correction import Correction
 
@@ -36,17 +39,16 @@ def main():
 
     cut_im = io.imread(args.path_img + '/' + files_cut_im[0])
     seg_im = io.imread(args.path_seg + '/' + files_seg_im[ix_seg])
-    seg_im_bin = (seg_im > 0).astype(int)
-    seg_im_bin = np.ma.masked_where(seg_im == 0, seg_im)
+
+    overl = mark_boundaries(cut_im, seg_im, color=(1, 0, 0))
 
     fig, ax = plt.subplots()
     fig.subplots_adjust(bottom=0.2)
-    im1 = ax.imshow(cut_im, cmap='gray')
-    im2 = ax.imshow(seg_im_bin, alpha=0.5)
+    im1 = ax.imshow(overl)
     ax.set_title(str(frame_cut))
 
     # include buttons
-    callback = Correction(ax, im1, im2, args.path_img,
+    callback = Correction(ax, im1, args.path_img,
                           args.path_seg, files_cut_im, files_seg_im)
     axprev = fig.add_axes([0.55, 0.05, 0.1, 0.075])
     axnext = fig.add_axes([0.66, 0.05, 0.1, 0.075])

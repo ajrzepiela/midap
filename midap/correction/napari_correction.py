@@ -1,4 +1,5 @@
 import skimage.io as io
+from skimage.segmentation import mark_boundaries
 import numpy as np
 import os
 import re
@@ -18,13 +19,11 @@ class Correction:
 
     def __init__(self, ax,
                  im1,
-                 im2,
                  path_img,
                  path_seg,
                  files_cut_im,
                  files_seg_im):
         self.im1 = im1
-        self.im2 = im2
         self.ax = ax
         self.path_img = path_img
         self.path_seg = path_seg
@@ -47,12 +46,13 @@ class Correction:
 
         self.seg_im_bin = np.ma.masked_where(self.seg_im == 0, self.seg_im)
 
+        self.overl = mark_boundaries(self.cut_im, self.seg_im, color=(1, 0, 0))
+
     def update_fig(self):
         """
         Update figure with data of chosen time frame.
         """
-        self.im1.set_data(self.cut_im)
-        self.im2.set_data(self.seg_im_bin)
+        self.im1.set_data(self.overl)
         self.ax.set_title(str(self.frame_cut))
         plt.draw()
 
