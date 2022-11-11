@@ -19,6 +19,16 @@ Efficiency:
 Fix:
 - ...
 
+## [0.1.4]
+
+2022-11-11
+
+Feature:
+- Added tool to investigate quality of segmentations (all frames of one tif-stack) and open napari for manual correction if needed
+
+Fix:
+- Generated requirements.txt including napari
+
 ## [0.1.3]
 
 2022-11-02
