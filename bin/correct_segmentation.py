@@ -4,21 +4,21 @@ Correct segmentations
 
 Correct a segmentation generated with Midap
 """
+import os
+
 import argparse
-import skimage.io as io
-from skimage import measure
-from skimage.segmentation import mark_boundaries
+import numpy as np
+
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
-import re
-import os
-import numpy as np
-import pdb
 
 from midap.correction.napari_correction import Correction
 
 
-def get_args():
+def get_args() -> None:
+    '''
+    Get arguments provided over the command line.
+    '''
     parser = argparse.ArgumentParser()
     parser.add_argument('--path_img', help='path to images')
     parser.add_argument('--path_seg', help='path to segmentations')
@@ -26,7 +26,10 @@ def get_args():
     return args
 
 
-def main():
+def main() -> None:
+    '''
+    Main function to run the segmentation correction with napari.
+    '''
     args = get_args()
 
     # get file names
@@ -34,29 +37,24 @@ def main():
     files_seg_im = np.sort(os.listdir(args.path_seg))
 
     # plot first time frame
-    frame_cut = re.findall('_frame[0-9][0-9][0-9]_', files_cut_im[0])[0]
-    ix_seg = np.where([frame_cut in fs for fs in files_seg_im])[0][0]
-
-    cut_im = io.imread(args.path_img + '/' + files_cut_im[0])
-    seg_im = io.imread(args.path_seg + '/' + files_seg_im[ix_seg])
-
-    overl = mark_boundaries(cut_im, seg_im, color=(1, 0, 0))
-
     fig, ax = plt.subplots()
     fig.subplots_adjust(bottom=0.2)
-    im1 = ax.imshow(overl)
-    ax.set_title(str(frame_cut))
+
+    callback = Correction(ax, args.path_img,
+                          args.path_seg, files_cut_im, files_seg_im)
+    callback.load_img_seg(0)
+
+    im1 = ax.imshow(callback.overl)
+    ax.set_title(str(callback.cur_frame))
 
     # include buttons
-    callback = Correction(ax, im1, args.path_img,
-                          args.path_seg, files_cut_im, files_seg_im)
     axprev = fig.add_axes([0.55, 0.05, 0.1, 0.075])
     axnext = fig.add_axes([0.66, 0.05, 0.1, 0.075])
     axnapari = fig.add_axes([0.77, 0.05, 0.13, 0.075])
     bnext = Button(axnext, 'Next')
-    bnext.on_clicked(callback.next_frame)
+    bnext.on_clicked(lambda x: callback.next_frame(x, im1))
     bprev = Button(axprev, 'Previous')
-    bprev.on_clicked(callback.prev_frame)
+    bprev.on_clicked(lambda x: callback.prev_frame(x, im1))
     bnapari = Button(axnapari, 'Correction')
     bnapari.on_clicked(callback.correct_seg)
 
