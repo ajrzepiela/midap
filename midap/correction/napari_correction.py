@@ -67,10 +67,8 @@ class Correction:
         self.ix_seg = np.where(
             [self.cur_frame in fs for fs in self.files_seg_im])[0][0]
 
-        self.cut_im = io.imread(self.path_img + '/' +
-                                self.files_cut_im[self.frame])
-        self.seg_im = io.imread(self.path_seg + '/' +
-                                self.files_seg_im[self.ix_seg])
+        self.cut_im = io.imread(os.path.join(self.path_img, self.files_cut_im[self.frame]))
+        self.seg_im = io.imread(os.path.join(self.path_seg, self.files_seg_im[self.ix_seg]))
 
         self.overl = mark_boundaries(self.cut_im, self.seg_im, color=(1, 0, 0))
 
@@ -98,12 +96,10 @@ class Correction:
         '''
         Override segmentation with corrected segmentation.
         '''
-        orig_seg_dir = self.path_seg + '/orig_seg/'
-        if not os.path.exists(orig_seg_dir):
-            os.makedirs(orig_seg_dir)
-        io.imsave(orig_seg_dir + self.files_seg_im[self.ix_seg], self.seg_im)
-        io.imsave(self.path_seg + '/' +
-                  self.files_seg_im[self.ix_seg], self.edited_labels)
+        orig_seg_dir = os.path.join(self.path_seg, 'orig_seg')
+        os.makedirs(orig_seg_dir, exist_ok=True)
+        io.imsave(os.path.join(orig_seg_dir, self.files_seg_im[self.ix_seg]), self.seg_im)
+        io.imsave(os.path.join(self.path_seg,self.files_seg_im[self.ix_seg]), self.edited_labels)
 
     def correct_seg(self, event: matplotlib.backend_bases.MouseEvent) -> None:
         '''
