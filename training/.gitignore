@@ -2,6 +2,7 @@
 training_data/
 # saved models
 saved_models/
+logs/
 checkpoint
 # temp dirs
 tmp/

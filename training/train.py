@@ -7,6 +7,9 @@ from midap.utils import get_logger
 # Parsing
 #########
 
+# TODO: Add the preprocessing
+# TODO: Option for on the fly data augmentation
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--save_path", type=str, required=True,
                     help="The path in which the results should be saved, this directory should exists.")
@@ -22,6 +25,8 @@ parser.add_argument("--custom_model", type=str, default=None,
                          "the constructor method.")
 parser.add_argument("--restore_path", type=str, default=None,
                     help="Path to restore the model from, note that it will use the model.save_weights routine")
+parser.add_argument("--tfboard_logdir", type=str, default=None,
+                    help="Logdir used for the Tensorboard callback, defaults to None -> no callback.")
 parser.add_argument("--save_model", action="store_true",
                     help="If this flag is set, the model will be saved using tf.keras.models.save_model "
                          "instead of just saving the weights.")
@@ -59,16 +64,21 @@ else:
 model = ModelClass(input_size=X_train.shape[1:], dropout=0.5)
 
 # load the weights
-if args.restore_path is not None:
-    logger.info(f"Restoring weights from: {args.restore_path}")
-    model.load_weights(args.restore_path)
+if (restore_path := args.restore_path) is not None:
+    logger.info(f"Restoring weights from: {restore_path}")
+    model.load_weights(restore_path)
+
+# callbacks
+callbacks = [tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)]
+if (log_dir := args.tfboard_logdir) is not None:
+    logger.info(f"Setting TF board log dir: {log_dir}")
+    callbacks.append(tf.keras.callbacks.TensorBoard(log_dir=log_dir))
 
 # Fit the model
-callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)
 model.fit(x=[X_train,
              weight_maps_train,
-             y_train], # we need to provide this here for the custom loss
-          y=y_train, # here for the accuracy metric
+             y_train],  # we need to provide this here for the custom loss
+          y=y_train,  # here for the accuracy metric
           sample_weight=ratio_cell_train,
           epochs=args.epochs,
           validation_data=([X_val,
@@ -76,7 +86,7 @@ model.fit(x=[X_train,
                             y_val],
                             y_val),
           batch_size=args.batch_size,
-          callbacks=[callback],
+          callbacks=callbacks,
           shuffle=True)
 
 # save the results
