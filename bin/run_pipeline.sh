@@ -3,9 +3,6 @@
 # necessary to catch python errors
 set -E
 
-# Run on CPU (only if desired)
-# export CUDA_VISIBLE_DEVICES="-1"
-
 # Argument Parsing
 ##################
 
@@ -22,6 +19,8 @@ help()
   echo "                    PATH, otherwise the current working directory is searched"
   echo " --headless         Run pipeline in headless mode (no GUI)"
   echo " --loglevel         Set logging level of script (0-7), defaults to 7 (max log)"
+  echo " --cpu_only         Sets CUDA_VISIBLE_DEVICES to -1 which will cause most! "
+  echo "                    applications to use CPU only."
   echo 
   exit 2
 }
@@ -38,8 +37,8 @@ while [[ $# -gt 0 ]]; do
       if [ -d "$2" ]; then
         RESTARTPATH="$2"
         shift # one extra shift for value
-      # make sure the next one is an option, -v to check if it is set at all
-      elif [ "$2" != "--*" ] && [ ! -z ${2+x} ]; then
+      # make sure the next one is an option, -z to check if it is set at all
+      elif [[ "$2" != --* ]] && [ ! -z ${2+x} ]; then
         echo "Restart path does not exist: $2"
         exit 1
       fi
@@ -58,6 +57,11 @@ while [[ $# -gt 0 ]]; do
       LOGLEVEL=$2
       shift # past argument
       shift # past value
+      ;;
+    --cpu_only)
+      # Run on CPU (only if desired)
+      export CUDA_VISIBLE_DEVICES="-1"
+      shift # past argument
       ;;
     -*|--*)
       echo "Unknown option $1"
@@ -203,9 +207,6 @@ source_paths_family() {
 setup_folders_family() {
   # creates the folder structure for the family machine
 
-  # Set path for checkpoints 
-  CHECKDIR="$PATH_FOLDER$POS"
-   
   # only redo this if necessary (arg is POS again)
   retry "${FUNCNAME[0]}_$1" || return 0
   
@@ -327,7 +328,7 @@ tracking_family() {
   # cycle through channels
   for i in $(seq $START $NUM_CHANNEL_TYPES); do
     CH="CHANNEL_$i"
-    ${PYTHON_EXE} apps/track_cells_crop.py --path "$PATH_FOLDER$POS/${!CH}/" --loglevel "${__VERBOSE}"
+    ${PYTHON_EXE} apps/track_cells_crop.py --path "$PATH_FOLDER$POS/${!CH}/" --loglevel "${__VERBOSE}" --tracking_class "${TRACKING_METHOD}"
     ${PYTHON_EXE} apps/generate_lineages.py --path "$PATH_FOLDER$POS/${!CH}/$TRACK_OUT_PATH" --loglevel "${__VERBOSE}"
   done
 
@@ -526,7 +527,10 @@ if [[ $DATA_TYPE == "FAMILY_MACHINE" ]]; then
   for POS in "${POS_UNIQ[@]}"; do
     .log 7 "Starting with: ${POS}"
 
-   if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
+    # Set path for checkpoints 
+    CHECKDIR="$PATH_FOLDER$POS"
+   
+    if [[ $RUN_OPTION == "BOTH" ]] || [[ $RUN_OPTION == "SEGMENTATION" ]]; then
       # 1) Generate folder structure
       setup_folders_family $POS
 

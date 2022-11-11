@@ -19,6 +19,30 @@ Efficiency:
 Fix:
 - ...
 
+## [0.1.3]
+
+2022-11-02
+
+Feature:
+- Added Tracking modularity in the same way as Segmentation and image cutout modularity via subclasses
+- The pipeline accepts a `--cpu_only` flag that will set CUDA_VISIBLE_DEVICES to -1
+
+Fix:
+- Minor typo in README
+- String comparison performed to check if the --restart argument has been supplied with a path was faulty
+
+
+## [0.1.2]
+
+2022-11-01
+
+Feature:
+- Omnipose support for non M1 local machines.
+
+Fix:
+- Updated the creation scripts of the euler env to use python 3.8.5, similar to the conda env
+- Minor change in `run_pipeline.sh` such that the pipeline runs with tracking only
+
 ## [0.1.1]
 
 2022-10-27
