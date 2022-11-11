@@ -24,8 +24,8 @@ output_folder = os.path.join(args.path, 'track_output')
 model_file = '../model_weights/model_weights_tracking/unet_pads_track.hdf5'
 
 # glob all the cut images and segmented images
-img_names_sort = np.sort(glob.glob(os.path.join(images_folder, '*frame*')))
-seg_names_sort = np.sort(glob.glob(os.path.join(segmentation_folder, '*frame*')))
+img_names_sort = np.sort(glob.glob(os.path.join(images_folder, '*frame*.png')))
+seg_names_sort = np.sort(glob.glob(os.path.join(segmentation_folder, '*frame*.png')))
 
 # Parameters:
 crop_size = (128, 128)
