@@ -111,10 +111,10 @@ python -m pip install "napari[all]"
 The manual correction can be started with the following commands:
 ```
 cd bin/
-python correct_segmentation.py --path_img PATH_IMG --path_seg PATH_SEG_IMG
+python correct_segmentation.py --path_img FOLDER_IMG --path_seg FOLDER_SEG_IMG
 ```
 
-The arguments PATH_IMG and PATH_SEG_IMG are passed as strings and should contain the full path name (e.g. '/Users/Documents/data/img_1.tif').
+The arguments FOLDER_IMG and FOLDER_SEG_IMG are passed as strings and should contain the full path name to the respective folder (e.g. '/Users/Documents/cut_im/' or '/Users/Documents/seg_im/').
 
 #### Visualization of tracking results
 ```
