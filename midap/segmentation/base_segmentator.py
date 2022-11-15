@@ -1,14 +1,15 @@
 import os
 import re
 
-import matplotlib.pyplot as plt
 import numpy as np
 import skimage.io as io
-from matplotlib.widgets import RadioButtons
+
 from skimage.filters import sobel
 from skimage.measure import label, regionprops
 from skimage.morphology import area_closing
 from skimage.segmentation import watershed
+
+from abc import ABC, abstractmethod
 
 from ..networks.unets import UNetv1
 from ..utils import get_logger
@@ -21,7 +22,7 @@ else:
 logger = get_logger(__file__, loglevel)
 
 
-class SegmentationPredictor(object):
+class SegmentationPredictor(ABC):
     """
     A class that performs the image segmentation of the cells
     """
@@ -216,3 +217,10 @@ class SegmentationPredictor(object):
         """
         img_unpad = img_pad[0, :self.row_shape, :self.col_shape, 0]
         return img_unpad
+
+    @abstractmethod
+    def set_segmentation_method(self):
+        """
+        This is an abstract method forcing subclasses to implement it
+        """
+        pass

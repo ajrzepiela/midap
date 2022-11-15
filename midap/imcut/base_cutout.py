@@ -16,6 +16,7 @@ from skimage.filters import threshold_mean
 import cv2
 
 from tqdm import tqdm
+from abc import ABC, abstractmethod
 
 from ..utils import get_logger
 
@@ -26,7 +27,7 @@ else:
     loglevel = 7
 logger = get_logger(__file__, loglevel)
 
-class CutoutImage:
+class CutoutImage(ABC):
     """
     A class that performs the image cutout for the different channels
     """
@@ -88,30 +89,6 @@ class CutoutImage:
 
         # computes the offset to choose depending on shift between images
         self.off = int(math.ceil(np.max(np.abs(self.shifts)) / 10.0)) * 10
-
-    def cut_corners(self, img):
-        """
-        Given a single aligned image as array, it defines the corners that are used to cut out all images
-        :param img: Image to cut as array
-        :returns: The corners of the cutout as tuple (left_x, right_x, lower_y, upper_y), where full range of the
-                  image, i.e. the limits of the corners, are given by the total number of pixels.
-        """
-        if self.cutout_mode == 'automatic':
-            # find contours in image
-            contours = self.find_contour(img)
-            # compute the range in x-direction for every contour and check for contours above a specific size
-            ix_rect = self.find_rectangle(contours)
-            # get the corners of the rectangle
-            corners = self.get_corners(contours[ix_rect])
-
-            # get coordinates from cutout and cutout images
-            self.rectangle_x, self.rectangle_y, self.range_x, self.range_y = self.draw_rectangle(corners)
-            self.corners_cut = self.get_corners(np.array([self.rectangle_y, self.rectangle_x]).T)
-
-        elif self.cutout_mode == 'interactive':
-            # interactive cutout of chambers
-            corners = self.interactive_cutout(img)
-            self.corners_cut = tuple([int(i) for i in corners])
 
     def save_corners(self):
         """
@@ -359,3 +336,9 @@ class CutoutImage:
                 aligned_cutouts.append(proc_img)
 
             self.save_cutout(aligned_cutouts, files)
+    @abstractmethod
+    def cut_corners(self, img):
+        """
+        This is an abstract method forcing subclasses to implement it
+        """
+        pass
