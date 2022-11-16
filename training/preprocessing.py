@@ -1,3 +1,5 @@
+import os.path
+
 import numpy as np
 import argparse
 
@@ -65,15 +67,22 @@ proc = DataProcessor(n_grid=args.n_grid, test_size=args.test_size, val_size=args
                      augment_patches=~args.no_augmentation, sigma=args.sigma, w_0=args.w_0, w_c0=args.w_c0,
                      w_c1=args.w_c1, loglevel=args.loglevel, np_random_seed=args.np_random_seed)
 
-# Create the data
+# Get the data
 path_img_train = args.path_img
 path_mask_train = args.path_mask
 logger.info(f"Using image data from: {path_img_train}")
 logger.info(f"Using mask data from: {path_mask_train}")
 
+# Create the save directories if necessary
+save_dir, _ = os.path.split(os.path.abspath(args.path_train))
+os.makedirs(save_dir, exist_ok=True)
+save_dir, _ = os.path.split(os.path.abspath(args.path_test))
+os.makedirs(save_dir, exist_ok=True)
+
 # Preprocessing of data
 if args.mother_machine:
     X_train, y_train, X_val, y_val = proc.run_mother_machine(path_img_train, path_mask_train)
+
     # Save generated training data
     np.savez_compressed(args.path_train, X_train=X_train, y_train=y_train, X_val=X_val, y_val=y_val)
 else:
