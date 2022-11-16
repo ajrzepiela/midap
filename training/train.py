@@ -41,14 +41,14 @@ logger = get_logger(__file__, args.loglevel)
 logger.info("Loading data...")
 data = np.load(args.train_data)
 
-X_train = data['X_train'][:10]
-y_train = data['y_train'][:10]
-weight_maps_train = data['weight_maps_train'][:10]
-ratio_cell_train = data['ratio_cell_train'][:10]
-X_val = data['X_val'][:10]
-y_val = data['y_val'][:10]
-weight_maps_val = data['weight_maps_val'][:10]
-ratio_cell_val = data['ratio_cell_val'][:10]
+X_train = data['X_train']
+y_train = data['y_train']
+weight_maps_train = data['weight_maps_train']
+ratio_cell_train = data['ratio_cell_train']
+X_val = data['X_val']
+y_val = data['y_val']
+weight_maps_val = data['weight_maps_val']
+ratio_cell_val = data['ratio_cell_val']
 logger.info("done!")
 
 # import the right model
