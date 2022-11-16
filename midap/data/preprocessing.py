@@ -7,8 +7,7 @@ from skimage.segmentation import find_boundaries
 from skimage.measure import label
 from sklearn.model_selection import train_test_split
 from scipy.spatial import distance_matrix
-from typing import Optional, Union
-from collections.abc import Iterable
+from typing import Optional, Iterable
 from tqdm import tqdm
 
 from ..utils import get_logger, set_logger_level
@@ -43,7 +42,7 @@ class DataProcessor(object):
     logger = get_logger(__file__)
 
     def __init__(self, n_grid=4, test_size=0.15, val_size=0.2, patch_size=128, num_split_r=10, num_split_c=10,
-                 augment_patches=True, sigma=2, w_0=2, w_c0=1, w_c1=1.1, loglevel=7,
+                 augment_patches=True, sigma=2.0, w_0=2.0, w_c0=1.0, w_c1=1.1, loglevel=7,
                  np_random_seed: Optional[int]=None):
         """
         Initializes the DataProcessor instance. Note that a lot parameters are used to implement the weight map
