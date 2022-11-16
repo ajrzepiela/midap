@@ -22,6 +22,8 @@ args = parser.parse_args()
 # get the logger
 logger =get_logger(__file__, logging_level=args.loglevel)
 
+# TODO: print random see warning
+
 # Init the Processor
 logger.debug("Initializing the DataProcessor...")
 proc = DataProcessor(loglevel=args.loglevel)
@@ -33,32 +35,14 @@ logger.info(f"Using image data from: {path_img_train}")
 logger.info(f"Using mask data from: {path_mask_train}")
 
 # Preprocessing of data
-(X_train,
-y_train,
-weight_maps_train,
-ratio_cell_train,
-X_val,
-y_val,
-weight_maps_val,
-ratio_cell_val,
-X_test,
-y_test,
-weight_maps_test,
-ratio_cell_test) = proc.run(path_img_train,
-                            path_mask_train)
+data = proc.run(path_img_train, path_mask_train)
 
 # Save generated training data
-np.savez_compressed(args.path_train, X_train = X_train,
-y_train = y_train,
-weight_maps_train = weight_maps_train,
-ratio_cell_train = ratio_cell_train,
-X_val = X_val,
-y_val = y_val,
-weight_maps_val = weight_maps_val,
-ratio_cell_val = ratio_cell_val)
+np.savez_compressed(args.path_train, X_train=data["X_train"], y_train=data["y_train"],
+                    weight_maps_train=data["weight_maps_train"], ratio_cell_train=data["ratio_cell_train"],
+                    X_val=data["X_val"], y_val=data["y_val"], weight_maps_val=data["weight_maps_val"],
+                    ratio_cell_val=data["ratio_cell_val"])
 
 # Save generated test data
-np.savez_compressed(args.path_test, X_test = X_test,
-y_test = y_test,
-weight_maps_test = weight_maps_test,
-ratio_cell_test = ratio_cell_test)
+np.savez_compressed(args.path_test, X_test=data["X_test"], y_test=data["y_test"],
+                    weight_maps_test=data["weight_maps_test"], ratio_cell_test=data["ratio_cell_test"])
