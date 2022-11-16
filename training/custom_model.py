@@ -67,7 +67,7 @@ class CustomUNet(UNetBaseClass):
         """
         Saves the model in inference mode as a TF model
         :param filepath: Path to save directory
-        :param kwargs: Additional keyword args forwarded to tf.leras.models.save_model
+        :param kwargs: Additional keyword args forwarded to tf.keras.models.save_model
         """
 
         model = tf.keras.Model(inputs=self.inp, outputs=self.out)
