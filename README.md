@@ -156,3 +156,6 @@ cp deltav2_tracking.py <your_filename>.py
 ```
 In the copied file, change the name of the class from `DeltaV2Tracking` to your own class. Choose a descriptive name as the name of this class will be shown in the dropdown menu of the GUI to select the method. Then you can overwrite the `load_model` method with your own method. Note that you should not add additional arguments to the method and the method has to set the attribute `self.model` to a model that performs the cell tracking. This model should be callable like the DeltaV2 model (see the [paper](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1009797) for more information). You can make use of all the attributes that the base class (`Tracking` defined in `base_tracking.py`) sets in its constructor.
 
+## Training segmentation models
+
+You can train the standard MIDAP UNet for segmentation from scratch, finetune existing models or train custom UNets and easily add them to the pipeline. For more information please have a look into the [training](./training) directory.

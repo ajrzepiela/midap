@@ -5,6 +5,7 @@ from skimage.morphology import remove_small_objects
 
 import numpy as np
 from tqdm import tqdm
+from abc import ABC, abstractmethod
 
 from ..utils import get_logger
 
@@ -19,7 +20,7 @@ else:
     loglevel = 7
 logger = get_logger(__file__, loglevel)
 
-class Tracking():
+class Tracking(ABC):
     """
     A class for cell tracking using the U-Net
 
@@ -464,4 +465,9 @@ class Tracking():
         res_clean = np.array(res_clean)
         return res_clean
 
-
+    @abstractmethod
+    def load_model(self):
+        """
+        This is an abstract method forcing subclasses to implement it
+        """
+        pass

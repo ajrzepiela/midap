@@ -19,6 +19,26 @@ Efficiency:
 Fix:
 - ...
 
+## [0.1.5]
+
+2022-11-17
+
+Feature:
+- moved all networks into a designated `networks` folder in the package.
+- Added support for the old delta model for tracking
+- Refactored to standard UNet into a class
+- All base classes are now abstract base classes that enforce setting the required methods
+- Added the `training` directory for the training and finetuning of models.
+- Added example notebooks and a README about the training of custom models.
+- Added basic UNet block into the `netoworks` directory that can be used for custom models.
+
+Fix:
+- Cleanup of the base classes, removal of redundant methods
+- Minor fix in the preprocessing where some pixels of the input image weren't used
+- Fix in the weight_map generation that could case the cell border to receive zero weight during the training
+- Fix in data augmentation where the same augmentation was applied multiple times.
+
+
 ## [0.1.4]
 
 2022-11-11
