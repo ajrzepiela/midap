@@ -448,4 +448,3 @@ def test_run_mother_machine(monkeypatch):
 
     # check shape
     assert X_train.shape == (n_train, 32, 16)
-    
