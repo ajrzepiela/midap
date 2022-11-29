@@ -39,7 +39,7 @@ class UNetLayerClassicDown(tf.keras.layers.Layer):
         else:
             self.pool = tf.keras.activations.linear
 
-    def call(self, input):
+    def call(self, input: tf.Tensor):
         """
         Calls the UNetLayer
         :param input: The input to the layer
@@ -94,7 +94,7 @@ class UNetLayerClassicUp(tf.keras.layers.Layer):
         else:
             self.dropout = tf.keras.activations.linear
 
-    def call(self, input1, input2):
+    def call(self, input1: tf.Tensor, input2: tf.Tensor):
         """
         Calls the UNetLayer
         :param input1: The input to the layer
