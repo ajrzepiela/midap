@@ -6,6 +6,7 @@ from skimage.morphology import remove_small_objects
 import numpy as np
 from tqdm import tqdm
 from abc import ABC, abstractmethod
+from typing import Iterable, Optional
 
 from ..utils import get_logger
 
@@ -23,74 +24,21 @@ logger = get_logger(__file__, loglevel)
 class Tracking(ABC):
     """
     A class for cell tracking using the U-Net
-
-    ...
-
-    Attributes
-    ----------
-    imgs: list of str
-        list of path strings
-    segs : list of str
-        list of path strings
-    model_weights : str 
-        path to model weights
-    input_size : tuple
-        input size of tracking network
-    target_size: tuple
-        target size of tracking network
-    crop_size: tuple
-        size of cropped input image
-
-    Methods
-    -------
-    load_data(self, cur_frame)
-        Loads and resizes raw images and segmentation images of the previous and current time frame.
-    gen_input(cur_frame)
-        Generates input for tracking network per time frame.
-    gen_input_const(self, cur_frame)
-        Generates the input for the tracking network.
-    gen_input_crop(self, cur_frame)
-        Generates the input for the tracking network using cropped images.
-    clean_crop(self, seg, seg_crop)
-        Cleans the cropped segmentation by removing all cells which have been cut during the cropping.
-    areas2dict(self, regs)
-        Generates dictionary based on regionsprops of segmentation.
-        The dictionary contains cell indices as keys and the areas as values.
-    track_cell()
-        Tracks single cell within current time frame by using a U-Net.
-    track_cur_frame(cur_frame)
-        Loops over all cells of current time frame.
-    track_all_frames()
-        Loops over all time frames to track all cells over time.
-    track_all_frames_const(self)
-        Track all frames using a constant input.
-    track_all_frames_crop(self)
-        Track all frames using cropped images as input.
-    clean_cur_frame(self, inp, res)
-        Clean result from cropped image by comparing the segmentation with the result from the tracking.
     """
 
     # this logger will be shared by all instances and subclasses
     logger = logger
 
-    def __init__(self, imgs, segs, model_weights, input_size, target_size, crop_size=None):
+    def __init__(self, imgs: Iterable[str], segs: Iterable[str], model_weights: str, input_size: tuple,
+                 target_size: tuple, crop_size: Optional[str]=None):
         """
         Initializes the class instance
-
-        Parameters
-        ----------
-        imgs: list
-            List of files containing the cut out images ordered chronological in time
-        segs: list
-            List of files containing the segmentation ordered in the same way as imgs
-        model_weights: str
-            Path to the tracking model weights
-        input_size: tuple
-            A tuple of ints indicating the shape of the input
-        target_size: tuple
-            A tuple of ints indicating the shape of the target size
-        crop_size: tuple
-            A tuple of ints indicating the shape of the crop size
+        :param imgs: List of files containing the cut out images ordered chronological in time
+        :param segs: List of files containing the segmentation ordered in the same way as imgs
+        :param model_weights: Path to the tracking model weights
+        :param input_size: A tuple of ints indicating the shape of the input
+        :param target_size: A tuple of ints indicating the shape of the target size
+        :param crop_size: A tuple of ints indicating the shape of the crop size
         """
 
         # set the variables
@@ -104,14 +52,14 @@ class Tracking(ABC):
         if crop_size is not None:
             self.crop_size = crop_size
 
-    def load_data(self, cur_frame):
-        """Loads and resizes raw images and segmentation images of the previous and current time frame.
-
-        Parameters
-        ----------
-        cur_frame: int
-            Number of the current frame.
+    def load_data(self, cur_frame: int):
         """
+        Loads and resizes raw images and segmentation images of the previous and current time frame.
+        :param cur_frame: Number of the current frame.
+        :return: The loaded and resized images of the current frame, the previous frame, the current segmentation and
+                the prvious segmentation
+        """
+
         img_cur_frame = resize(
             io.imread(self.imgs[cur_frame]), self.target_size, order=1)
         img_prev_frame = resize(
@@ -123,13 +71,11 @@ class Tracking(ABC):
 
         return img_cur_frame, img_prev_frame, seg_cur_frame, seg_prev_frame
 
-    def gen_input(self, cur_frame):
-        """Generates the input for the tracking network.
-
-        Parameters
-        ----------
-        cur_frame: int
-            Number of the current frame.
+    def gen_input(self, cur_frame: int):
+        """
+        Generates the input for the tracking network.
+        :param cur_frame: Number of the current frame.
+        :return: Input for the tracking network
         """
 
         # Load data
@@ -150,13 +96,11 @@ class Tracking(ABC):
 
         return input_cur_frame
 
-    def gen_input_const(self, cur_frame):
-        """Generates the input for the tracking network.
-
-        Parameters
-        ----------
-        cur_frame: int
-            Number of the current frame.
+    def gen_input_const(self, cur_frame: int):
+        """
+        Generates the input for the tracking network.
+        :param cur_frame: Number of the current frame.
+        :return: Input for the tracking network
         """
 
         # Load data
@@ -183,13 +127,11 @@ class Tracking(ABC):
             np.expand_dims(img_cur_frame, axis=[0, -1]), \
             np.expand_dims(seg_cur_frame, axis=[0, -1])
 
-    def gen_input_crop(self, cur_frame):
-        """Generates the input for the tracking network using cropped images.
-
-        Parameters
-        ----------
-        cur_frame: int
-            Number of the current frame.
+    def gen_input_crop(self, cur_frame: int):
+        """
+        Generates the input for the tracking network using cropped images.
+        :param cur_frame: Number of the current frame.
+        :return: Cropped input for the tracking network
         """
 
         # Load data
@@ -250,16 +192,12 @@ class Tracking(ABC):
 
         return input_cur_frame, input_whole_frame, crop_box
 
-    def clean_crop(self, seg, seg_crop):
-        """Cleans the cropped segmentation by removing all cells which have been cut during the cropping.
-
-        Parameters
-        ----------
-        seg: array of ints
-            Segmentation of full image.
-
-        seg_crop: array of ints
-            Segmentation of cropped image.
+    def clean_crop(self, seg: np.ndarray, seg_crop: np.ndarray):
+        """
+        Cleans the cropped segmentation by removing all cells which have been cut during the cropping.
+        :param seg: Segmentation of full image.
+        :param seg_crop: Segmentation of cropped image.
+        :return: The cleaned up segmentation
         """
 
         # Generate dictionary with cell indices as keys and area as values for the full and cropped segmentation.
@@ -279,15 +217,12 @@ class Tracking(ABC):
 
         return seg_clean_bin
 
-    def areas2dict(self, regs):
-        """Generates dictionary based on regionsprops of segmentation.
-        The dictionary contains cell indices as keys and the areas as values.
-
-
-        Parameters
-        ----------
-        regs: list of RegionProperties
-            Each item contains labeled cell of segmentation image.
+    def areas2dict(self, regs: Iterable):
+        """
+        Generates dictionary based on regionsprops of segmentation. The dictionary contains cell indices as keys and
+        the areas as values.
+        :param regs: Each item contains labeled cell of segmentation image.
+        :return: Dictionary of areas
         """
 
         areas = dict()
@@ -297,16 +232,12 @@ class Tracking(ABC):
 
         return areas
 
-    def track_cell(self, cell_id, inputs):
-        """Tracks single cell by using the U-Net.
-
-        Parameters
-        ----------
-        cell_id: int
-            ID of seed cell.
-
-        inputs: array
-            Generated input.
+    def track_cell(self, cell_id: int, inputs: np.ndarray):
+        """
+        Tracks single cell by using the U-Net.
+        :param cell_id: ID of seed cell.
+        :param inputs: Generated input.
+        :return: The generated tracking output
         """
 
         # Extract seed cell
@@ -322,13 +253,11 @@ class Tracking(ABC):
 
         return results[0, :, :, :]
 
-    def track_cur_frame(self, cur_frame):
-        """Tracks all cells of current time frame by using the U-Net.
-
-        Parameters
-        ----------
-        cur_frame: int
-            Number of the current frame.
+    def track_cur_frame(self, cur_frame: int):
+        """
+        Tracks all cells of current time frame by using the U-Net.
+        :param cur_frame: Number of the current frame.
+        :return: The tracking results
         """
 
         # Generate input
@@ -345,8 +274,8 @@ class Tracking(ABC):
         return np.array(results_ar), inputs
 
     def track_all_frames(self):
-        """Track all frames.
-
+        """
+        Track all frames.
         """
 
         # Load model
@@ -365,8 +294,8 @@ class Tracking(ABC):
             print(process.memory_info().rss*1e-9)
 
     def track_all_frames_const(self):
-        """Track all frames using a constant input.
-
+        """
+        Track all frames using a constant input.
         """
 
         # Loop over all time frames
@@ -388,8 +317,8 @@ class Tracking(ABC):
             print(process.memory_info().rss*1e-9)
 
     def track_all_frames_crop(self):
-        """Track all frames using cropped images as input.
-
+        """
+        Track all frames using cropped images as input.
         """
 
         # Load model
@@ -430,16 +359,12 @@ class Tracking(ABC):
             ram_usg = process.memory_info().rss*1e-9
             pbar.set_postfix({"RAM": f"{ram_usg:.1f} GB"})
 
-    def clean_cur_frame(self, inp, res):
-        """Clean result from cropped image by comparing the segmentation with the result from the tracking.
-
-        Parameters
-        ----------
-        inp: array of ints
-            Segmentation of full image.
-
-        res: array of floats
-            Result of the tracking.
+    def clean_cur_frame(self, inp: np.ndarray, res: np.ndarray):
+        """
+        Clean result from cropped image by comparing the segmentation with the result from the tracking.
+        :param inp: Segmentation of full image.
+        :param res: Result of the tracking.
+        :return: The cleaned up tracking result
         """
 
         # Labeling of the segmentation.
