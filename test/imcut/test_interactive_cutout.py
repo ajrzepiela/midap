@@ -197,6 +197,8 @@ def test_run_align_cutout(monkeypatch, cutout_instance):
     dir_name = os.path.dirname(os.path.dirname(cutout_instance.channels[0][0]))
     dir_name = os.path.join(dir_name, "cut_im")
     imgs = []
+    # Note: io.imread and os.listdir have been monkeypatched by the cutout_instance fixture
+    # for this reason we use the direct imports
     for fname in listdir(dir_name):
         imgs.append(imread(os.path.join(dir_name, fname)))
 
