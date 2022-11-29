@@ -1,6 +1,7 @@
+import tensorflow as tf
 from ..networks.deltav1 import unet_track
 from .base_tracking import Tracking
-import tensorflow as tf
+from pathlib import Path
 
 class DeltaV1Tracking(Tracking):
     """
@@ -24,7 +25,9 @@ class DeltaV1Tracking(Tracking):
 
         # we get the model
         model = unet_track(self.input_size, constant_input=None)
-        model.load_weights("../model_weights/model_weights_tracking/unet_moma_track_multisets.hdf5")
+        weight_path = Path(__file__).absolute().parent.parent.parent
+        weight_path = weight_path.joinpath("model_weights", "model_weights_tracking", "unet_moma_track_multisets.hdf5")
+        model.load_weights(weight_path)
 
         # now we create a Delta2 conform model, this is similiar to what was done before DeltaV2
         inputs = tf.keras.layers.Input(shape=self.input_size, dtype='float32')
