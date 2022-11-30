@@ -19,6 +19,17 @@ Efficiency:
 Fix:
 - ...
 
+## [0.1.6]
+
+2022-11-30
+
+Feature:
+- Introduced testing to most of the important pipeline routines.
+- Consistent type hints and docstring of the tracking files.
+
+Fix:
+- Minor bug fixes according to tests.
+
 ## [0.1.5]
 
 2022-11-17
