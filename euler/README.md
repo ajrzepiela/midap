@@ -24,7 +24,9 @@ so, you won't need to do it manually in the next step.
 ```
 source source_venv.sh
 ```
-This step has to be **repeated everytime you log into Euler before starting the pipeline**. If you want this to happen automatically add the following line 
+If you did not choose to add the source script to your `.bash_profile` in the previous step 
+then this step has to be **repeated everytime you log into Euler before starting the 
+pipeline**. If you want this to happen automatically add the following line 
 to your `$HOME/.bash_profile`:
 ```
 source <path/to/your>/source_venv.sh
@@ -37,7 +39,7 @@ cd ../bin/
 bsub -XF -n 8 -R "rusage[ngpus_excl_p=1]" -Is bash
 ```
 
-7. After the job starts you can run the pipeline in the same way as on your local machine (see step 3 above)
+7. After the job starts you can run the pipeline in the same way as on your local machine (see main [README.md](../README.md)).
 
 ## Jupyter on Euler
 
@@ -78,7 +80,7 @@ ssh <username>@euler.ethz.ch
 
 ### 2. Euler setup [euler]
 
-Log into Euler as shown above. Then clone the repo and follow the installation [instructions above](README.md#installation-of-the-pipeline). Once you have sourced `source_venv.sh`, there should be a `(midap)` on the line of the curser like this
+Log into Euler as shown above. Then clone the repo and follow the installation [instructions above](#installation-of-the-pipeline). Once you have sourced `source_venv.sh`, there should be a `(midap)` on the line of the curser like this
 
 ```
 (midap) [<username>@eu-....
