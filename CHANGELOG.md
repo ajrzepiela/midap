@@ -19,6 +19,14 @@ Efficiency:
 Fix:
 - ...
 
+## [0.1.7]
+
+2022-12-01
+
+Feature:
+- Added scripts to run jupyter on Euler with SLURM and GPU support.
+- Updated README in base directory and created README for Euler.
+
 ## [0.1.6]
 
 2022-11-30
