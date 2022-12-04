@@ -71,18 +71,18 @@ class Tracking(ABC):
         return img_cur_frame, img_prev_frame, seg_cur_frame, seg_prev_frame
 
  
-    def track_all_frames_crop(self, *args, **kwargs): #logger, output_folder
+    def run_tracking(self, *args, **kwargs): #logger, output_folder
         """
         Track all frames using cropped images as input.
         """
 
-        self.run_tracking()
+        self.track_all_frames(*args, **kwargs)
 
-        self.store_data(*args, **kwargs)
+        #self.store_data()
 
 
     @abstractmethod
-    def run_tracking(self):
+    def track_all_frames(self, *args, **kwargs):
         """
         This is an abstract method forcing subclasses to implement it
         """

@@ -11,6 +11,7 @@ process = psutil.Process(os.getpid())
 
 from ..networks.deltav2 import unet_track
 from .base_tracking import Tracking
+from .deltav2_lineage import DeltaV2Lineages
 from midap.utils import get_logger
 
 class DeltaV2Tracking(Tracking):
@@ -28,6 +29,15 @@ class DeltaV2Tracking(Tracking):
         # base class init
         super().__init__(*args, **kwargs)
 
+
+    def track_all_frames(self, *args, **kwargs):
+        self.run_model_crop()
+        self.reduce_data(*args, **kwargs)
+        
+        lin = DeltaV2Lineages(self.inputs_all, self.results_all_red)
+        lin.generate_lineages()
+        lin.store_lineages(*args, **kwargs)
+        
 
     def gen_input_crop(self, cur_frame: int):
         """
@@ -137,15 +147,13 @@ class DeltaV2Tracking(Tracking):
         return areas
 
 
-    def run_tracking(self):
+    def run_model_crop(self):
         """
         Loads model for inference/tracking.
         """
 
-        self.model = unet_track(self.model_weights, self.input_size)
-
         # Load model
-        #self.load_model()
+        self.model = unet_track(self.model_weights, self.input_size)
 
         # Loop over all time frames
         self.results_all = []
@@ -215,23 +223,25 @@ class DeltaV2Tracking(Tracking):
         return res_clean
 
 
-    def store_data(self, logger, output_folder: str):
+    def reduce_data(self, logger, output_folder: str):
         # Reduce results file for storage if there is a tracking result
         if sum([res.size for res in self.results_all]) > 0:
             logger.info("Saving results of tracking...")
             # the first might be emtpy
-            results_all_red = np.zeros(
+            self.results_all_red = np.zeros(
                 (len(self.results_all), ) + self.results_all[0].shape[1:3] + (2,))
 
             for t in range(len(self.results_all)):
                 for ix, cell_id in enumerate(self.results_all[t]):
                     if cell_id[:, :, 0].sum() > 0:
-                        results_all_red[t, cell_id[:, :, 0] > 0, 0] = ix+1
+                        self.results_all_red[t, cell_id[:, :, 0] > 0, 0] = ix+1
                     if cell_id[:, :, 1].sum() > 0:
-                        results_all_red[t, cell_id[:, :, 1] > 0, 1] = ix+1
+                        self.results_all_red[t, cell_id[:, :, 1] > 0, 1] = ix+1
 
             # Save data
+            self.inputs_all = np.array(self.inputs_all)
+            self.results_all_red = np.array(self.results_all_red)
             np.savez(os.path.join(output_folder, 'inputs_all_red.npz'),
-                    inputs_all=np.array(self.inputs_all))
+                    inputs_all=self.inputs_all)
             np.savez(os.path.join(output_folder, 'results_all_red.npz'),
-                    results_all_red=np.array(results_all_red))
+                    results_all_red=self.results_all_red)

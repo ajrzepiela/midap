@@ -56,7 +56,11 @@ class BayesianCellTracking(Tracking):
         self.config_file = datasets.cell_config()
 
 
-    def run_tracking(self):
+    def track_all_frames(self, *args, **kwargs):
+        self.run_model()
+
+    
+    def run_model(self):
         """Loads model for inference/tracking.
 
         Parameters
