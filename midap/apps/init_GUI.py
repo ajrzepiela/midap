@@ -27,9 +27,10 @@ tracking_subclasses = [subclass.__name__ for subclass in base_tracking.Tracking.
 # main function of the App
 ##########################
 
-def main():
+def main(config_file="settings.ini"):
     """
     The main function of the App
+    :param config_file: Name of the config file to save
     """
     # set layout for GUI
     sg.theme('LightGrey1')
@@ -138,10 +139,10 @@ def main():
     tracking = {"Class": values['track_method']}
 
     # init the config
-    config = Config(general=general, segmentation=segmentation, cut_img=cut_img, tracking=tracking)
+    config = Config(fname=config_file, general=general, segmentation=segmentation, cut_img=cut_img, tracking=tracking)
 
     # write to file
-    config.to_file("settings.ini", overwrite=True)
+    config.to_file(config_file, overwrite=True)
 
 # Run as script
 ###############

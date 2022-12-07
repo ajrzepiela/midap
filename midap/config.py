@@ -31,11 +31,12 @@ class Config(ConfigParser):
     A subclass of the ConfigParser defining all values of the MIDAP pipeline.
     """
 
-    def __init__(self, general: Optional[dict]=None, cut_img: Optional[dict]=None, segmentation: Optional[dict]=None,
-                 tracking: Optional[dict]=None):
+    def __init__(self, fname: str, general: Optional[dict]=None, cut_img: Optional[dict]=None,
+                 segmentation: Optional[dict]=None, tracking: Optional[dict]=None):
         """
         Initializes the Config of the pipeline, the default values of the sections are updated with the entries
         provided in the dictionary
+        :param fname: The name of the file the instance corresponds to
         :param general: A dictionary used for the entries of the General section of the config
         :param cut_img: A dictionary used for the entries of the CutImg section of the config
         :param segmentation: A dictionary used for the entries of the Segmentation section of the config
@@ -47,6 +48,9 @@ class Config(ConfigParser):
 
         # make all keys case sensitive
         self.optionxform = str
+
+        # save the file_name
+        self.fname = fname
 
         # set the defaults
         self.set_defaults()
@@ -85,9 +89,10 @@ class Config(ConfigParser):
                         "Segmentation": {"Class": "UNetSegmentation"},
                         "Tracking": {"Class": "DeltaV2Tracking"}})
 
-    def validate_sections(self):
+    def validate_sections(self, basic=True):
         """
-        Validates the content of all sections in choice and type
+        Validates the content of all sections in choice and type.
+        :param basic: Only check the parameters that would be set by the initial GUI
         :raises: ValueError if invalid value is found or other Errors accordingly
         """
 
@@ -127,16 +132,31 @@ class Config(ConfigParser):
         if self.get("Tracking", "Class") not in tracking_subclasses:
             raise ValueError(f"'Class' of 'Tracking' not in {tracking_subclasses}")
 
-    def to_file(self, fname: str, overwrite=True):
+        if not basic:
+            # TODO: do the check of the remaining variables
+            pass
+
+    def to_file(self, fname: Optional[str]=None, overwrite=True):
         """
         Write the config into a file
-        :param fname: Name of the file to write
+        :param fname: Name of the file to write, defaults to fname attribute. If a directory is specified, the file
+                      will be saved in that directory with the same name, if a full path is specified, the full path
+                      is used to save the file.
         :param overwrite: Overwrite existing file, defaults to True
         :raises: FileExistsError if overwrite is False and file exists
         """
 
+        # check if we have an argument for the file name
+        if fname is not None:
+            fname = Path(fname)
+            # if we have a dir we add the fname attribute
+            if fname.is_dir():
+                fname = fname.joinpath(self.fname)
+        else:
+            fname = Path(self.fname)
+
         # check
-        if not overwrite and Path(fname).exists():
+        if not overwrite and fname.exists():
             FileExistsError(f"File already exists, set overwrite to True to overwrite: {fname}")
 
         # now we can open a w+ without worrying
@@ -144,23 +164,24 @@ class Config(ConfigParser):
             self.write(f)
 
     @classmethod
-    def from_file(cls, fname: str):
+    def from_file(cls, fname: str, full_check=False):
         """
         Initiates a new instance of the class and overwrites the defaults with contents from a file. The contents read
         from the file will be checked for validity.
         :param fname: The name of the file to read
+        :param full_check: If True, all parameters of the file will be checked, otherwise only the initial params.
         :return: An instance of the class
         """
 
         # create a class instance
-        config = Config()
+        config = Config(fname=fname)
 
         # read the file
         with open(fname, "r") as f:
             config.read_file(f)
 
         # check validity
-        config.validate_sections()
+        config.validate_sections(basic=~full_check)
 
         # if no error was thrown we return the instance
         return config
