@@ -127,7 +127,7 @@ class Config(ConfigParser):
         if self.get("Tracking", "Class") not in tracking_subclasses:
             raise ValueError(f"'Class' of 'Tracking' not in {tracking_subclasses}")
 
-    def to_file(self, fname, overwrite=True):
+    def to_file(self, fname: str, overwrite=True):
         """
         Write the config into a file
         :param fname: Name of the file to write
@@ -144,7 +144,7 @@ class Config(ConfigParser):
             self.write(f)
 
     @classmethod
-    def from_file(cls, fname):
+    def from_file(cls, fname: str):
         """
         Initiates a new instance of the class and overwrites the defaults with contents from a file. The contents read
         from the file will be checked for validity.
