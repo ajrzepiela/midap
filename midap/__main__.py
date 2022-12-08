@@ -1,9 +1,11 @@
-import shutil
-
 import pkg_resources
 import argparse
+import shutil
 import sys
 import os
+import re
+
+import numpy as np
 
 from shutil import copyfile
 from pathlib import Path
@@ -137,10 +139,19 @@ def run_module(args=None):
     #######
 
     # read out what we need to do
+    # FIXME: change this to new config 
     run_segmentation = config.get("General", "RunOption").lower() in ['both', 'segmentation']
     run_tracking = config.get("General", "RunOption").lower() in ['both', 'tracking']
 
-    
+    # extract all files matching the identifier
+    folder_path = config.get("General", "FolderPath")
+    identifier = config.get("General", "PosIdentifier")
+    file_type = config.get("General", "FileType")
+    files = sorted(glob(os.path.join(folder_path, f"*{identifier}*.{file_type}")))
+
+    # we extract all the identifiers
+    unique_identifiers = np.unique([re.search(f"{identifier}\d+", os.path.basename(f))[0] for f in files])
+    logger.info(f"Extracted unique identifiers: {unique_identifiers}")
 
 
 
