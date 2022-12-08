@@ -1,56 +1,33 @@
+import tensorflow as tf
 from ..networks.deltav1 import unet_track
 from .base_tracking import Tracking
-import tensorflow as tf
+from pathlib import Path
 
 class DeltaV1Tracking(Tracking):
     """
     A class for cell tracking using the U-Net Delta V2 model
-
-    ...
-
-    Attributes
-    ----------
-    imgs: list of str
-        list of path strings
-    segs : list of str
-        list of path strings
-    model_weights : str 
-        path to model weights
-    input_size : tuple
-        input size of tracking network
-    target_size: tuple
-        target size of tracking network
-    crop_size: tuple
-        size of cropped input image
-
-    Methods
-    -------
-    load_model(self)
-        Loads model for inference/tracking.
     """
 
     def __init__(self, *args, **kwargs):
         """
         Initializes the DeltaV2Tracking using the base class init
-        :*args: Arguments used for the base class init
-        :**kwargs: Keyword arguments used for the basecalss init
+        :param args: Arguments used for the base class init
+        :param kwargs: Keyword arguments used for the basecalss init
         """
 
         # base class init
         super().__init__(*args, **kwargs)
 
     def load_model(self):
-        """Loads model for inference/tracking.
-
-        Parameters
-        ----------
-        constant_input: array, optional
-            Array containing the constant input (whole raw image and segmentation image) per time frame.
+        """
+        Loads model for inference/tracking.
         """
 
         # we get the model
         model = unet_track(self.input_size, constant_input=None)
-        model.load_weights("../model_weights/model_weights_tracking/unet_moma_track_multisets.hdf5")
+        weight_path = Path(__file__).absolute().parent.parent.parent
+        weight_path = weight_path.joinpath("model_weights", "model_weights_tracking", "unet_moma_track_multisets.hdf5")
+        model.load_weights(weight_path)
 
         # now we create a Delta2 conform model, this is similiar to what was done before DeltaV2
         inputs = tf.keras.layers.Input(shape=self.input_size, dtype='float32')

@@ -19,6 +19,25 @@ Efficiency:
 Fix:
 - ...
 
+## [0.1.7]
+
+2022-12-01
+
+Feature:
+- Added scripts to run jupyter on Euler with SLURM and GPU support.
+- Updated README in base directory and created README for Euler.
+
+## [0.1.6]
+
+2022-11-30
+
+Feature:
+- Introduced testing to most of the important pipeline routines.
+- Consistent type hints and docstring of the tracking files.
+
+Fix:
+- Minor bug fixes according to tests.
+
 ## [0.1.5]
 
 2022-11-17

@@ -44,36 +44,7 @@ Note that the `--headless` option currently only skips the first GUI and expects
 
 ## Installation on the Euler cluster
 
-1. **[Mac only]**: Install [XQuartz](https://www.xquartz.org/) for X11 support (GUI forwarding from Euler) and start the software.
-
-2. Log into Euler with activated X11 forwarding: `ssh -X <username>@euler.ethz.ch`
-
-3. Clone the repo, navigate to the directory containing the pipeline `cd midap` and download model weights and example files from polybox `./download_files.sh`.
-
-4. Navigate to the Euler directory in the repo `cd ./euler` and create the virtual environment
-```
-./create_venv.sh
-```
-
-5. Source the environment
-
-```
-source source_venv.sh
-```
-This step has to be **repeated everytime you log into Euler before starting the pipeline**. If you want this to happen automatically add the following line 
-to your `$HOME/.bash_profile`:
-```
-source <path/to/your>/source_venv.sh
-```
-where you fill in the absolute path to your source file.
-
-6. Navigate to the bin and start an interactive job with X11 forwarding
-```
-cd ../bin/
-bsub -XF -n 8 -R "rusage[ngpus_excl_p=1]" -Is bash
-```
-
-7. After the job starts you can run the pipeline in the same way as on your local machine (see step 3 above)
+The installation on Euler is described in the [README.md](./euler/README.md) of the `euler` directory.
 
 ## User Guide
 

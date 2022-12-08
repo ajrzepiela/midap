@@ -214,15 +214,15 @@ class DataProcessor(object):
 
         # 1) Load data
         list_imgs = np.sort(os.listdir(path_img))
-        imgs_unpad = [self.scale_pixel_vals(io.imread(path_img + i, as_gray=True)) for i in list_imgs]
+        imgs_unpad = [self.scale_pixel_vals(io.imread(os.path.join(path_img, i), as_gray=True)) for i in list_imgs]
         list_masks = np.sort(os.listdir(path_mask))
-        masks_unpad = [self.scale_pixel_vals(io.imread(path_mask + m).astype(int)) for m in list_masks]
+        masks_unpad = [self.scale_pixel_vals(io.imread(os.path.join(path_mask, m)).astype(int)) for m in list_masks]
 
         # 2) Pad images and masks to adjust height and width
         height_max, width_max = self.get_max_shape(imgs_unpad)
-        imgs = np.array([np.pad(i, [[0, height_max - i.shape[0]], [width_max - i.shape[1]]], mode="reflect")
+        imgs = np.array([np.pad(i, [[0, height_max - i.shape[0]], [0, width_max - i.shape[1]]], mode="reflect")
                          for i in imgs_unpad])
-        masks = np.array([np.pad(m, [[0, height_max - m.shape[0]], [width_max - m.shape[1]]], mode="reflect")
+        masks = np.array([np.pad(m, [[0, height_max - m.shape[0]], [0, width_max - m.shape[1]]], mode="reflect")
                           for m in masks_unpad])
 
         # 3) Split images and masks into train and validation set
@@ -250,7 +250,7 @@ class DataProcessor(object):
     def tile_img(cls, img: np.ndarray, n_grid=4, divisor=1):
         """
         Tiles an image into a gird of n_grid x n_grid non-overlapping patches
-        :param img: The image to tile must be at least two-dimensional
+        :param img: The image totile must be at least two-dimensional
         :param n_grid: The grid dimension for the tiling
         :param divisor: Ensure that all the dimensions of the tiles are divisible by divisor, e.g. divisor=2 to have
                         even dimensions. Note that this may cause a large portion of the original image to be
@@ -322,7 +322,7 @@ class DataProcessor(object):
 
         # get the indices to cut
         row_indices = np.linspace(0, img.shape[0] - size, n_row).astype(int)
-        col_indices = np.linspace(0, img.shape[0] - size, n_col).astype(int)
+        col_indices = np.linspace(0, img.shape[1] - size, n_col).astype(int)
 
         # cycle and cut
         patches = []
@@ -331,7 +331,8 @@ class DataProcessor(object):
                 patches.append(img[i:i+size, j:j+size])
         return np.array(patches)
 
-    def scale_pixel_vals(self, img: np.ndarray):
+    @classmethod
+    def scale_pixel_vals(cls, img: np.ndarray):
         """
         Scales pixel values between 0 and 1.
         :param img: An image that should be rescaled
@@ -346,7 +347,7 @@ class DataProcessor(object):
         Generate the weight map based on the distance to nearest and second-nearest neighbor as described in
         https://arxiv.org/abs/1505.04597
         :param mask: The mask used to generate the weights map
-        :return: The generated weights map
+        :return: The generated weights map with an additional channel dimension of 1
         """
         # label cells and generate separate masks
         mask_label = label(mask)
@@ -495,15 +496,18 @@ class DataProcessor(object):
         return height_cutoff, split_start
 
     def horizontal_split(self, img: np.ndarray, height_cutoff: int, split_start: Iterable[float]):
-        '''
-        Split an image into random horizontal patches accoring to
-        previously defined starting heights of the horizontal splits. The image is
-        horizontally mirrored before the split to to use the full height of the image.
-        '''
+        """
+        Split an image into random horizontal patches according to previously defined starting heights of the
+        horizontal splits. The image is horizontally mirrored before the split to to use the full height of the image.
+        :param img: The image to cut
+        :param height_cutoff: The height of the cuts
+        :param split_start: An iterable containing the starting indices of the cuts
+        :return: An array containing the cuts, the first dimension will have the length of split_start
+        """
 
         # check if the image is wide enough
         if img.shape[0] < np.max(split_start) + height_cutoff:
-            img = np.pad(img, pad_width=[0, np.max(split_start) + height_cutoff - img.shape[0],
+            img = np.pad(img, pad_width=[[0, np.max(split_start) + height_cutoff - img.shape[0]],
                                         [0, 0]], mode="reflect")
 
         # split image according to where split starts
@@ -588,6 +592,6 @@ class DataProcessor(object):
         # create the output
         out = (np.array(aug_imgs)[perm], np.array(aug_masks)[perm], np.array(aug_weight_maps)[perm])
         if splitting_cells is not None:
-            out += (np.array(aug_splitting_cells)[perm])
+            out += (np.array(aug_splitting_cells)[perm], )
 
         return out
