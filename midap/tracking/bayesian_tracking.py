@@ -2,6 +2,7 @@ import btrack
 from btrack import datasets
 from btrack.constants import BayesianUpdates
 
+import h5py
 import numpy as np
 import pandas as pd
 from scipy.spatial import distance
@@ -59,6 +60,7 @@ class BayesianCellTracking(Tracking):
         self.run_model()
         self.convert_data()
         self.generate_label_stack()
+        self.store_lineages(*args, **kwargs)
 
 
     def extract_data(self):
@@ -206,7 +208,7 @@ class BayesianCellTracking(Tracking):
                                 'first_frame':first_frame, 
                                 'last_frame':last_frame})
 
-        self.track_outp = df_conv.groupby(['frame', 'trackID']).aggregate({'frame':'first',
+        self.track_output = df_conv.groupby(['frame', 'trackID']).aggregate({'frame':'first',
                                                                 'trackID':'first',
                                                                 'trackID_d1':'first',
                                                                 'trackID_d2':'last',
@@ -219,3 +221,27 @@ class BayesianCellTracking(Tracking):
                                                                 'intensity_max':'first',
                                                                 'first_frame':'first',
                                                                 'last_frame':'first'}).reindex(columns=df_conv.columns)
+
+
+    def store_lineages(self, logger, output_folder: str):
+        """
+        Store tracking output files: labeled stack, tracking output, input files.
+        :logger: 
+        :output_folder: Folder where to store the data
+        """
+
+        self.track_output.to_csv(output_folder + '/track_output_bayesian.csv', index=True)
+
+        hf = h5py.File(output_folder + '/raw_inputs_bayesian.h5', 'w')
+        raw_inputs = self.raw_imgs
+        hf.create_dataset('raw_inputs', data=raw_inputs)
+        hf.close()
+
+        hf = h5py.File(output_folder + '/segmentations_bayesian.h5', 'w')
+        segs = self.seg_imgs
+        hf.create_dataset('segmentations', data=segs)
+        hf.close()
+
+        hf = h5py.File(output_folder + '/label_stack_bayesian.h5', 'w')
+        hf.create_dataset('label_stack', data=self.label_stack)
+        hf.close()
