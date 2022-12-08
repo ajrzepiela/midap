@@ -1,0 +1,107 @@
+import skimage.io as io
+import numpy as np
+
+from midap.tracking.deltav1_tracking import DeltaV1Tracking
+from pytest import fixture
+from pathlib import Path
+
+# Fixtures
+##########
+
+@fixture()
+def img1():
+    """
+    Creates a test image
+    :return: A test image used as base image (no split, siingle cell)
+    """
+    # define the images
+    img = np.zeros((512, 512))
+
+    # create the cell
+    img[25:100, 75:100] = 1
+
+    return img
+
+@fixture()
+def img2(img1):
+    """
+    Creates a test image
+    :return: A test image containing two cells
+    """
+    # define the images
+    img = img1.copy()
+
+    # now we create a split event
+    img[50:55, 75:100] = 0
+
+    return img
+
+@fixture()
+def tracking_instance(monkeypatch, img1, img2):
+    """
+    This fixture prepares the DeltaV1Tracking class including monkey patching for the image read
+    :param monkeypatch: The monkeypatch fixture from pytest to override methods
+    :param img1: A test image fixture used as base image to segment and track (single cell)
+    :param img2: A test image fixture used as base image to segment and track (two cells)
+    :return: A DeltaV1Tracking instance
+    """
+
+    def fake_load(path):
+        """
+        This is a monkeypatch for io.imread
+        :param path: Path of the image to load
+        :return: A loaded image
+        """
+
+        if "frame1" in path or "frame2" in path:
+            return img1
+        else:
+            return img2
+
+    # patch
+    monkeypatch.setattr(io, "imread", fake_load)
+
+    # prep the images
+    imgs = ["img_frame1.png", "img_frame2.png", "img_frame3.png"]
+    segs = ["seg_frame1.png", "seg_frame2.png", "seg_frame3.png"]
+
+    # the model weights (this is a dummy for v1 tracking but we set it corret anyway)
+    weight_path = Path(__file__).absolute().parent.parent.parent
+    weight_path = weight_path.joinpath("model_weights", "model_weights_tracking", "unet_moma_track_multisets.hdf5")
+
+    # sizes
+    crop_size = (128, 128)
+    target_size = (512, 512)
+    input_size = crop_size + (4,)
+
+    # get the instance
+    deltav1 = DeltaV1Tracking(imgs=imgs, segs=segs, model_weights=weight_path, input_size=input_size,
+                              target_size=target_size, crop_size=crop_size)
+
+    return deltav1
+
+# Tests
+#######
+
+def test_track_all_frames_crop(tracking_instance):
+    """
+    Tests the track_all_frames_crop routine with the DeltaV1Tracking class
+    :param tracking_instance: A pytest fixture of an DeltaV1Tracking instance
+    """
+
+    tracking_instance.track_all_frames_crop()
+
+    # we should have 1 less result than number of input frames
+    assert len(tracking_instance.results_all) == 2
+
+    # The first should not have a split
+    first_res = tracking_instance.results_all[0]
+    assert first_res.shape == (1, 512, 512, 2)
+    assert first_res[..., 0].sum() != 0
+    assert first_res[..., 1].sum() == 0
+
+    # The second should have a split
+    second_res = tracking_instance.results_all[1]
+    assert second_res.shape == (1, 512, 512, 2)
+    assert second_res[..., 0].sum() != 0
+    assert second_res[..., 1].sum() != 0

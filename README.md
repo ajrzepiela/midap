@@ -37,41 +37,14 @@ Options:
                     PATH, otherwise the current working directory is searched
  --headless         Run pipeline in headless mode (no GUI)
  --loglevel         Set logging level of script (0-7), defaults to 7 (max log)
+ --cpu_only         Sets CUDA_VISIBLE_DEVICES to -1 which will cause most!
+                    applications to use CPU only.
 ```
 Note that the `--headless` option currently only skips the first GUI and expects that a `settings.sh` is provided in the working directory.
 
 ## Installation on the Euler cluster
 
-1. **[Mac only]**: Install [XQuartz](https://www.xquartz.org/) for X11 support (GUI forwarding from Euler) and start the software.
-
-2. Log into Euler with activated X11 forwarding: `ssh -X <username>@euler.ethz.ch`
-
-3. Clone the repo, navigate to the directory containing the pipeline `cd midap` and download model weights and example files from polybox `./download_files.sh`.
-
-4. Navigate to the Euler directory in the repo `cd ./euler` and create the virtual environment
-```
-./create_venv.sh
-```
-
-5. Source the environment
-
-```
-source source_venv.sh
-```
-This step has to be **repeated everytime you log into Euler before starting the pipeline**. If you want this to happen automatically add the following line 
-to your `$HOME/.bash_profile`:
-```
-source <path/to/your>/source_venv.sh
-```
-where you fill in the absolute path to your source file.
-
-6. Navigate to the bin and start an interactive job with X11 forwarding
-```
-cd ../bin/
-bsub -XF -n 8 -R "rusage[ngpus_excl_p=1]" -Is bash
-```
-
-7. After the job starts you can run the pipeline in the same way as on your local machine (see step 6 above)
+The installation on Euler is described in the [README.md](./euler/README.md) of the `euler` directory.
 
 ## User Guide
 
@@ -109,10 +82,10 @@ python -m pip install "napari[all]"
 The manual correction can be started with the following commands:
 ```
 cd bin/
-python correct_segmentation.py --path_img PATH_IMG --path_seg PATH_SEG_IMG
+python correct_segmentation.py --path_img FOLDER_IMG --path_seg FOLDER_SEG_IMG
 ```
 
-The arguments PATH_IMG and PATH_SEG_IMG are passed as strings and should contain the full path name (e.g. '/Users/Documents/data/img_1.tif').
+The arguments FOLDER_IMG and FOLDER_SEG_IMG are passed as strings and should contain the full path name to the respective folder (e.g. '/Users/Documents/cut_im/' or '/Users/Documents/seg_im/').
 
 #### Visualization of tracking results
 ```
@@ -146,5 +119,14 @@ In the copied file, change the name of the class from `UNetSegmentation` to your
 
 #### Tracking
 
-To be added...
+To define a custom method for the cell tracking, you can start by copying the `deltav2_tracking.py` file in the `midap` package:
 
+```
+cd midap/tracking
+cp deltav2_tracking.py <your_filename>.py
+```
+In the copied file, change the name of the class from `DeltaV2Tracking` to your own class. Choose a descriptive name as the name of this class will be shown in the dropdown menu of the GUI to select the method. Then you can overwrite the `load_model` method with your own method. Note that you should not add additional arguments to the method and the method has to set the attribute `self.model` to a model that performs the cell tracking. This model should be callable like the DeltaV2 model (see the [paper](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1009797) for more information). You can make use of all the attributes that the base class (`Tracking` defined in `base_tracking.py`) sets in its constructor.
+
+## Training segmentation models
+
+You can train the standard MIDAP UNet for segmentation from scratch, finetune existing models or train custom UNets and easily add them to the pipeline. For more information please have a look into the [training](./training) directory.

@@ -19,6 +19,79 @@ Efficiency:
 Fix:
 - ...
 
+## [0.1.7]
+
+2022-12-01
+
+Feature:
+- Added scripts to run jupyter on Euler with SLURM and GPU support.
+- Updated README in base directory and created README for Euler.
+
+## [0.1.6]
+
+2022-11-30
+
+Feature:
+- Introduced testing to most of the important pipeline routines.
+- Consistent type hints and docstring of the tracking files.
+
+Fix:
+- Minor bug fixes according to tests.
+
+## [0.1.5]
+
+2022-11-17
+
+Feature:
+- moved all networks into a designated `networks` folder in the package.
+- Added support for the old delta model for tracking
+- Refactored to standard UNet into a class
+- All base classes are now abstract base classes that enforce setting the required methods
+- Added the `training` directory for the training and finetuning of models.
+- Added example notebooks and a README about the training of custom models.
+- Added basic UNet block into the `netoworks` directory that can be used for custom models.
+
+Fix:
+- Cleanup of the base classes, removal of redundant methods
+- Minor fix in the preprocessing where some pixels of the input image weren't used
+- Fix in the weight_map generation that could case the cell border to receive zero weight during the training
+- Fix in data augmentation where the same augmentation was applied multiple times.
+
+
+## [0.1.4]
+
+2022-11-11
+
+Feature:
+- Added tool to investigate quality of segmentations (all frames of one tif-stack) and open napari for manual correction if needed
+
+Fix:
+- Generated requirements.txt including napari
+
+## [0.1.3]
+
+2022-11-02
+
+Feature:
+- Added Tracking modularity in the same way as Segmentation and image cutout modularity via subclasses
+- The pipeline accepts a `--cpu_only` flag that will set CUDA_VISIBLE_DEVICES to -1
+
+Fix:
+- Minor typo in README
+- String comparison performed to check if the --restart argument has been supplied with a path was faulty
+
+
+## [0.1.2]
+
+2022-11-01
+
+Feature:
+- Omnipose support for non M1 local machines.
+
+Fix:
+- Updated the creation scripts of the euler env to use python 3.8.5, similar to the conda env
+- Minor change in `run_pipeline.sh` such that the pipeline runs with tracking only
+
 ## [0.1.1]
 
 2022-10-27

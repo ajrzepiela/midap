@@ -5,7 +5,7 @@ import numpy as np
 import skimage.io as io
 from matplotlib.widgets import RadioButtons
 
-from .model import unet_inference
+from ..networks.unets import UNetv1
 from .base_segmentator import SegmentationPredictor
 
 
@@ -51,7 +51,7 @@ class UNetSegmentation(SegmentationPredictor):
 
         segs = [watershed_seg]
         for m in model_weights:
-            model_pred = unet_inference(input_size=img_pad.shape[1:3] + (1,))
+            model_pred = UNetv1(input_size=img_pad.shape[1:3] + (1,), inference=True)
             model_pred.load_weights(os.path.join(self.path_model_weights, m))
             y_pred = model_pred.predict(img_pad)
             seg = (self.undo_padding(y_pred) > 0.5).astype(int)
