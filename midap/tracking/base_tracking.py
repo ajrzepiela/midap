@@ -27,8 +27,12 @@ class Tracking(ABC):
     # this logger will be shared by all instances and subclasses
     logger = logger
 
-    def __init__(self, imgs: Iterable[str], segs: Iterable[str], model_weights: str, input_size: tuple,
-                 target_size: tuple, crop_size: Optional[str]=None):
+    def __init__(self, imgs: Iterable[str], 
+                        segs: Iterable[str]=None, 
+                        model_weights: Optional[str]=None, 
+                        input_size: Optional[tuple]=None,
+                        target_size: Optional[tuple]=None, 
+                        crop_size: Optional[str]=None):
         """
         Initializes the class instance
         :param imgs: List of files containing the cut out images ordered chronological in time
@@ -42,11 +46,14 @@ class Tracking(ABC):
         # set the variables
         self.imgs = imgs
         self.segs = segs
-        self.num_time_steps = len(self.imgs)
+
+        if self.segs is not None:
+            self.num_time_steps = len(self.segs)
 
         self.model_weights = model_weights
         self.input_size = input_size
         self.target_size = target_size
+
         if crop_size is not None:
             self.crop_size = crop_size
 
