@@ -1,7 +1,13 @@
+import os
+
 from configparser import ConfigParser
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
+from .config import Config
+from .utils import get_logger
 
+# get a logger for the checkpointing
+logger = get_logger(__file__, logging_level=os.environ.get("__VERBOSE", 7))
 
 class Checkpoint(ConfigParser):
     """
@@ -32,9 +38,9 @@ class Checkpoint(ConfigParser):
         """
 
         self.read_dict({"Checkpoint": {"Function": "None"},
-                        "Settings": {}})
+                        "Settings": {"Identifier": "None"}})
 
-    def to_file(self, fname: Optional[str]=None, overwrite=True):
+    def to_file(self, fname: Optional[str,Path]=None, overwrite=True):
         """
         Write the config into a file
         :param fname: Name of the file to write, defaults to fname attribute. If a directory is specified, the file
@@ -61,6 +67,41 @@ class Checkpoint(ConfigParser):
         with open(fname, "w+") as f:
             self.write(f)
 
+    def get_state(self, identifier=False):
+        """
+        Shortcut to get("Checkpoint", "Function")
+        :param identifier: If True, "Settings" "Identifier" is also returned
+        :return: The current state of the checkpoint
+        """
+
+        if identifier:
+            self.get("Checkpoint", "Function"), self.get("Settings", "Identifier")
+        else:
+            return self.get("Checkpoint", "Function")
+
+    def set_state(self, state, identifier="None", flush=True, **kwargs):
+        """
+        Sets the state of the checkpoint
+        :param state: The state of the checkpoint
+        :param identifier: The identifier to set
+        :param flush: Save the checkpoint to file after update
+        :param kwargs: Additional keyword arguments forwarded to the Settings section
+        """
+
+        # define the new state
+        new_state = {"Checkpoint": {"Function": state},
+                     "Settings": {"Identifier": identifier}}
+
+        # update the settings if necessary
+        new_state["Settings"].update(kwargs)
+
+        # update the checkpoint state
+        self.read_dict(new_state)
+
+        # write to file
+        if flush:
+            self.to_file()
+
     @classmethod
     def from_file(cls, fname: str):
         """
@@ -77,3 +118,116 @@ class Checkpoint(ConfigParser):
             checkpoint.read_file(f)
 
         return checkpoint
+
+
+class AlreadyDoneError(Exception):
+    """
+    A simple error raised by the CheckpointChecker if we do not need to rerun a block
+    """
+
+    def __init__(self, message="Already done this..."):
+        super().__init__(message)
+
+
+class CheckpointChecker(object):
+    """
+    This is a helper class that checks if we need to run something or we skip ip
+    """
+    def __init__(self, restart: bool, checkpoint: Checkpoint, state: str, identifier: str):
+        """
+        Create a CheckpointChecker to compare the current state of the checkpoint to the fail state and see if we need
+        to run something
+        :param restart: The restart flag of the pipeline, if False, then the code in the with block will always
+                        be executed
+        :param checkpoint: The checkpoint instance to use for the manager
+        :param state: The new state of the checkpoint in case of failure
+        :param identifier: The new identifier of the checkpoint in case of failure
+        """
+
+        # set the attributes
+        self.restart = restart
+        self.checkpoint = checkpoint
+        self.state = state
+        self.identifier = identifier
+
+    def check(self):
+        """
+        Checks if we need to run something, raises a AlreadyDoneError if not
+        :raises: AlreadyDoneError if the checkpoint state indicates that we do not need to run something
+        """
+
+        # if we are not in restart mode, we run everything, otherwise we rerun if new_state == old_state
+        if self.restart and self.checkpoint.get_state(identifier=True) == (self.state, self.identifier):
+            raise AlreadyDoneError(f"Already done this! State: {self.state}, Identifier: {self.identifier}")
+
+
+class CheckpointManager(object):
+    """
+    This is a context manager
+    """
+
+    def __init__(self, restart: bool, checkpoint: Checkpoint, config: Config, state: str,
+                 identifier: str, copy_path: Optional[str,Path]=None, **kwargs):
+        """
+        Create a checkpoint manager to run things in a with statement for easy checkpointing
+        :param restart: The restart flag of the pipeline, if False, then the code in the with block will always
+                        be executed
+        :param checkpoint: The checkpoint instance to use for the manager
+        :param config: The Config instance to use
+        :param state: The new state of the checkpoint in case of failure
+        :param identifier: The new identifier of the checkpoint in case of failure
+        :param copy_path: A path to copy the checkpoint and config to in case of failure
+        :param kwargs: Additional keyword arguments forwarded to the checkpoint state in case of failure
+        """
+
+        # set the attributes
+        self.restart = restart
+        self.checkpoint = checkpoint
+        self.config = config
+        self.state = state
+        self.identifier = identifier
+        self.copy_path = copy_path
+        self.state_kwargs = kwargs
+
+    def __enter__(self):
+        """
+        Enter the CheckpointManager context, return a CheckpointChecker to check if we actually need to run something
+        :return: A CheckpointChecker object
+        """
+
+        return CheckpointChecker(restart=self.restart, checkpoint=self.checkpoint, state=self.state,
+                                 identifier=self.identifier)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """
+        The teardown mechanism of the context manager
+        :param exc_type: The Exception type, can be None
+        :param exc_val: The Exception value, can be None
+        :param exc_tb: The trace back
+        :return: If there was an exception the method returns True if the exception was handled gracefully, otherwise
+                 we do the teardown and the exception is forwarded
+        """
+
+        # if we already did it, there is nothing to do
+        if isinstance(exc_type, AlreadyDoneError):
+            logger.info(f"Skipping {self.state} for {self.identifier}...")
+            return True
+
+        # we update the checkpoint if we fail otherwise
+        if exc_type is not None:
+            logger.info(f"Error while running {self.state} for {self.identifier}")
+
+            # we update the checkpoint file
+            self.checkpoint.set_state(state=self.state, identifier=self.identifier, **self.state_kwargs)
+
+            # save checkpoint and config
+            self.checkpoint.to_file()
+            self.config.to_file()
+
+            # save a copy if we have a path
+            if self.copy_path is not None:
+                logger.info(f"Saving a copy of the checkpoint and settings to: {self.copy_path}")
+                self.checkpoint.to_file(self.copy_path)
+                self.config.to_file(self.copy_path)
+
+            return False
