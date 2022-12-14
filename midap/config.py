@@ -153,7 +153,17 @@ class Config(ConfigParser):
             # TODO: do the check of the remaining variables
             pass
 
-    def to_file(self, fname: Optional[str]=None, overwrite=True):
+    def getlist(self, section, option):
+        """
+        Return the requested param as a list, i.e. transform from comma separated string to list
+        :param section: The section of the parameter
+        :param option: The requested option
+        :return: A list of strings that was generated from the parameter
+        """
+
+        return self.get(section=section, option=option).split(",")
+
+    def to_file(self, fname: Optional[str,Path]=None, overwrite=True):
         """
         Write the config into a file
         :param fname: Name of the file to write, defaults to fname attribute. If a directory is specified, the file
