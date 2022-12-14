@@ -3,7 +3,7 @@ import git
 from configparser import ConfigParser
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 # Get all subclasses to check validity of config
 ################################################
@@ -163,7 +163,7 @@ class Config(ConfigParser):
 
         return self.get(section=section, option=option).split(",")
 
-    def to_file(self, fname: Optional[str,Path]=None, overwrite=True):
+    def to_file(self, fname: Union[str,Path,None]=None, overwrite=True):
         """
         Write the config into a file
         :param fname: Name of the file to write, defaults to fname attribute. If a directory is specified, the file

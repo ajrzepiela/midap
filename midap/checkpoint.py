@@ -2,12 +2,16 @@ import os
 
 from configparser import ConfigParser
 from pathlib import Path
-from typing import Optional, Union
+from typing import Union
 from .config import Config
 from .utils import get_logger
 
-# get a logger for the checkpointing
-logger = get_logger(__file__, logging_level=os.environ.get("__VERBOSE", 7))
+# get the logger we readout the variable or set it to max output
+if "__VERBOSE" in os.environ:
+    loglevel = int(os.environ["__VERBOSE"])
+else:
+    loglevel = 7
+logger = get_logger(__file__, loglevel)
 
 class Checkpoint(ConfigParser):
     """
@@ -40,7 +44,7 @@ class Checkpoint(ConfigParser):
         self.read_dict({"Checkpoint": {"Function": "None"},
                         "Settings": {"Identifier": "None"}})
 
-    def to_file(self, fname: Optional[str,Path]=None, overwrite=True):
+    def to_file(self, fname: Union[str,Path,None]=None, overwrite=True):
         """
         Write the config into a file
         :param fname: Name of the file to write, defaults to fname attribute. If a directory is specified, the file
@@ -167,7 +171,7 @@ class CheckpointManager(object):
     """
 
     def __init__(self, restart: bool, checkpoint: Checkpoint, config: Config, state: str,
-                 identifier: str, copy_path: Optional[str,Path]=None, **kwargs):
+                 identifier: str, copy_path: Union[str,Path,None]=None, **kwargs):
         """
         Create a checkpoint manager to run things in a with statement for easy checkpointing
         :param restart: The restart flag of the pipeline, if False, then the code in the with block will always

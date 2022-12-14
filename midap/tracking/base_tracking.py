@@ -16,7 +16,7 @@ process = psutil.Process(os.getpid())
 
 # get the logger we readout the variable or set it to max output
 if "__VERBOSE" in os.environ:
-    loglevel = os.environ["__VERBOSE"]
+    loglevel = int(os.environ["__VERBOSE"])
 else:
     loglevel = 7
 logger = get_logger(__file__, loglevel)

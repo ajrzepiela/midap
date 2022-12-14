@@ -45,9 +45,13 @@ def run_module(args=None):
     # parsing
     args = parser.parse_args(args)
 
-    # Some constants
+    # Some constants or conventions
     config_file = "settings.ini"
     check_file = "checkpoints.log"
+    raw_im_folder = "raw_im"
+    cut_im_folder = "cut_im"
+    seg_im_folder = "seg_im"
+    track_folder = "track_output"
 
     # Argument handling
     ###################
@@ -57,6 +61,9 @@ def run_module(args=None):
         os.environ["CUDA_VISIBLE_DEVICES"] = -1
     # supress TF blurp
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
+
+    # set the global loglevel
+    os.environ["__VERBOSE"] = str(args.loglevel)
 
     # create a logger
     from .utils import get_logger
@@ -68,7 +75,7 @@ def run_module(args=None):
 
     # imports
     logger.info(f"Importing all dependencies...")
-    from .checkpoint import Checkpoint
+    from .checkpoint import Checkpoint, CheckpointManager
     from .config import Config
     from .apps import init_GUI
     logger.info("Done!")
@@ -80,7 +87,11 @@ def run_module(args=None):
         return 0
 
     # check if we are restarting
+    restart = False
     if args.restart is not None:
+        # we set the restart flag
+        restart = True
+
         # we search for the checkpoint file (recursive subdirectory search)
         checkpoints = glob(os.path.join(args.restart, "**", check_file), recursive=True)
 
@@ -119,8 +130,8 @@ def run_module(args=None):
         checkpoint = Checkpoint(check_file)
 
         # we create a checkpoint with the current config
-        checkpoint.set("Checkpoint", "Function", "InitGUI")
-        checkpoint.to_file()
+        # Note that this is a dummy checkpoint such that we can use the --restart flag in the worst case
+        checkpoint.set_state(state="InitGUI", flush=True)
 
     # we are not restarting nor are we in headless mode
     else:
@@ -132,26 +143,51 @@ def run_module(args=None):
         checkpoint = Checkpoint(check_file)
 
         # we create a checkpoint with the current config
-        checkpoint.set("Checkpoint", "Function", "InitGUI")
-        checkpoint.to_file()
+        # Note that this is a dummy checkpoint such that we can use the --restart flag in the worst case
+        checkpoint.set_state(state="InitGUI", flush=True)
 
     # Setup
     #######
 
-    # read out what we need to do
-    # FIXME: change this to new config 
-    run_segmentation = config.get("General", "RunOption").lower() in ['both', 'segmentation']
-    run_tracking = config.get("General", "RunOption").lower() in ['both', 'tracking']
+    # we cycle through all pos identifiers
+    for identifier in config.getlist("General", "IdentifierFound"):
+        # read out what we need to do
+        run_segmentation = config.get(identifier, "RunOption").lower() in ['both', 'segmentation']
+        run_tracking = config.get(identifier, "RunOption").lower() in ['both', 'tracking']
+        # get the current base folder
+        base_path = Path(config.get("General", "FolderPath"))
 
-    # extract all files matching the identifier
-    folder_path = config.get("General", "FolderPath")
-    identifier = config.get("General", "PosIdentifier")
-    file_type = config.get("General", "FileType")
-    files = sorted(glob(os.path.join(folder_path, f"*{identifier}*.{file_type}")))
+        # stuff we do for the segmentation
+        if run_segmentation:
+            # define all the current paths
+            current_path = base_path.joinpath(identifier)
 
-    # we extract all the identifiers
-    unique_identifiers = np.unique([re.search(f"{identifier}\d+", os.path.basename(f))[0] for f in files])
-    logger.info(f"Extracted unique identifiers: {unique_identifiers}")
+            # setup all the directories
+            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="SetupDirs",
+                                   identifier=identifier, copy_path=current_path) as checker:
+                # check to skip
+                checker.check()
+
+                # remove the folder if it exists
+                if current_path.exists():
+                    shutil.rmtree(current_path, ignore_errors=False)
+
+                # we create all the necessary directories
+                current_path.mkdir(parents=True)
+
+                # channel directories
+                for channel in config.getlist(identifier, "Channels"):
+                    current_path.joinpath(channel, raw_im_folder).mkdir(parents=True)
+                    current_path.joinpath(channel, cut_im_folder).mkdir(parents=True)
+                    current_path.joinpath(channel, seg_im_folder).mkdir(parents=True)
+                    current_path.joinpath(channel, track_folder).mkdir(parents=True)
+
+
+
+
+
+
+
 
 
 
