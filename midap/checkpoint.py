@@ -79,7 +79,7 @@ class Checkpoint(ConfigParser):
         """
 
         if identifier:
-            self.get("Checkpoint", "Function"), self.get("Settings", "Identifier")
+            return self.get("Checkpoint", "Function"), self.get("Settings", "Identifier")
         else:
             return self.get("Checkpoint", "Function")
 
@@ -161,7 +161,7 @@ class CheckpointChecker(object):
         """
 
         # if we are not in restart mode, we run everything, otherwise we rerun if new_state == old_state
-        if self.restart and self.checkpoint.get_state(identifier=True) == (self.state, self.identifier):
+        if self.restart and self.checkpoint.get_state(identifier=True) != (self.state, self.identifier):
             raise AlreadyDoneError(f"Already done this! State: {self.state}, Identifier: {self.identifier}")
 
 
@@ -213,7 +213,7 @@ class CheckpointManager(object):
         """
 
         # if we already did it, there is nothing to do
-        if isinstance(exc_type, AlreadyDoneError):
+        if isinstance(exc_val, AlreadyDoneError):
             logger.info(f"Skipping {self.state} for {self.identifier}...")
             return True
 
