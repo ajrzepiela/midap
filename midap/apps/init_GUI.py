@@ -94,12 +94,11 @@ def main(config_file="settings.ini", loglevel=7):
     # init the config
     config = Config(fname=config_file, general=general)
 
-    # we create sections for all identifiers
-    for id_name in unique_identifiers:
-        config.set_id_section(id_name=id_name)
-
     # We start a GUI for each ID
     for i, id_name in enumerate(unique_identifiers):
+        # we create sections for all identifiers
+        config.set_id_section(id_name=id_name)
+
         # the defaults come either from the first section or from the last that we set
         defaults = config[id_name] if i == 0 else config[unique_identifiers[i-1]]
 
