@@ -131,7 +131,7 @@ def run_module(args=None):
 
         # we create a checkpoint with the current config
         # Note that this is a dummy checkpoint such that we can use the --restart flag in the worst case
-        checkpoint.set_state(state="InitGUI", flush=True)
+        checkpoint.set_state(state="None", flush=True)
 
     # we are not restarting nor are we in headless mode
     else:
@@ -144,29 +144,32 @@ def run_module(args=None):
 
         # we create a checkpoint with the current config
         # Note that this is a dummy checkpoint such that we can use the --restart flag in the worst case
-        checkpoint.set_state(state="InitGUI", flush=True)
+        checkpoint.set_state(state="None", flush=True)
 
     # Setup
     #######
+
+    # get the current base folder
+    base_path = Path(config.get("General", "FolderPath"))
 
     # we cycle through all pos identifiers
     for identifier in config.getlist("General", "IdentifierFound"):
         # read out what we need to do
         run_segmentation = config.get(identifier, "RunOption").lower() in ['both', 'segmentation']
         run_tracking = config.get(identifier, "RunOption").lower() in ['both', 'tracking']
-        # get the current base folder
-        base_path = Path(config.get("General", "FolderPath"))
+        # current path of the identifier
+        current_path = base_path.joinpath(identifier)
 
         # stuff we do for the segmentation
         if run_segmentation:
-            # define all the current paths
-            current_path = base_path.joinpath(identifier)
 
             # setup all the directories
             with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="SetupDirs",
                                    identifier=identifier, copy_path=current_path) as checker:
                 # check to skip
                 checker.check()
+
+                logger.info(f"Generating folder structure for {identifier}")
 
                 # remove the folder if it exists
                 if current_path.exists():
@@ -182,16 +185,21 @@ def run_module(args=None):
                     current_path.joinpath(channel, seg_im_folder).mkdir(parents=True)
                     current_path.joinpath(channel, track_folder).mkdir(parents=True)
 
+            # copy the files
+            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="CopyFiles",
+                                   identifier=identifier, copy_path=current_path) as checker:
+                # check to skip
+                checker.check()
 
+                logger.info(f"Copying files for {identifier}")
 
-
-
-
-
-
-
-
-
+                # we get all the files in the base bath that match
+                file_ext = config.get("General", "FileType")
+                for fname in base_path.glob(f"*{identifier}*.{file_ext}"):
+                    for channel in config.getlist(identifier, "Channels"):
+                        if channel in fname.stem:
+                            logger.info(f"Copying '{fname.name}'...")
+                            copyfile(fname, current_path.joinpath(channel, fname.name))
 
 
 # main routine

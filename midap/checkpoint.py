@@ -161,8 +161,15 @@ class CheckpointChecker(object):
         """
 
         # if we are not in restart mode, we run everything, otherwise we rerun if new_state == old_state
-        if self.restart and self.checkpoint.get_state(identifier=True) != (self.state, self.identifier):
-            raise AlreadyDoneError(f"Already done this! State: {self.state}, Identifier: {self.identifier}")
+        if self.restart:
+            # we get the current state
+            current_state = self.checkpoint.get_state(identifier=True)
+            # if the Function value is None, we run everything
+            if current_state == ("None", "None"):
+                return
+
+            if current_state != (self.state, self.identifier):
+                raise AlreadyDoneError(f"Already done this! State: {self.state}, Identifier: {self.identifier}")
 
 
 class CheckpointManager(object):
@@ -215,6 +222,11 @@ class CheckpointManager(object):
         # if we already did it, there is nothing to do
         if isinstance(exc_val, AlreadyDoneError):
             logger.info(f"Skipping {self.state} for {self.identifier}...")
+            return True
+
+        # if there is no Error and we successfully finished the job we reset the checkpoint
+        if exc_val is None and self.restart:
+            self.checkpoint.set_state(state="None", identifier="None", flush=True)
             return True
 
         # we update the checkpoint if we fail otherwise
