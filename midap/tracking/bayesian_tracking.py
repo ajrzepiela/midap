@@ -70,7 +70,7 @@ class BayesianCellTracking(Tracking):
         """
         Extracts input data needed for Bayesian tracking.
         """
-        self.seg_imgs = np.array([self.load_data(cur_frame)[2] for cur_frame in range(1, self.num_time_steps)])
+        self.seg_imgs = np.array([label(self.load_data(cur_frame)[2]) for cur_frame in range(1, self.num_time_steps)])
         self.raw_imgs = np.array([self.load_data(cur_frame)[0] for cur_frame in range(1, self.num_time_steps)])
 
     
