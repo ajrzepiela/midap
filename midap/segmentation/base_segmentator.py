@@ -76,6 +76,7 @@ class SegmentationPredictor(ABC):
         """
         path_cut = os.path.join(channel_path, "cut_im")
         path_seg = os.path.join(channel_path, "seg_im")
+        path_seg_bin = os.path.join(channel_path, "seg_im_bin")
         path_seg_track = os.path.join(channel_path, "input_ilastik_tracking")
 
         # get all the images to segment
@@ -144,6 +145,8 @@ class SegmentationPredictor(ABC):
                 # save individual image
                 io.imsave(os.path.join(path_seg, re.sub("(_cut.tif|_cut.png|.tif)", "_seg.png", path_imgs[i])),
                           seg_label.astype(np.uint8), check_contrast=False)
+                io.imsave(os.path.join(path_seg_bin, re.sub("(_cut.tif|_cut.png|.tif)", "_seg_bin.png", path_imgs[i])),
+                seg, check_contrast=False)
 
             # save the stacks
             io.imsave(os.path.join(path_seg_track,
@@ -175,9 +178,7 @@ class SegmentationPredictor(ABC):
         mask_sizes[0] = 0
         img_filt = (mask_sizes[label_objects] > 0).astype(int)
 
-        # close small holes
-        img_closed = area_closing(img_filt)
-        return img_closed
+        return img_filt
 
     def scale_pixel_vals(self, img):
         """

@@ -288,23 +288,29 @@ class DeltaV2Lineages:
 
 
     def store_lineages(self, logger, output_folder: str):
+        """
+        Store tracking output files: labeled stack, tracking output, input files.
+        :logger: 
+        :output_folder: Folder where to store the data
+        """
+
         try:
             # use the results, this will trigger a file not found error if the tracking did not produce anything
 
             # Save data
-            self.track_output.to_csv(output_folder + 'track_output.csv', index=True)
+            self.track_output.to_csv(output_folder + '/track_output_delta.csv', index=True)
 
-            hf = h5py.File(output_folder + 'raw_inputs.h5', 'w')
+            hf = h5py.File(output_folder + '/raw_inputs_delta.h5', 'w')
             raw_inputs = self.inputs[:, :, :, 0]
             hf.create_dataset('raw_inputs', data=raw_inputs)
             hf.close()
 
-            hf = h5py.File(output_folder + 'segmentations.h5', 'w')
+            hf = h5py.File(output_folder + '/segmentations_delta.h5', 'w')
             segs = self.inputs[0, :, :, 3]
             hf.create_dataset('segmentations', data=segs)
             hf.close()
 
-            hf = h5py.File(output_folder + 'label_stack.h5', 'w')
+            hf = h5py.File(output_folder + '/label_stack_delta.h5', 'w')
             hf.create_dataset('label_stack', data=self.label_stack)
             hf.close()
 
@@ -319,4 +325,4 @@ class DeltaV2Lineages:
                     'minor_axis_length', 'major_axis_length', 'frames',
                     'first_frame', 'last_frame']
             track_output = pd.DataFrame(columns=columns)
-            track_output.to_csv(os.path.join(args.path, 'track_output.csv'), index=True)
+            track_output.to_csv(os.path.join(args.path, '/track_output_delta.csv'), index=True)
