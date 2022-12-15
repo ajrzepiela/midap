@@ -43,3 +43,12 @@ ln -s /cluster/apps/nss/gcc-8.2.0/python/3.8.5/x86_64/lib64/python3.8/site-packa
 
 # install the package
 pip install -e ..
+
+while true; do
+    read -p "Do you want to add the source script to your .bash_profile? Y/N" yn
+    case $yn in
+        [Yy]* ) printf '%s\n' '' '# midap env' "source $(pwd)/source_venv.sh" >> ${HOME}/.bash_profile; break;;
+        [Nn]* ) exit;;
+        * ) echo "Please answer yes or no.";;
+    esac
+done
