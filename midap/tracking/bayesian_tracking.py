@@ -8,8 +8,8 @@ import pandas as pd
 from scipy.spatial import distance
 
 from skimage.measure import label, regionprops
+from skimage.segmentation import clear_border
 
-#from .model_tracking_bayesian import BayesianCellTracking
 from .base_tracking import Tracking
 
 class BayesianCellTracking(Tracking):
@@ -17,7 +17,7 @@ class BayesianCellTracking(Tracking):
     A class for cell tracking using Bayesian tracking
     """
 
-    def __init__(self, *args, **kwargs): #input_type, output_type, 
+    def __init__(self, *args, **kwargs):
         """
         Initializes the DeltaV2Tracking using the base class init
         :*args: Arguments used for the base class init
@@ -42,7 +42,7 @@ class BayesianCellTracking(Tracking):
                             "intensity_max",
                             "minor_axis_length",
                             "major_axis_length",
-                            "coords"]
+                            "coords",]
 
         self.objects = btrack.utils.segmentation_to_objects(
             segmentation = self.seg_imgs, 
@@ -70,8 +70,6 @@ class BayesianCellTracking(Tracking):
         """
         Extracts input data needed for Bayesian tracking.
         """
-        # inputs = np.array([self.load_data(cur_frame) for cur_frame in range(1, self.num_time_steps)])
-        # #self.seg_imgs = np.array([label(self.load_data(cur_frame)[2]) for cur_frame in range(1, self.num_time_steps)])
         self.seg_imgs = np.array([self.load_data(cur_frame)[2] for cur_frame in range(1, self.num_time_steps)])
         self.raw_imgs = np.array([self.load_data(cur_frame)[0] for cur_frame in range(1, self.num_time_steps)])
 
@@ -90,17 +88,14 @@ class BayesianCellTracking(Tracking):
 
             # configure the tracker using a config file
             self.tracker.configure_from_file(self.config_file)
-            self.tracker.verbose = True
-            self.tracker.max_search_radius = 200
-            self.tracker.features = self.features
 
-            self.tracker.tracking_updates = ["VISUAL"]
+            # set params
+            self.tracker.max_search_radius = 100
+            self.tracker.features = self.features
+            self.tracker.tracking_updates = ["VISUAL","MOTION"]
 
             # append the objects to be tracked
             self.tracker.append(self.objects)
-
-            # set the tracking volume
-            #self.tracker.volume=((0, 512), (0, 512))
 
             # track them (in interactive mode)
             self.tracker.track(step_size=100)
@@ -125,10 +120,6 @@ class BayesianCellTracking(Tracking):
                     
                 except IndexError:
                     None
-                    # point = (int(tr['x'][i]), int(tr['y'][i]))
-                    # ix_cell = self.__find_nearest_neighbour(point, self.seg_imgs[t])
-                    # self.label_stack[t][ix_cell] = tr['ID']
-                    # print(tr['ID'], i)
 
 
     def __find_nearest_neighbour(self, point: tuple, seg: np.ndarray):
@@ -141,11 +132,22 @@ class BayesianCellTracking(Tracking):
         centroids = [r.centroid for r in regionprops(seg)]
         labels = [r.label for r in regionprops(seg)]
         ix_min = np.argsort([distance.euclidean(c, point) for c in centroids])[1]
-        ix_cell = np.where(seg == labels[ix_min])
         return ix_min
 
 
     def correct_label_stack(self):
+        """
+        Correct label_stack and track_output to fit to community standard:
+        - new label for mother after cell split
+        - add IDs of daughter cells
+        """
+
+        self.label_stack_correct = self.label_stack 
+        self.track_output_correct = self.track_output.copy()
+
+        self.track_output_correct['trackID_d1'] = self.track_output_correct['trackID']
+        self.track_output_correct['trackID_d2'] = self.track_output_correct['trackID']
+        self.track_output_correct['trackID_mother'] = self.track_output_correct['trackID']
 
         for t in range(1,len(self.label_stack)):
 
@@ -162,40 +164,48 @@ class BayesianCellTracking(Tracking):
             new_cells = labels_cur_frame[diff_ix]
 
             # find closest cell and do correction of label stack
-            self.label_stack_correct = self.label_stack 
-            self.track_output_correct = self.track_output.copy()
             for c in new_cells:
                 ix = np.where(labels == c)[0][0]
                 ix_closest_cell = self.__find_nearest_neighbour(centroids[ix], self.label_stack[t].astype(int))
-                new_ID_d1 = labels[ix]
-                new_ID_d2 = self.__new_ID()
-                old_ID_d1 = labels[ix_closest_cell]
+                new_ID_d1 = int(labels[ix])
+                new_ID_d2 = int(self.__new_ID())
+                mother = labels[ix_closest_cell]
 
-                self.label_stack_correct[t:][self.label_stack[t:] == old_ID_d1] = new_ID_d2
+                self.label_stack_correct[t:][self.label_stack[t:] == mother] = new_ID_d2
 
-                # import pdb
-                # pdb.set_trace()
+                # correct df
+                ix_col_ID = np.where(self.track_output_correct.columns == 'trackID')[0][0]
+                ix_col_mother = np.where(self.track_output_correct.columns == 'trackID_mother')[0][0]
+                ix_col_ID_d1 = np.where(self.track_output_correct.columns == 'trackID_d1')[0][0]
+                ix_col_ID_d2 = np.where(self.track_output_correct.columns == 'trackID_d2')[0][0]
 
-                # update df
-                for t_tmp_1 in range(1,t):
-                    self.track_output.at[t_tmp_1,'trackID_d1'][self.track_output.at[t_tmp_1,'trackID'] == old_ID_d1] = new_ID_d1 #set new trackID
-                    self.track_output.at[t_tmp_1,'trackID_d2'][self.track_output.at[t_tmp_1,'trackID'] == old_ID_d1] = new_ID_d2 #set new trackID
-                    self.track_output.at[t_tmp_1,'split_frame'][self.track_output.at[t_tmp_1,'trackID'] == old_ID_d1] = t #set new trackID
-                for t_tmp_2 in range(t,len(self.label_stack)):
-                    # import pdb
-                    # pdb.set_trace()
-                    self.track_output.loc[self.track_output.trackID == old_ID_d1].loc[t_tmp_2] = 111
-                    #self.track_output.loc[t_tmp_2].at['trackID'== old_ID_d1] = 111
-                    #self.track_output_correct.at[t_tmp_2,'trackID'][self.track_output.at[t_tmp_2,'trackID'] == old_ID_d1] = 111#new_ID_d2 #set new trackID
-                    # self.track_output_correct.at[t_tmp_2,'trackID_mother'][self.track_output.at[t_tmp_2,'trackID'] == old_ID_d1] = old_ID_d1 #set new trackID
-                    # self.track_output_correct.at[t_tmp_2,'trackID_d1'][self.track_output.at[t_tmp_2,'trackID'] == old_ID_d1] = new_ID_d1 #set new trackID
-                    # self.track_output_correct.at[t_tmp_2,'trackID_d2'][self.track_output.at[t_tmp_2,'trackID'] == old_ID_d1] = new_ID_d1 #set new trackID
+                for t_tmp_1 in range(0,t):
+
+                    filter_t = self.track_output_correct['frame']==t_tmp_1
+                    filter_ID = self.track_output_correct['trackID']==mother
+
+                    try:
+                        ix_cell = np.where(filter_t&filter_ID)[0][0]
+                        self.track_output_correct.iloc[ix_cell,ix_col_ID_d1] = new_ID_d1
+                        self.track_output_correct.iloc[ix_cell,ix_col_ID_d2] = new_ID_d2
+
+                    except IndexError: #if cell skips frame
+                        None
+
+                for t_tmp_2 in range(t,self.tracks[int(c)-1].t[-1]):
                     
-                    # self.track_output_correct.at[t_tmp_2,'trackID'][self.track_output.at[t_tmp_2,'trackID'] == old_ID_d1] = new_ID_d2 #set new trackID
-                    # self.track_output_correct.at[t_tmp_2,'trackID_mother'][self.track_output.at[t_tmp_2,'trackID'] == new_ID_d1] = old_ID_d1 #set new trackID
-                    # self.track_output_correct.at[t_tmp_2,'trackID_d1'][self.track_output.at[t_tmp_2,'trackID'] == new_ID_d1] = new_ID_d1 #set new trackID
-                    # self.track_output_correct.at[t_tmp_2,'trackID_d2'][self.track_output.at[t_tmp_2,'trackID'] == new_ID_d1] = new_ID_d1 #set new trackID
+                    filter_t = self.track_output_correct['frame']==t_tmp_2
+                    filter_ID = self.track_output_correct['trackID']==mother
+                    filter_ID_d1 = self.track_output_correct['trackID']==new_ID_d1
 
+                    try:
+                        ix_d1 = np.where(filter_t&filter_ID_d1)[0][0]
+                        self.track_output_correct.iat[ix_d1,ix_col_mother] = mother
+
+                        ix_cell = np.where(filter_t&filter_ID)[0][0]
+                        self.track_output_correct.iat[ix_cell,ix_col_ID] = new_ID_d2
+                    except IndexError: #if cell skips frame
+                        None
 
 
     def __new_ID(self):
@@ -207,95 +217,28 @@ class BayesianCellTracking(Tracking):
         Convert tracking output into dataframe in standard format.
         """
 
-        time = []
-        area = []
-        trackID = []
-        trackID_d1 = []
-        trackID_d2 = []
-        trackID_mother = []
-        x_coor = []
-        y_coor = []
-        intensity_mean = []
-        intensity_min = []
-        intensity_max = []
-        minor_axis_length = []
-        major_axis_length = []
-        first_frame = []
-        last_frame = []
-
-        for t in self.tracks:
-            time.append(t.t)
-            area.append(t['area'])
-            trackID_d1.append([t.ID]*len(t.t))
-            trackID_d2.append([t.ID]*len(t.t))
-            trackID_mother.append([t.parent]*len(t.t))
-            x_coor.append(t.x)
-            y_coor.append(t.y)
-            intensity_mean.append(t['intensity_mean'])
-            intensity_min.append(t['intensity_min'])
-            intensity_max.append(t['intensity_max'])
-            minor_axis_length.append(t['minor_axis_length'])
-            major_axis_length.append(t['major_axis_length'])
-            first_frame.append([t.t[0]]*len(t.t))
-            last_frame.append([t.t[-1]]*len(t.t))
-                
-            if t.ID == t.parent:
-                trackID.append([t.ID]*len(t.t))
-                # trackID_mother.append([t.parent]*len(t.t))
+        # generate subset of dict
+        keys_to_extract = ['t', 'ID', 'x', 'y', 'area', 
+                            'intensity_mean', 'intensity_min', 'intensity_max',
+                            'minor_axis_length', 'major_axis_length']
+        cells = []
+        for cell in self.tracks:
+            tmp_dict = cell.to_dict()
+            tmp_dict['first_frame'] = tmp_dict['t'][0]
+            tmp_dict['last_frame'] = tmp_dict['t'][-1]
+            cell_dict = {key: tmp_dict[key] for key in keys_to_extract}
             
-            elif t.ID != t.parent:
-                trackID.append([t.parent]*len(t.t))
+            cells.append(cell_dict)
 
-        time = np.concatenate(time)
-        area = np.concatenate(area)
-        trackID = np.concatenate(trackID)
-        trackID_d1 = np.concatenate(trackID_d1)
-        trackID_d2 = np.concatenate(trackID_d2)
-        trackID_mother = np.concatenate(trackID_mother)
-        x_coor = np.concatenate(x_coor)
-        y_coor = np.concatenate(y_coor)
-        intensity_mean = np.concatenate(intensity_mean)
-        intensity_min = np.concatenate(intensity_min)
-        intensity_max = np.concatenate(intensity_max)
-        minor_axis_length = np.concatenate(minor_axis_length)
-        major_axis_length = np.concatenate(major_axis_length)
-        first_frame = np.concatenate(first_frame)
-        last_frame = np.concatenate(last_frame)
-
-        df_conv = pd.DataFrame({'frame' : time, 
-                                'trackID':trackID, 
-                                'trackID_d1':trackID_d1, 
-                                'trackID_d2':trackID_d2, 
-                                'trackID_mother':trackID_mother, 
-                                'split_frame':np.zeros(len(time)),
-                                'area':area, 
-                                'x':x_coor, 
-                                'y':y_coor,
-                                'intensity_mean':intensity_mean,
-                                'intensity_min':intensity_min,
-                                'intensity_max':intensity_max,
-                                'minor_axis_length':minor_axis_length,
-                                'major_axis_length':major_axis_length,
-                                'first_frame':first_frame, 
-                                'last_frame':last_frame})
-
-        self.track_output = df_conv.groupby(['frame', 'trackID']).aggregate({'frame':'first',
-                                                                'trackID':'first',
-                                                                'trackID_d1':'first',
-                                                                'trackID_d2':'last',
-                                                                'trackID_mother':'first', 
-                                                                'area':'first',
-                                                                'x':'first',
-                                                                'y':'first',
-                                                                'intensity_mean':'first',
-                                                                'intensity_min':'first',
-                                                                'intensity_max':'first',
-                                                                'minor_axis_length':'first',
-                                                                'major_axis_length':'first',
-                                                                'first_frame':'first',
-                                                                'last_frame':'first'}).reindex(columns=df_conv.columns)
-
-        self.track_output.set_index('frame', inplace=True)
+        # transform subset into df
+        self.track_output = pd.DataFrame(cells[0])
+        for c in cells[1:]:
+            df_cells_old = self.track_output
+            df_cells_new = pd.DataFrame(c)
+            self.track_output = pd.concat([df_cells_old, df_cells_new])
+            
+        self.track_output.sort_values(by='t', inplace=True)
+        self.track_output.rename(columns = {'t':'frame', 'ID':'trackID'}, inplace = True)
 
 
     def store_lineages(self, logger, output_folder: str):
