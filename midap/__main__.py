@@ -77,7 +77,7 @@ def run_module(args=None):
     logger.info(f"Importing all dependencies...")
     from .checkpoint import Checkpoint, CheckpointManager
     from .config import Config
-    from .apps import init_GUI
+    from .apps import init_GUI, split_frames
     logger.info("Done!")
 
     # create a config file if requested and exit
@@ -200,6 +200,26 @@ def run_module(args=None):
                         if channel in fname.stem:
                             logger.info(f"Copying '{fname.name}'...")
                             copyfile(fname, current_path.joinpath(channel, fname.name))
+
+            # split frames
+            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="SplitFrames",
+                                   identifier=identifier, copy_path=current_path) as checker:
+                # check to skip
+                checker.check()
+
+                # split the frames for all channels
+                file_ext = config.get("General", "FileType")
+                for channel in config.getlist(identifier, "Channels"):
+                    paths = list(current_path.joinpath(channel).glob(f"*.{file_ext}"))
+                    if len(paths) > 1:
+                        raise FileExistsError(f"More than one file of the type '.{file_ext}' "
+                                              f"exists for channel {channel}")
+                    split_frames.main(path=paths[0], save_dir=current_path.joinpath(channel, raw_im_folder),
+                                      start_frame=config.getint(identifier, "StartFrame"),
+                                      end_frame=config.getint(identifier, "EndFrame"),
+                                      deconv=config.get(identifier, "Deconvolution"),
+                                      loglevel=args.loglevel)
+
 
 
 # main routine
