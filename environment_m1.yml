@@ -153,6 +153,7 @@ dependencies:
   - pip:
     - absl-py==1.0.0
     - astunparse==1.6.3
+    - btrack==0.4.6
     - cachetools==5.1.0
     - charset-normalizer==2.0.12
     - flatbuffers==1.12
