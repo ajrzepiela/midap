@@ -15,6 +15,7 @@ from abc import ABC, abstractmethod
 from typing import Iterable
 
 from ..utils import get_logger
+from ..config import Config
 
 # get the logger we readout the variable or set it to max output
 if "__VERBOSE" in os.environ:
@@ -31,8 +32,8 @@ class CutoutImage(ABC):
     # this logger will be shared by all instances and subclasses
     logger = logger
 
-    def __init__(self, paths: Iterable[str], min_x_range=700, max_x_range=1600, min_y_range=500,
-                 max_y_range=1600, cutout_mode='interactive'):
+    def __init__(self, paths: Iterable[str], config: Config):
+
 
         # if paths is just a single string we pack it into a list
         if isinstance(paths, str):
@@ -40,14 +41,8 @@ class CutoutImage(ABC):
         else:
             self.paths = paths
 
-        # read out the variables
-        self.min_x_range = min_x_range
-        self.max_x_range = max_x_range
-        self.min_y_range = min_y_range
-        self.max_y_range = max_y_range
-
-        # mode for cutout
-        self.cutout_mode = cutout_mode
+        # Set the config file
+        self.config = config
 
         # get the file lists
         self.channels = [[os.path.join(channel, f) for f in sorted(os.listdir(channel))] for channel in self.paths]
