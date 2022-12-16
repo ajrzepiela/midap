@@ -200,6 +200,7 @@ source_paths_family() {
   RAW_IM="raw_im/"
   CUT_PATH="cut_im/"
   SEG_IM_PATH="seg_im/"
+  SEG_IM_BIN_PATH="seg_im_bin/"
   SEG_IM_TRACK_PATH="input_ilastik_tracking/"
   TRACK_OUT_PATH="track_output/"
 }
@@ -229,6 +230,7 @@ setup_folders_family() {
     mkdir -p "$PATH_FOLDER$POS/${!CH}/$CUT_PATH"
     # segmentation images
     mkdir -p "$PATH_FOLDER$POS/${!CH}/$SEG_IM_PATH"
+    mkdir -p "$PATH_FOLDER$POS/${!CH}/$SEG_IM_BIN_PATH"
     # stack of segmentation images for tracking
     mkdir -p "$PATH_FOLDER$POS/${!CH}/$SEG_IM_TRACK_PATH"
     # tracking output (Unet)

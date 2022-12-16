@@ -192,7 +192,8 @@ class BayesianCellTracking(Tracking):
                     except IndexError: #if cell skips frame
                         None
 
-                for t_tmp_2 in range(t,self.tracks[int(c)-1].t[-1]):
+                max_t = self.track_output_correct[self.track_output_correct['trackID'] == new_ID_d1]['frame'].max()
+                for t_tmp_2 in range(t,max_t):
                     
                     filter_t = self.track_output_correct['frame']==t_tmp_2
                     filter_ID = self.track_output_correct['trackID']==mother
