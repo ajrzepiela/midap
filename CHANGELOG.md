@@ -19,6 +19,16 @@ Efficiency:
 Fix:
 - ...
 
+## [0.2.0]
+
+2022-12-15
+
+Feature:
+- Added new tracking algorithm: Bayesian tracking
+
+Fix:
+- Adjusted segmentation postprocessing to use same steps during model selection and segmentation of image stacks
+
 ## [0.1.7]
 
 2022-12-01

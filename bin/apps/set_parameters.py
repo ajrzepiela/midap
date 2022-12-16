@@ -138,7 +138,7 @@ with open("settings.sh", "w+") as file_settings:
         file_settings.write(f"START_FRAME={values['start_frame']}\n")
         file_settings.write(f"END_FRAME={values['end_frame']}\n")
         file_settings.write(f"DATA_TYPE=FAMILY_MACHINE\n")
-        file_settings.write(f"PATH_FOLDER={values['folder_name']}/\n")
+        file_settings.write(f"PATH_FOLDER=" + '"' + f"{values['folder_name']}/" + '"' + "\n")
         file_settings.write(f"FILE_TYPE={values['file_type']}\n")
         file_settings.write(f"POS_IDENTIFIER={values['pos']}\n")
         file_settings.write(f"CHAMBER_CUTOUT={values['imcut']}\n")
