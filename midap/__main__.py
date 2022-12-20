@@ -251,7 +251,13 @@ def run_module(args=None):
                     config.set(identifier, "Corners", corners)
                     config.to_file()
 
-            
+            # select the networks
+            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="SegmentationInit",
+                                   identifier=identifier, copy_path=current_path) as checker:
+                # check to skip
+                checker.check()
+
+
 
 
 
