@@ -160,6 +160,9 @@ def run_module(args=None):
         # current path of the identifier
         current_path = base_path.joinpath(identifier)
 
+        # This is just to fill in the config file, i.e. split files 2 frames, get corners, etc
+        ######################################################################################
+
         # stuff we do for the segmentation
         if run_segmentation:
 
@@ -214,9 +217,13 @@ def run_module(args=None):
                     if len(paths) > 1:
                         raise FileExistsError(f"More than one file of the type '.{file_ext}' "
                                               f"exists for channel {channel}")
+
+                    # we only get the first frame and the mid frame
+                    first_frame = config.getint(identifier, "StartFrame")
+                    mid_frame = int(0.5*(first_frame + config.getint(identifier, "EndFrame")))
+                    frames = np.unique([first_frame, mid_frame])
                     split_frames.main(path=paths[0], save_dir=current_path.joinpath(channel, raw_im_folder),
-                                      start_frame=config.getint(identifier, "StartFrame"),
-                                      end_frame=config.getint(identifier, "EndFrame"),
+                                      frames=frames,
                                       deconv=config.get(identifier, "Deconvolution"),
                                       loglevel=args.loglevel)
 

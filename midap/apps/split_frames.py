@@ -1,19 +1,19 @@
+import numpy as np
 from tqdm import tqdm
 from scipy.io import loadmat
 from skimage.restoration import richardson_lucy
 from skimage import io
-from typing import Union, Literal
+from typing import Union, Literal, Iterable
 from pathlib import Path
 
 from midap.utils import get_logger
 
-def main(path: Union[str,Path], save_dir: Union[str,Path], start_frame: int, end_frame: int,
+def main(path: Union[str,Path], save_dir: Union[str,Path], frames: Iterable[int],
          deconv: Literal["deconv_family_machine", "deconv_well", "no_deconv"], loglevel=7):
     """
     Splits the frames of a given file and saves it in the save dir
     :param path: Path to the file to split the frames
-    :param start_frame: Number of the start frame (inclusive)
-    :param end_frame: Number of the end frame (exclusive)
+    :param frames: An iterable containing the frames to split
     :param deconv: A literal used for the deconvolution
     :param loglevel: The loglevel of the script from 0 (no output) to 7
     """
@@ -42,14 +42,14 @@ def main(path: Union[str,Path], save_dir: Union[str,Path], start_frame: int, end
 
     # split the frames
     logger.info("Splitting frames...")
-    stack = io.imread(path)[int(start_frame):int(end_frame)]
-    for ix, frame in enumerate(tqdm(stack)):
+    stack = io.imread(path)[frames]
+    for ix, frame in tqdm(zip(frames, stack), total=len(frames)):
         if deconvolution:
             deconvoluted = richardson_lucy(frame, psf, iterations=10, clip=False)
-            io.imsave(save_dir.joinpath(f"{raw_filename}_frame{ix + start_frame:03d}_deconv.png"),
+            io.imsave(save_dir.joinpath(f"{raw_filename}_frame{ix:03d}_deconv.png"),
                       deconvoluted, check_contrast=False)
         else:
-            io.imsave(save_dir.joinpath(f"{raw_filename}_frame{ix + start_frame:03d}.png"),
+            io.imsave(save_dir.joinpath(f"{raw_filename}_frame{ix:03d}.png"),
                       frame, check_contrast=False)
 
 
@@ -67,5 +67,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # run the main
-    main(**vars(args))
+    frames = np.arange(args.start_frame, args.end_frame)
+    main(path=args.path, save_dir=args.save_dir, frames=frames, deconv=args.deconv, loglevel=args.loglevel)
 
