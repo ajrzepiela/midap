@@ -241,8 +241,17 @@ def run_module(args=None):
                 if config.get(identifier, "Corners") == "None":
                     corners = None
                 else:
-                    corners = (int(corner) for corner in config.getlist(identifier, "Corners"))
-                cut_chamber.main(channel=paths, cutout_class=config.get(identifier, "CutImgClass"), corners=corners)
+                    corners = tuple([int(corner) for corner in config.getlist(identifier, "Corners")])
+                cut_corners = cut_chamber.main(channel=paths, cutout_class=config.get(identifier, "CutImgClass"),
+                                               corners=corners)
+
+                # save the corners if necessary
+                if corners is None:
+                    corners = f"{cut_corners[0]},{cut_corners[1]},{cut_corners[2]},{cut_corners[3]}"
+                    config.set(identifier, "Corners", corners)
+                    config.to_file()
+
+            
 
 
 

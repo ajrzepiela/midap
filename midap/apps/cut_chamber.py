@@ -31,6 +31,9 @@ def main(channel: Union[str,Iterable[str],Iterable[Path]], cutout_class: str, co
         cut.corners_cut = corners
     cut.run_align_cutout()
 
+    return cut.corners_cut
+
+
 # run as main
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -43,5 +46,3 @@ if __name__ == "__main__":
 
     # unpack the namespace
     main(**vars(args))
-
-
