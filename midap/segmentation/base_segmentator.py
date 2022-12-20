@@ -220,7 +220,7 @@ class SegmentationPredictor(ABC):
         return img_unpad
 
     @abstractmethod
-    def set_segmentation_method(self):
+    def set_segmentation_method(self, path_to_cutouts):
         """
         This is an abstract method forcing subclasses to implement it
         """

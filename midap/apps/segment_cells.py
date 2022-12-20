@@ -1,8 +1,7 @@
 import argparse
 
-import sys
-import os
-import re
+from typing import Optional, Union
+from pathlib import Path
 
 # to get all subclasses
 from midap.segmentation import *
@@ -11,30 +10,41 @@ from midap.segmentation import base_segmentator
 ### Functions
 #############
 
-def save_weights(channel, weight_path):
-    """
-    Saves the path to the model weights into the settings file
-    :param channel: The channel of the weights selected
-    :param weight_path: Path to the weights
-    """
-    # Save the selected weights
-    with open("settings.sh", "r+") as file_settings:
-        # read the file content
-        content =file_settings.read()
+def main(path_model_weights: Union[str,Path], path_pos: Union[str, Path], path_channel: str, segmentation_class: str,
+         postprocessing: bool, network_name: Optional[str]=None, just_select=False):
 
-        # if there is no variable -> write new
-        if f"MODEL_WEIGHTS_{channel}" in content:
-            # we replace the path
-            content = re.sub(f"MODEL_WEIGHTS_{channel}\=.*",
-                             f"MODEL_WEIGHTS_{channel}={weight_path}",
-                             content)
-            # truncate, set stream to start and write
-            file_settings.truncate(0)
-            file_settings.seek(0)
-            file_settings.write(content)
-        else:
-            # we write a new variable
-            file_settings.write(f"MODEL_WEIGHTS_{args.path_channel}={os.path.abspath(weight_path)}\n")
+
+    # get the right subclass
+    class_instance = None
+    for subclass in base_segmentator.SegmentationPredictor.__subclasses__():
+        if subclass.__name__ == segmentation_class:
+            class_instance = subclass
+
+    # throw an error if we did not find anything
+    if class_instance is None:
+        raise ValueError(f"Chosen class does not exist: {segmentation_class}")
+
+    # get the Predictor
+    pred = class_instance(path_model_weights=path_model_weights, postprocessing=postprocessing)
+
+    # set the paths
+    path_channel = Path(path_pos).joinpath(path_channel)
+    # TODO this should not be hardcoded
+    path_cut = path_channel.joinpath("cut_im")
+
+    # Select the weights if necessary
+    if network_name is None:
+        pred.set_segmentation_method(path_cut)
+        # make sure that if this is a path, we have is absolute
+        if pred.model_weights is not None and (weight_path := Path(pred.model_weights).absolute()).exists():
+            pred.model_weights = weight_path
+
+    # run the stack
+    if just_select:
+        return pred.model_weights
+
+    pred.run_image_stack(path_channel)
+    return pred.model_weights
 
 # Main
 ######
@@ -50,62 +60,8 @@ if __name__ == "__main__":
     parser.add_argument("--segmentation_class", type=str,
                         help="Name of the class used for the cell segmentation. Must be defined in a file of "
                              "midap.segmentation and a subclass of midap.segmentation.SegmentationPredictor")
-    parser.add_argument("--batch_mode", action="store_true", help="Flag for batch mode.")
     parser.add_argument("--postprocessing", action="store_true", help="Flag for postprocessing.")
     args = parser.parse_args()
 
-    # get the right subclass
-    segmentation_class = None
-    for subclass in base_segmentator.SegmentationPredictor.__subclasses__():
-        if subclass.__name__ == args.segmentation_class:
-            segmentation_class = subclass
-
-    # throw an error if we did not find anything
-    if segmentation_class == None:
-        raise ValueError(f"Chosen class does not exist: {args.cutout_class}")
-
-    # get the Predictor
-    pred = segmentation_class(path_model_weights=args.path_model_weights, postprocessing=args.postprocessing)
-
-    # set the paths
-    path_channel = os.path.join(args.path_pos, args.path_channel)
-    path_cut = os.path.join(path_channel, "cut_im")
-
-    # We use the same weight for all channels
-    path_model_weights = None
-    if args.batch_mode:
-        # Readout the parameters
-        with open("settings.sh", "r") as file_settings:
-            lines = file_settings.readlines()
-
-        # Transform to dict, ignore comments in file
-        list_items = [l.replace('\n', '').split('=') for l in lines if not l.startswith("#")]
-        params_dict = {l[0]: l[1] for l in list_items}
-
-        # check if the path for the weights is set in
-        param = f'MODEL_WEIGHTS_{args.path_channel}'
-        if param in params_dict and args.path_channel != params_dict['CHANNEL_1']:
-            # we set the path for the weights
-            path_model_weights = params_dict[param]
-
-            # if we don't use a custom method, we set the _model_weights
-            if path_model_weights != "custom":
-                pred.model_weights = path_model_weights
-
-    # Select the weights if not set by the batch mode
-    if path_model_weights is None:
-        pred.set_segmentation_method(path_cut)
-        # check if the weights are set, this might not be the case in a custom implementation
-        if pred.model_weights is None:
-            path_model_weights = "custom"
-        # we need to make an exception for the base variant which is not a path
-        elif pred.model_weights == "watershed":
-            path_model_weights = pred.model_weights
-        else:
-            path_model_weights = os.path.abspath(pred.model_weights)
-
-    # Save the selected weights
-    save_weights(args.path_channel, path_model_weights)
-
-    # run the stack
-    pred.run_image_stack(path_channel)
+    # run
+    main(**vars(args))
