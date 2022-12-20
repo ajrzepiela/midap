@@ -111,6 +111,7 @@ class Config(ConfigParser):
                                   "PhaseSegmentation": False,
                                   "Channels": 'None',
                                   "CutImgClass": "InteractiveCutout",
+                                  "Corners": "None",
                                   "SegmentationClass": "UNetSegmentation",
                                   "TrackingClass": "DeltaV2Tracking"}})
 
@@ -151,7 +152,14 @@ class Config(ConfigParser):
 
         if not basic:
             # TODO: do the check of the remaining variables
-            pass
+            # check the corner
+            corners = self.get(id_name, "Corners")
+            corner_list = self.getlist(id_name, "Corners")
+            if len(corners) != 4:
+                raise ValueError(f"'Corner' is not properly defined: {corners}")
+            # check if we have valid integers
+            for corner in corner_list:
+                _ = int(corner)
 
     def getlist(self, section, option):
         """

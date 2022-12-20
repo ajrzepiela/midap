@@ -107,6 +107,7 @@ class CutoutImage(ABC):
         :param file_names: The list of file names from the original files
         """
         # save of cutouts
+        # TODO: This should not be hardcoded
         dir_name = os.path.dirname(os.path.dirname(file_names[0]))
         for f, i in zip(file_names, files):
             fname = f"{os.path.splitext(os.path.basename(f))[0]}_cut.png"
@@ -149,10 +150,10 @@ class CutoutImage(ABC):
 
                 # adapt the corner with the shift of the image
                 left_x, right_x, lower_y, upper_y = self.corners_cut
-                current_corners = (left_x - self.shifts[i-1][0],
-                                   right_x - self.shifts[i-1][0],
-                                   lower_y - self.shifts[i-1][1],
-                                   upper_y - self.shifts[i-1][1])
+                current_corners = (left_x - self.shifts[i-1][1],
+                                   right_x - self.shifts[i-1][1],
+                                   lower_y - self.shifts[i-1][0],
+                                   upper_y - self.shifts[i-1][0])
                 cut_img = self.do_cutout(img, current_corners)
                 # sacle the pixel values
                 proc_img = self.scale_pixel_val(cut_img)

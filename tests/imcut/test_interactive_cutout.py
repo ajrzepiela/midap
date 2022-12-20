@@ -22,6 +22,7 @@ def img1():
     img = np.array([[0.0, 0.0, 0.0, 0.0],
                     [0.0, 1.0, 1.0, 0.0],
                     [0.0, 1.0, 1.0, 0.0],
+                    [0.0, 0.0, 0.0, 0.0],
                     [0.0, 0.0, 0.0, 0.0]])
 
     # we pad the image with 0s on all sides to deal with the offset of the cutout
@@ -37,6 +38,7 @@ def img2():
     """
     # define the images
     img = np.array([[0.0, 0.0, 0.0, 0.0],
+                    [0.0, 0.0, 0.0, 0.0],
                     [0.0, 0.0, 0.0, 0.0],
                     [0.0, 0.0, 1.0, 1.0],
                     [0.0, 0.0, 1.0, 1.0]])
@@ -120,7 +122,7 @@ def test_align_two_images(cutout_instance, img1, img2):
 
     # align
     alignment = cutout_instance.align_two_images(img1, img2)
-    assert np.all(alignment == np.array([-1, -1]))
+    assert np.all(alignment == np.array([-2, -1]))
 
 def test_align_all_images(cutout_instance):
     """
@@ -132,7 +134,7 @@ def test_align_all_images(cutout_instance):
 
     # check all shifts
     assert len(cutout_instance.shifts) == 2
-    assert np.all([np.all(alignment == np.array([-1, -1])) for alignment in cutout_instance.shifts])
+    assert np.all([np.all(alignment == np.array([-2, -1])) for alignment in cutout_instance.shifts])
 
 def test_run_align_cutout(monkeypatch, cutout_instance):
     """
@@ -154,6 +156,7 @@ def test_run_align_cutout(monkeypatch, cutout_instance):
 
     # run the stack
     cutout_instance.run_align_cutout()
+    print(cutout_instance.shifts)
 
     # now we read in the images again
     dir_name = os.path.dirname(os.path.dirname(cutout_instance.channels[0][0]))

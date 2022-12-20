@@ -77,7 +77,7 @@ def run_module(args=None):
     logger.info(f"Importing all dependencies...")
     from .checkpoint import Checkpoint, CheckpointManager
     from .config import Config
-    from .apps import init_GUI, split_frames
+    from .apps import init_GUI, split_frames, cut_chamber
     logger.info("Done!")
 
     # create a config file if requested and exit
@@ -160,9 +160,6 @@ def run_module(args=None):
         # current path of the identifier
         current_path = base_path.joinpath(identifier)
 
-        # This is just to fill in the config file, i.e. split files 2 frames, get corners, etc
-        ######################################################################################
-
         # stuff we do for the segmentation
         if run_segmentation:
 
@@ -204,6 +201,9 @@ def run_module(args=None):
                             logger.info(f"Copying '{fname.name}'...")
                             copyfile(fname, current_path.joinpath(channel, fname.name))
 
+            # This is just to fill in the config file, i.e. split files 2 frames, get corners, etc
+            ######################################################################################
+
             # split frames
             with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="SplitFramesInit",
                                    identifier=identifier, copy_path=current_path) as checker:
@@ -226,6 +226,23 @@ def run_module(args=None):
                                       frames=frames,
                                       deconv=config.get(identifier, "Deconvolution"),
                                       loglevel=args.loglevel)
+
+            # cut chamber and images
+            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="CutFramesInit",
+                                   identifier=identifier, copy_path=current_path) as checker:
+                # check to skip
+                checker.check()
+
+                # get the paths
+                paths = [current_path.joinpath(channel, raw_im_folder)
+                         for channel in config.getlist(identifier, "Channels")]
+
+                # Do the init cutouts
+                if config.get(identifier, "Corners") == "None":
+                    corners = None
+                else:
+                    corners = (int(corner) for corner in config.getlist(identifier, "Corners"))
+                cut_chamber.main(channel=paths, cutout_class=config.get(identifier, "CutImgClass"), corners=corners)
 
 
 
