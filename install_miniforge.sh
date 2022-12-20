@@ -13,6 +13,8 @@ if [ ! -d "$PATH_MINIFORGE" ]; then
   ./Miniforge3-MacOSX-arm64.sh -b -p $PATH_MINIFORGE
 fi
 
+# update conda and environment
+$PATH_MINIFORGE/bin/conda update -n base -c conda-forge conda
 $PATH_MINIFORGE/bin/conda env update -f environment_m1.yml
 
 # instal midap
