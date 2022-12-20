@@ -205,7 +205,7 @@ def run_module(args=None):
                             copyfile(fname, current_path.joinpath(channel, fname.name))
 
             # split frames
-            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="SplitFrames",
+            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="SplitFramesInit",
                                    identifier=identifier, copy_path=current_path) as checker:
                 # check to skip
                 checker.check()

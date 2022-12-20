@@ -31,8 +31,11 @@ class CutoutImage(ABC):
     # this logger will be shared by all instances and subclasses
     logger = logger
 
-    def __init__(self, paths: Iterable[str], config):
-
+    def __init__(self, paths: Iterable[str]):
+        """
+        Initializes the class
+        :param paths: List of paths to the directoris containing the files that should be cut
+        """
 
         # if paths is just a single string we pack it into a list
         if isinstance(paths, str):
@@ -40,8 +43,8 @@ class CutoutImage(ABC):
         else:
             self.paths = paths
 
-        # Set the config file
-        self.config = config
+        # this should be set by the cut_corners routine
+        self.corners_cut = None
 
         # get the file lists
         self.channels = [[os.path.join(channel, f) for f in sorted(os.listdir(channel))] for channel in self.paths]
@@ -67,48 +70,13 @@ class CutoutImage(ABC):
         """
         # load 1st image of phase channel
         files = self.channels[0]
-        src = self.open_tiff(files[0])
+        src = io.imread(files[0])
         self.shifts = []
         for i in tqdm(range(1,len(files))):
-            ref = self.open_tiff(files[i])
+            ref = io.imread(files[i])
             # align image compared to 1st image
             shift = self.align_two_images(src, ref)
             self.shifts.append(shift)
-
-        # computes the offset to choose depending on shift between images
-        self.off = int(math.ceil(np.max(np.abs(self.shifts)) / 10.0)) * 10
-
-    def save_corners(self):
-        """
-        Saves the corners for the cutout into the settings.sh
-        """
-        # write the corners into the settings.sh file
-        with open("settings.sh", mode="r+") as f:
-            # read the file content
-            content = f.read()
-
-            if "CORNERS=" in content:
-                # we replace the variable
-                content = re.sub(f"CORNERS\=.*", f"CORNERS={self.corners_cut}".replace(",", ""), content)
-
-                # truncate, set stream to start and write
-                f.truncate(0)
-                f.seek(0)
-                f.write(content)
-            else:
-                # we add a new line to the file
-                # replace commas to create a bash array
-                f.write(f"CORNERS={self.corners_cut}\n".replace(",", ""))
-
-    def open_tiff(self, path):
-        """
-        Opens a tiff file and returns the images as array
-        :param path: path to the file
-        :returns: array of images
-        """
-        # load all pages of tiff file and return list of image arrays
-        im = io.imread(path)
-        return im
 
     def do_cutout(self, img, corners_cut):
         """
@@ -117,6 +85,7 @@ class CutoutImage(ABC):
         :param corners_cut: The corners used for the cutout
         :returns: The cutout from the image given the corners
         """
+
         # generate cutout of image
         left_x, right_x, lower_y, upper_y = corners_cut
         cutout = img[lower_y:upper_y, left_x:right_x]
@@ -130,19 +99,6 @@ class CutoutImage(ABC):
         """
         img_scaled = (255 * ((img - np.min(img))/np.max(img - np.min(img)))).astype('uint8')
         return img_scaled
-
-    def shift_image(self, im, shift):
-        """
-        Aligns an image of an additional channels by shift
-        :param im: image to shift as array
-        :param shift: The shift to perform
-        :returns: The shifted image
-        """
-        if self.off-shift[0] != 0:
-            im = im[(self.off - shift[0]):(-self.off - shift[0]), :]
-        if self.off - shift[1] != 0:
-            im = im[:, (self.off - shift[1]):(-self.off - shift[1])]
-        return im
 
     def save_cutout(self, files, file_names):
         """
@@ -172,23 +128,15 @@ class CutoutImage(ABC):
             aligned_cutouts = []
 
             # get the first image
-            src = self.open_tiff(files[0])
-            # offset of 1st image
-            if self.off == 0:
-                src_off = src
-            else:
-                src_off = src[self.off:-self.off, self.off:-self.off]
+            src = io.imread(files[0])
 
-            # We get the corners using the PH channel
-            if channel_id == 0:
+            # We cut the corners if the corners_cut is None
+            if self.corners_cut is None:
                 # set the corner to cut
-                self.cut_corners(img=src_off)
-
-                # save the corner to file
-                self.save_corners()
+                self.cut_corners(img=src)
 
             # perform the cutout of the first image
-            cutout = self.do_cutout(src_off, self.corners_cut)
+            cutout = self.do_cutout(src, self.corners_cut)
             # scale the pixel values
             cut_src = self.scale_pixel_val(cutout)
 
@@ -197,11 +145,15 @@ class CutoutImage(ABC):
 
             # cutout of all other images of all channels
             for i in tqdm(range(1, len(files))):
-                ref = self.open_tiff(files[i])
+                img = io.imread(files[i])
 
-                # align and cutout phase image compared to 1st image
-                aligned_img = self.shift_image(ref, self.shifts[i-1])
-                cut_img = self.do_cutout(aligned_img, self.corners_cut)
+                # adapt the corner with the shift of the image
+                left_x, right_x, lower_y, upper_y = self.corners_cut
+                current_corners = (left_x - self.shifts[i-1][0],
+                                   right_x - self.shifts[i-1][0],
+                                   lower_y - self.shifts[i-1][1],
+                                   upper_y - self.shifts[i-1][1])
+                cut_img = self.do_cutout(img, current_corners)
                 # sacle the pixel values
                 proc_img = self.scale_pixel_val(cut_img)
                 aligned_cutouts.append(proc_img)

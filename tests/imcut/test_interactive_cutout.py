@@ -4,6 +4,7 @@ import tempfile
 import os
 
 from midap.imcut.interactive_cutout import InteractiveCutout
+from midap.config import Config
 from skimage.io import imread
 from pytest import fixture
 from os import listdir
@@ -55,10 +56,6 @@ def cutout_instance(monkeypatch, img1, img2):
     :return: A CutoutImage instance
     """
 
-    # create the settings file
-    with open("settings.sh", "w+") as f:
-        pass
-
     # create a temp directory
     tmpdir = tempfile.TemporaryDirectory()
 
@@ -109,8 +106,6 @@ def cutout_instance(monkeypatch, img1, img2):
     # clean up
     tmpdir.cleanup()
 
-    # remove the settings file again
-    os.remove("settings.sh")
 
 # Tests
 #######
@@ -138,39 +133,6 @@ def test_align_all_images(cutout_instance):
     # check all shifts
     assert len(cutout_instance.shifts) == 2
     assert np.all([np.all(alignment == np.array([-1, -1])) for alignment in cutout_instance.shifts])
-    # check offset
-    assert cutout_instance.off
-
-def test_save_corners(cutout_instance):
-    """
-    Tests the align_all_images of the InteractiveCutout class
-    :param cutout_instance: A pytest fixture returning an instance the class
-    """
-
-    # set the corners
-    cutout_instance.corners_cut = (1, 2, 3, 4)
-
-    # save the corners
-    cutout_instance.save_corners()
-
-    # check the file
-    with open("settings.sh", "r") as f:
-        content = f.read()
-
-    assert content == "CORNERS=(1 2 3 4)\n"
-
-    # overwrite
-    # set the corners
-    cutout_instance.corners_cut = (11, 22, 33, 44)
-
-    # save the corners
-    cutout_instance.save_corners()
-
-    # check the file
-    with open("settings.sh", "r") as f:
-        content = f.read()
-
-    assert content == "CORNERS=(11 22 33 44)\n"
 
 def test_run_align_cutout(monkeypatch, cutout_instance):
     """
@@ -185,7 +147,7 @@ def test_run_align_cutout(monkeypatch, cutout_instance):
         """
 
         # set the corners
-        monkeypatch.setattr(cutout_instance, "corners_cut", (1, 5, 1, 5), raising=False)
+        monkeypatch.setattr(cutout_instance, "corners_cut", (10, 15, 10, 15), raising=False)
 
     # monkey patch
     monkeypatch.setattr(cutout_instance, "cut_corners", dummy_cutout)
