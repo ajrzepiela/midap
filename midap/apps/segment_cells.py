@@ -25,24 +25,25 @@ def main(path_model_weights: Union[str,Path], path_pos: Union[str, Path], path_c
         raise ValueError(f"Chosen class does not exist: {segmentation_class}")
 
     # get the Predictor
-    pred = class_instance(path_model_weights=path_model_weights, postprocessing=postprocessing)
+    pred = class_instance(path_model_weights=path_model_weights, postprocessing=postprocessing,
+                          model_weights=network_name)
 
     # set the paths
     path_channel = Path(path_pos).joinpath(path_channel)
     # TODO this should not be hardcoded
     path_cut = path_channel.joinpath("cut_im")
 
-    # Select the weights if necessary
-    if network_name is None:
-        pred.set_segmentation_method(path_cut)
-        # make sure that if this is a path, we have is absolute
-        if pred.model_weights is not None and (weight_path := Path(pred.model_weights).absolute()).exists():
-            pred.model_weights = weight_path
+    # now we select the segmentor
+    pred.set_segmentation_method(path_cut)
+    # make sure that if this is a path, we have it absolute
+    if pred.model_weights is not None and (weight_path := Path(pred.model_weights).absolute()).exists():
+        pred.model_weights = str(weight_path)
 
-    # run the stack
+    # if we just want to set the method we are done here
     if just_select:
         return pred.model_weights
 
+    # run the stack if we want to
     pred.run_image_stack(path_channel)
     return pred.model_weights
 

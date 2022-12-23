@@ -77,7 +77,7 @@ def run_module(args=None):
     logger.info(f"Importing all dependencies...")
     from .checkpoint import Checkpoint, CheckpointManager
     from .config import Config
-    from .apps import init_GUI, split_frames, cut_chamber
+    from .apps import init_GUI, split_frames, cut_chamber, segment_cells
     logger.info("Done!")
 
     # create a config file if requested and exit
@@ -257,6 +257,23 @@ def run_module(args=None):
                 # check to skip
                 checker.check()
 
+                # cycle through all channels
+                for channel in config.getlist(identifier, "Channels"):
+                    # get the current model weight (if defined)
+                    model_weights = config.get(identifier, f"ModelWeights_{channel}", fallback=None)
+
+                    # run the selector
+                    path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
+                                                                               "model_weights_family_mother_machine")
+                    weights = segment_cells.main(path_model_weights=path_model_weights, path_pos=current_path,
+                                                 path_channel=channel, postprocessing=True, network_name=model_weights,
+                                                 segmentation_class=config.get(identifier, "SegmentationClass"),
+                                                 just_select=True)
+
+                    # save to config
+                    if model_weights is None:
+                        config.set(identifier, f"ModelWeights_{channel}", weights)
+                        config.to_file()
 
 
 

@@ -151,7 +151,6 @@ class Config(ConfigParser):
             raise ValueError(f"'Class' of 'Tracking' not in {tracking_subclasses}")
 
         if not basic:
-            # TODO: do the check of the remaining variables
             # check the corner
             corners = self.get(id_name, "Corners")
             corner_list = self.getlist(id_name, "Corners")
@@ -160,6 +159,21 @@ class Config(ConfigParser):
             # check if we have valid integers
             for corner in corner_list:
                 _ = int(corner)
+
+            # check the model weights
+            for channel in self.getlist(id_name, "Channels"):
+                if self.get(id_name, "SegmentationClass") == "UNetSegmentation":
+                    model_weights = self.get(id_name, f"ModelWeights_{channel}")
+                    model_path = Path(model_weights)
+                    if not (model_path.exists() and model_path.suffix == ".h5") and model_weights != "watershed":
+                        raise ValueError(f"Invalid 'ModelWeights' for method 'UNetSegmentation': {model_weights}")
+                elif self.get(id_name, "SegmentationClass") == "OmniSegmentation":
+                    model_weights = self.get(id_name, f"ModelWeights_{channel}")
+                    if model_weights not in ['bact_phase_cp', 'bact_fluor_cp', 'bact_phase_omni', 'bact_fluor_omni']:
+                        raise ValueError(f"Invalid 'ModelWeights' for method 'OmniSegmentation': {model_weights}")
+
+            # TODO: do the check of the remaining variables
+
 
     def getlist(self, section, option):
         """
