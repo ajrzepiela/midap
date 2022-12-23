@@ -27,12 +27,12 @@ class Tracking(ABC):
     # this logger will be shared by all instances and subclasses
     logger = logger
 
-    def __init__(self, imgs: Iterable[str], 
-                        segs: Iterable[str]=None, 
-                        model_weights: Optional[str]=None, 
-                        input_size: Optional[tuple]=None,
-                        target_size: Optional[tuple]=None, 
-                        crop_size: Optional[str]=None):
+    def __init__(self, imgs: Iterable[str],
+                 segs: Optional[Iterable[str]] = None,
+                 model_weights: Optional[str] = None,
+                 input_size: Optional[tuple] = None,
+                 target_size: Optional[tuple] = None,
+                 crop_size: Optional[str] = None):
         """
         Initializes the class instance
         :param imgs: List of files containing the cut out images ordered chronological in time
@@ -57,7 +57,6 @@ class Tracking(ABC):
         if crop_size is not None:
             self.crop_size = crop_size
 
-
     def load_data(self, cur_frame: int):
         """
         Loads and resizes raw images and segmentation images of the previous and current time frame.
@@ -76,17 +75,6 @@ class Tracking(ABC):
             io.imread(self.segs[cur_frame-1]), self.target_size, order=0) > 0).astype(int)
 
         return img_cur_frame, img_prev_frame, seg_cur_frame, seg_prev_frame
-
- 
-    def run_tracking(self, *args, **kwargs): #logger, output_folder
-        """
-        Track all frames using cropped images as input.
-        """
-
-        self.track_all_frames(*args, **kwargs)
-
-        #self.store_data()
-
 
     @abstractmethod
     def track_all_frames(self, *args, **kwargs):

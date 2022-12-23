@@ -1,16 +1,15 @@
+import h5py
 import btrack
+import numpy as np
+import pandas as pd
+
+from scipy.spatial import distance
+from skimage.measure import label, regionprops
 from btrack import datasets
 from btrack.constants import BayesianUpdates
 
-import h5py
-import numpy as np
-import pandas as pd
-from scipy.spatial import distance
-
-from skimage.measure import label, regionprops
-from skimage.segmentation import clear_border
-
 from .base_tracking import Tracking
+
 
 class BayesianCellTracking(Tracking):
     """
@@ -21,7 +20,7 @@ class BayesianCellTracking(Tracking):
         """
         Initializes the DeltaV2Tracking using the base class init
         :*args: Arguments used for the base class init
-        :**kwargs: Keyword arguments used for the basecalss init
+        :**kwargs: Keyword arguments used for the baseclass init
         """
 
         # base class init
@@ -33,23 +32,19 @@ class BayesianCellTracking(Tracking):
         Sets the parameters needed for the Bayesian tracking.
         """
 
-        self.features = ["area", 
-                            "major_axis_length", 
-                            "minor_axis_length", 
-                            "orientation",
-                            "intensity_mean",
-                            "intensity_min",
-                            "intensity_max",
-                            "minor_axis_length",
-                            "major_axis_length",
-                            "coords",]
+        self.features = ["area",
+                         "major_axis_length",
+                         "minor_axis_length",
+                         "orientation",
+                         "intensity_mean",
+                         "intensity_min",
+                         "intensity_max",
+                         "minor_axis_length",
+                         "major_axis_length",
+                         "coords", ]
 
-        self.objects = btrack.utils.segmentation_to_objects(
-            segmentation = self.seg_imgs, 
-            intensity_image = self.raw_imgs,
-            properties=tuple(self.features), 
-        )
-
+        self.objects = btrack.utils.segmentation_to_objects(segmentation=self.seg_imgs, intensity_image=self.raw_imgs,
+                                                            properties=tuple(self.features))
         self.config_file = datasets.cell_config()
 
 
@@ -59,6 +54,7 @@ class BayesianCellTracking(Tracking):
         :*args: Arguments used for the base class init
         :**kwargs: Keyword arguments used for the basecalss init
         """
+
         self.run_model()
         self.convert_data()
         self.generate_label_stack()

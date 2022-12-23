@@ -50,7 +50,7 @@ num_time_steps = len(img_names_sort)
 # Process
 tr = tracking_class(img_names_sort, seg_names_sort, model_file,
                     input_size, target_size, crop_size)
-tr.run_tracking(logger, output_folder)
+tr.track_all_frames(logger, output_folder)
 
 # # Reduce results file for storage if there is a tracking result
 # if sum([res.size for res in tr.results_all]) > 0:
