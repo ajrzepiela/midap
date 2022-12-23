@@ -51,6 +51,7 @@ def run_module(args=None):
     raw_im_folder = "raw_im"
     cut_im_folder = "cut_im"
     seg_im_folder = "seg_im"
+    seg_im_bin_folder = "seg_im_bin"
     track_folder = "track_output"
 
     # Argument handling
@@ -156,7 +157,6 @@ def run_module(args=None):
     for identifier in config.getlist("General", "IdentifierFound"):
         # read out what we need to do
         run_segmentation = config.get(identifier, "RunOption").lower() in ['both', 'segmentation']
-        run_tracking = config.get(identifier, "RunOption").lower() in ['both', 'tracking']
         # current path of the identifier
         current_path = base_path.joinpath(identifier)
 
@@ -183,6 +183,7 @@ def run_module(args=None):
                     current_path.joinpath(channel, raw_im_folder).mkdir(parents=True)
                     current_path.joinpath(channel, cut_im_folder).mkdir(parents=True)
                     current_path.joinpath(channel, seg_im_folder).mkdir(parents=True)
+                    current_path.joinpath(channel, seg_im_bin_folder).mkdir(parents=True)
                     current_path.joinpath(channel, track_folder).mkdir(parents=True)
 
             # copy the files
@@ -210,6 +211,8 @@ def run_module(args=None):
                 # check to skip
                 checker.check()
 
+                logger.info(f"Splitting test frames for {identifier}")
+
                 # split the frames for all channels
                 file_ext = config.get("General", "FileType")
                 for channel in config.getlist(identifier, "Channels"):
@@ -232,6 +235,8 @@ def run_module(args=None):
                                    identifier=identifier, copy_path=current_path) as checker:
                 # check to skip
                 checker.check()
+
+                logger.info(f"Cutting test frames for {identifier}")
 
                 # get the paths
                 paths = [current_path.joinpath(channel, raw_im_folder)
@@ -257,6 +262,8 @@ def run_module(args=None):
                 # check to skip
                 checker.check()
 
+                logger.info(f"Segmenting test frames for {identifier}...")
+
                 # cycle through all channels
                 for channel in config.getlist(identifier, "Channels"):
                     # get the current model weight (if defined)
@@ -275,7 +282,79 @@ def run_module(args=None):
                         config.set(identifier, f"ModelWeights_{channel}", weights)
                         config.to_file()
 
+    # we cycle through all pos identifiers again to perform all tasks fully
+    for identifier in config.getlist("General", "IdentifierFound"):
+        # read out what we need to do
+        run_segmentation = config.get(identifier, "RunOption").lower() in ['both', 'segmentation']
+        run_tracking = config.get(identifier, "RunOption").lower() in ['both', 'tracking']
+        # current path of the identifier
+        current_path = base_path.joinpath(identifier)
 
+        # stuff we do for the segmentation
+        if run_segmentation:
+            # split frames
+            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="SplitFramesFull",
+                                   identifier=identifier, copy_path=current_path) as checker:
+                # check to skip
+                checker.check()
+
+                logger.info(f"Splitting all frames for {identifier}")
+
+                # split the frames for all channels
+                file_ext = config.get("General", "FileType")
+                for channel in config.getlist(identifier, "Channels"):
+                    paths = list(current_path.joinpath(channel).glob(f"*.{file_ext}"))
+                    if len(paths) > 1:
+                        raise FileExistsError(f"More than one file of the type '.{file_ext}' "
+                                              f"exists for channel {channel}")
+
+                    # get all the frames and split
+                    frames = np.arange(config.getint(identifier, "StartFrame"), config.getint(identifier, "EndFrame"))
+                    split_frames.main(path=paths[0], save_dir=current_path.joinpath(channel, raw_im_folder),
+                                      frames=frames,
+                                      deconv=config.get(identifier, "Deconvolution"),
+                                      loglevel=args.loglevel)
+
+            # cut chamber and images
+            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="CutFramesFull",
+                                   identifier=identifier, copy_path=current_path) as checker:
+                # check to skip
+                checker.check()
+
+                logger.info(f"Cutting all frames for {identifier}")
+
+                # get the paths
+                paths = [current_path.joinpath(channel, raw_im_folder)
+                         for channel in config.getlist(identifier, "Channels")]
+
+                # Get the corners and cut
+                corners = tuple([int(corner) for corner in config.getlist(identifier, "Corners")])
+                _ = cut_chamber.main(channel=paths, cutout_class=config.get(identifier, "CutImgClass"), corners=corners)
+
+            # run full segmentation (we checkpoint after each channel)
+            for channel in config.getlist(identifier, "Channels"):
+                with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config,
+                                       state=f"SegmentationFull_{channel}", identifier=identifier,
+                                       copy_path=current_path) as checker:
+                    # check to skip
+                    checker.check()
+
+                    logger.info(f"Segmenting test frames for {identifier} and channel {channel}...")
+
+                    # get the current model weight (if defined)
+                    model_weights = config.get(identifier, f"ModelWeights_{channel}")
+
+                    # run the selector
+                    path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
+                                                                               "model_weights_family_mother_machine")
+                    _ = segment_cells.main(path_model_weights=path_model_weights, path_pos=current_path,
+                                           path_channel=channel, postprocessing=True, network_name=model_weights,
+                                           segmentation_class=config.get(identifier, "SegmentationClass"))
+
+        if run_tracking:
+            pass
+
+    # TODO: copy settings and delete checkpoint
 
 
 # main routine
