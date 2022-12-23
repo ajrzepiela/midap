@@ -78,7 +78,7 @@ def run_module(args=None):
     logger.info(f"Importing all dependencies...")
     from .checkpoint import Checkpoint, CheckpointManager
     from .config import Config
-    from .apps import init_GUI, split_frames, cut_chamber, segment_cells
+    from .apps import init_GUI, split_frames, cut_chamber, segment_cells, segment_analysis
     logger.info("Done!")
 
     # create a config file if requested and exit
@@ -339,17 +339,21 @@ def run_module(args=None):
                     # check to skip
                     checker.check()
 
-                    logger.info(f"Segmenting test frames for {identifier} and channel {channel}...")
+                    logger.info(f"Segmenting all frames for {identifier} and channel {channel}...")
 
                     # get the current model weight (if defined)
                     model_weights = config.get(identifier, f"ModelWeights_{channel}")
 
-                    # run the selector
+                    # run the segmentation
                     path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
                                                                                "model_weights_family_mother_machine")
                     _ = segment_cells.main(path_model_weights=path_model_weights, path_pos=current_path,
                                            path_channel=channel, postprocessing=True, network_name=model_weights,
                                            segmentation_class=config.get(identifier, "SegmentationClass"))
+                    # analyse the images
+                    segment_analysis.main(path_seg=current_path.joinpath(channel, seg_im_folder),
+                                          path_result=current_path.joinpath(channel),
+                                          loglevel=args.loglevel)
 
         if run_tracking:
             pass
