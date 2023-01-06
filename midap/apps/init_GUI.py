@@ -7,7 +7,7 @@ import os
 
 from glob import glob
 from midap.config import Config
-from midap.utils import get_logger
+from midap.utils import get_logger, get_inheritors
 
 # Get all subclasses for the dropdown menus
 ###########################################
@@ -16,19 +16,19 @@ from midap.utils import get_logger
 from midap.imcut import *
 from midap.imcut import base_cutout
 
-imcut_subclasses = [subclass.__name__ for subclass in base_cutout.CutoutImage.__subclasses__()]
+imcut_subclasses = [subclass.__name__ for subclass in get_inheritors(base_cutout.CutoutImage)]
 
 # get all subclasses from the segmentations
 from midap.segmentation import *
 from midap.segmentation import base_segmentator
 
-segmentation_subclasses = [subclass.__name__ for subclass in base_segmentator.SegmentationPredictor.__subclasses__()]
+segmentation_subclasses = [subclass.__name__ for subclass in get_inheritors(base_segmentator.SegmentationPredictor)]
 
 # get all subclasses from the tracking
 from midap.tracking import *
 from midap.tracking import base_tracking
 
-tracking_subclasses = [subclass.__name__ for subclass in base_tracking.Tracking.__subclasses__()]
+tracking_subclasses = [subclass.__name__ for subclass in get_inheritors(base_tracking.Tracking)]
 
 # main function of the App
 ##########################

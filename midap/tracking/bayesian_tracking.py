@@ -83,7 +83,7 @@ class BayesianCellTracking(Tracking):
             self.tracker.update_method = BayesianUpdates.EXACT
 
             # configure the tracker using a config file
-            self.tracker.configure_from_file(self.config_file)
+            self.tracker.configure(self.config_file)
 
             # set params
             self.tracker.max_search_radius = 100
@@ -115,7 +115,7 @@ class BayesianCellTracking(Tracking):
                     self.label_stack[t][tr['coords'][i][:,0],tr['coords'][i][:,1]] = tr['ID']
                     
                 except IndexError:
-                    None
+                    pass
 
 
     def __find_nearest_neighbour(self, point: tuple, seg: np.ndarray):
@@ -186,7 +186,7 @@ class BayesianCellTracking(Tracking):
                         self.track_output_correct.iloc[ix_cell,ix_col_ID_d2] = new_ID_d2
 
                     except IndexError: #if cell skips frame
-                        None
+                        pass
 
                 max_t = self.track_output_correct[self.track_output_correct['trackID'] == new_ID_d1]['frame'].max()
                 for t_tmp_2 in range(t,max_t):
@@ -202,7 +202,7 @@ class BayesianCellTracking(Tracking):
                         ix_cell = np.where(filter_t&filter_ID)[0][0]
                         self.track_output_correct.iat[ix_cell,ix_col_ID] = new_ID_d2
                     except IndexError: #if cell skips frame
-                        None
+                        pass
 
 
     def __new_ID(self):
@@ -238,10 +238,9 @@ class BayesianCellTracking(Tracking):
         self.track_output.rename(columns = {'t':'frame', 'ID':'trackID'}, inplace = True)
 
 
-    def store_lineages(self, logger, output_folder: str):
+    def store_lineages(self, output_folder: str):
         """
         Store tracking output files: labeled stack, tracking output, input files.
-        :logger: 
         :output_folder: Folder where to store the data
         """
 
