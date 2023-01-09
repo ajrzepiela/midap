@@ -1,9 +1,20 @@
+import os
+from pathlib import Path
+from typing import Optional, Union
+
+import h5py
 import numpy as np
 import pandas as pd
-import h5py
-from skimage.measure import regionprops
-from scipy.spatial import distance
-from typing import Optional
+from skimage.measure import regionprops, label
+
+from ..utils import get_logger
+
+# get the logger we readout the variable or set it to max output
+if "__VERBOSE" in os.environ:
+    loglevel = int(os.environ["__VERBOSE"])
+else:
+    loglevel = 7
+logger = get_logger(__file__, loglevel)
 
 
 class DeltaV2Lineages:
@@ -11,318 +22,222 @@ class DeltaV2Lineages:
     A class to generate lineages based on trackinng outputs.
     """
 
-    def __init__(self, inputs: np.ndarray, results: np.ndarray):
+    # this logger will be shared by all instances and subclasses
+    logger = logger
+
+    def __init__(self, inputs: np.ndarray, results: np.ndarray, generate_lineage=True):
         """
         Initializes the class
         :param inputs: input array for tracking network
         :param results: output array of tracking network
+        :param generate_lineage: Generate the lineages immediately, defaults to True
         """
 
-        self.inputs = inputs
         self.results = results
+
+        # we append a input for the last frame
+        last_frame = np.zeros_like(inputs[:1])
+        last_frame[0,...,0] = inputs[-1,...,2]
+        last_frame[0,...,1] = label(inputs[-1,...,3])
+
+        self.inputs = np.concatenate([inputs, last_frame], axis=0)
+        self.n_frames = len(self.inputs)
+
+        # in this label stack all cells with the same ID are the same cell
+        self.label_stack = np.zeros(self.inputs.shape[:-1])
+
+        # get the dataframe
+        self.track_output = self.init_dataframe()
+
+        # generate the lineages
+        if generate_lineage:
+            self.generate_lineages()
+
+    def init_dataframe(self):
+        """
+        Initialize dataframe for tracking output.
+        :return: An empty dataframe with column labels
+        """
+
+        columns = ['frame', 'labelID', 'trackID', 'lineageID', 'trackID_d1', 'trackID_d2', 'split',
+                   'trackID_mother', 'area', 'edges_min_row', 'edges_min_col', 'edges_max_row',
+                   'edges_max_col', 'intensity_max', 'intensity_mean', 'intensity_min',
+                   'minor_axis_length', 'major_axis_length',
+                   'first_frame', 'last_frame']
+        return pd.DataFrame(columns=columns)
 
     def generate_lineages(self):
         """
         Generates lineages based on output of tracking (U-Net) network.
         """
 
-        # Generates global IDs for each frame and time step.
-        self.__generate_global_IDs()
+        # init the global unique ID and the track ID that track the cell through multiple cells
+        global_id = 0
+        track_id = 0
 
-        # Init dataframe and generate empty label stack
-        self.__init_dataframe()
-        self.label_stack = np.zeros((self.results.shape[:-1]))
+        # this goes through all labeled input the last
+        for frame_num, label_inp in enumerate(self.inputs[...,1]):
+            # we get all cells in the frame, first element is background
+            current_local_ids = np.unique(label_inp)[1:]
 
-        # Loop over all global IDs in list and connects cells between time frames
-        # with help of tracking results
-        num_time_steps = len(self.results)
-        self.trackID_list = np.arange(1, np.max(self.global_IDs) + 1).tolist()
+            # cycle through all local ids
+            for local_id in current_local_ids:
+                # track the cell if it's not already part of a lineage
+                if local_id not in self.track_output.loc[self.track_output["frame"] == frame_num, "labelID"].values:
+                    global_id, track_id = self._track_cell(frame_index=frame_num, cell_label=local_id,
+                                                           global_id=global_id, track_id=track_id)
 
-        while len(self.global_IDs) > 0:
-            # Gets first time frame where cell is present
-            start_ID = self.global_IDs[0] # globalID of currently tracked cell
-            first_frame_cell = np.where(self.global_label == start_ID)[0][0]
-
-            # Init list to store frame numbers where cell is present
-            frames = []
-            for frame_cell in range(first_frame_cell, num_time_steps):
-                # Check if track ID for current global ID was already assigned
-                if self.track_output.isna().loc[start_ID,'trackID']:
-                    trackID = self.__set_new_trackID()
-                else:
-                    trackID = self.track_output.loc[start_ID,'trackID']
-
-                # Get localID from input for current start ID/global ID
-                local_ID = self.__get_localID(frame_cell, start_ID)
-
-                # Add mother with new (unique) ID to label stack
-                self.label_stack[frame_cell][self.inputs[frame_cell,
-                                                         :, :, 1] == local_ID] = trackID
-                
-                # Compute features/IDs for cell
-                frames.append(frame_cell)
-                if len(frames) == 1:
-                    lineage_ID = trackID
-                cell_props = \
-                    self.__get_features(frame_cell, start_ID)
-
-                # Add data/features to DataFrame
-                self.track_output.loc[start_ID, 'frame'] = frame_cell
-                self.track_output.loc[start_ID, 'labelID'] = local_ID
-                self.track_output.loc[start_ID, 'trackID'] = trackID
-                self.track_output.loc[start_ID, 'lineageID'] = lineage_ID
-                self.track_output.loc[start_ID, 'area'] = cell_props.area
-                self.track_output.loc[start_ID, 'edges_min_row'] = cell_props.bbox[0]
-                self.track_output.loc[start_ID, 'edges_min_col'] = cell_props.bbox[1]
-                self.track_output.loc[start_ID, 'edges_max_row'] = cell_props.bbox[2]
-                self.track_output.loc[start_ID, 'edges_max_col'] = cell_props.bbox[3]
-                self.track_output.loc[start_ID, 'intensity_max'] = cell_props.intensity_max
-                self.track_output.loc[start_ID, 'intensity_mean'] = cell_props.intensity_mean
-                self.track_output.loc[start_ID, 'intensity_min'] = cell_props.intensity_min
-                self.track_output.loc[start_ID, 'minor_axis_length'] = cell_props.minor_axis_length
-                self.track_output.loc[start_ID, 'major_axis_length'] = cell_props.major_axis_length
-                self.track_output.loc[start_ID, 'frames'] = frames
-
-                # Generate binary masks for mother and daughter cells
-                daughter_1 = self.results[frame_cell][:, :, 0] == local_ID
-                daughter_2 = self.results[frame_cell][:, :, 1] == local_ID
-
-                # For all cells which are not in the last time frame
-                if frame_cell <= num_time_steps - 2:
-
-                    # Find global ID in next time frame to follow cell through time frames.
-                    # Only in case cell still exists in next frame.
-
-                    # Case 1: only daughter 1 is present
-                    if daughter_1.sum() > 0 and daughter_2.sum() == 0:
-                        new_global_ID = self.__get_new_daughter_ID(
-                            daughter_1, frame_cell)
-
-                        # update of df and set new globalID for next time-frame
-                        self.__update_df(new_global_ID, start_ID, trackID)
-                        self.__remove_global_ID(start_ID)
-                        start_ID = new_global_ID
-
-                    # Case 2: only daughter 2 is present
-                    elif daughter_1.sum() == 0 and daughter_2.sum() > 0:
-                        new_global_ID = self.__get_new_daughter_ID(
-                            daughter_2, frame_cell)
-
-                        # update of df and set new globalID for next time-frame
-                        self.__update_df(new_global_ID, start_ID, trackID)
-                        self.__remove_global_ID(start_ID)
-                        start_ID = new_global_ID
-
-                    # Case 3: cell split: both daughters are present
-                    elif daughter_1.sum() > 0 and daughter_2.sum() > 0:
-                        # get new ID for daughter one to continue tracking
-                        new_global_ID_d1 = self.__get_new_daughter_ID(
-                            daughter_1, frame_cell)
-                        new_global_ID_d2 = self.__get_new_daughter_ID(
-                            daughter_2, frame_cell)
-
-                        # cell split, new IDs for both daughter cells
-                        trackID_d1 = self.__set_new_trackID()
-                        trackID_d2 = self.__set_new_trackID()
-
-                        self.__update_df(new_global_ID_d1, start_ID, \
-                            trackID, trackID_d=trackID_d1)
-                        self.__update_df(new_global_ID_d2, start_ID, \
-                            trackID, trackID_d=trackID_d2)
-
-                        # Add trackID_mother, trackID_d1 and trackID_d2 to 
-                        # preceding cells with same trackID
-                        for f in frames:
-                            ix_prev_cell = np.where((self.track_output.frame == f) & \
-                                (self.track_output.trackID == trackID))[0][0] + 1
-                            self.track_output.loc[ix_prev_cell, 'trackID_d1'] = trackID_d1
-                            self.track_output.loc[ix_prev_cell, 'trackID_d2'] = trackID_d2
-                            if frames[0] > 0:
-                                self.track_output.loc[ix_prev_cell, 'trackID_mother'] = trackID
-
-                        # new_global_ID_d2 will stay in self.global_IDs and lineage generation is
-                        # continued at later time point.
-                        self.__remove_global_ID(start_ID)
-                        start_ID = new_global_ID_d1
-                        break
-
-                    # case 4: cell disappears
-                    elif daughter_1.sum() == 0 and daughter_2.sum() == 0:
-                        self.track_output.loc[start_ID, 'split'] = 0
-                        self.__remove_global_ID(start_ID)
-                        break
-
-                # Empty list to stop lineage generation
-                if frame_cell > num_time_steps-2:
-                    self.__remove_global_ID(start_ID)
-        
-        # Replace list of frames with first and last frame
-        for i in self.track_output.index:
-            self.track_output.loc[i, 'first_frame'] = self.track_output.loc[i, 'frames'][0]
-            self.track_output.loc[i, 'last_frame'] = self.track_output.loc[i, 'frames'][-1]
-        self.track_output.drop(['frames'],axis=1, inplace=True)
-
-
-    def __generate_global_IDs(self):
+    def _track_cell(self, frame_index: int, cell_label: int, global_id: int, track_id: int,
+                    first_frame: Optional[int]=None, lineage_id: Optional[int]=None, mother_id: Optional[int]=None):
         """
-        Generates global IDs with one ID per cell and time frame and list with all global IDs.
+        Tracks a cell through the results recursively
+        :param frame_index: The index of the frame where the cell is located
+        :param cell_label: The label of the cell in the frame given by frame_index
+        :param global_id: The global ID for this cell
+        :param track_id: The tracking ID for this cell
+        :param first_frame: The frame index of the first frame the cell appeared, defaults to frame_index
+        :param lineage_id: The lineage ID of the current lineage
+        :param mother_id: The optional tracking ID of the mother cell if the cell resulted from a split
+        :return: The next unique global and tracking id
         """
 
-        self.global_label = np.empty(self.inputs[:, :, :, 1].shape)
+        # set the lineage ID if necessary
+        if lineage_id is None:
+            lineage_id = track_id
+        # get the frist frame if necessary
+        if first_frame is None:
+            first_frame = frame_index
 
-        # Loops through all time frames and adding the maximal cell ID of the previous time frame to the
-        # IDs/labels of the current time frame. By that every cell in every time frame gets one global ID.
-        max_val = 0
-        for i, inp in enumerate(self.inputs[:, :, :, 1]):
-            new_label = inp + max_val
-            new_label[inp == 0] = 0
-            self.global_label[i] = new_label
-            max_val = np.max(self.global_label[i])
+        # we get the cell properties
+        cell = (self.inputs[frame_index,...,1] == cell_label)
+        cell_props = regionprops(cell.astype(int), intensity_image=self.inputs[frame_index, :, :, 0])[0]
 
-        self.global_IDs = list(np.unique(self.global_label)[1:].astype(int))
+        # update label stack
+        self.label_stack[frame_index, cell] = track_id
 
-    def __init_dataframe(self):
+        # add cell to output
+        self.track_output.loc[global_id, 'frame'] = frame_index
+        self.track_output.loc[global_id, 'labelID'] = cell_label
+        self.track_output.loc[global_id, 'trackID'] = track_id
+        self.track_output.loc[global_id, 'lineageID'] = lineage_id
+        self.track_output.loc[global_id, 'area'] = cell_props.area
+        self.track_output.loc[global_id, 'edges_min_row'] = cell_props.bbox[0]
+        self.track_output.loc[global_id, 'edges_min_col'] = cell_props.bbox[1]
+        self.track_output.loc[global_id, 'edges_max_row'] = cell_props.bbox[2]
+        self.track_output.loc[global_id, 'edges_max_col'] = cell_props.bbox[3]
+        self.track_output.loc[global_id, 'intensity_max'] = cell_props.intensity_max
+        self.track_output.loc[global_id, 'intensity_mean'] = cell_props.intensity_mean
+        self.track_output.loc[global_id, 'intensity_min'] = cell_props.intensity_min
+        self.track_output.loc[global_id, 'minor_axis_length'] = cell_props.minor_axis_length
+        self.track_output.loc[global_id, 'major_axis_length'] = cell_props.major_axis_length
+        self.track_output.loc[global_id, 'first_frame'] = first_frame
+        if mother_id is not None:
+            self.track_output.loc[global_id, 'trackID_mother'] = mother_id
+
+        # last frame
+        if frame_index == self.n_frames - 1:
+            # no split
+            self.track_output.loc[global_id, 'split'] = 0
+            # update the last frame for all previous cells
+            self.track_output.loc[self.track_output['trackID'] == track_id, 'last_frame'] = frame_index
+
+            # return new global id and track id
+            return global_id + 1, track_id + 1
+
+        # Generate binary masks for mother and daughter cells
+        daughter_1 = self.results[frame_index,:, :, 0] == cell_label
+        daughter_2 = self.results[frame_index,:, :, 1] == cell_label
+
+        # Case 1: only daughter 1 is present
+        if daughter_1.sum() > 0 and daughter_2.sum() == 0:
+            # no split occured
+            self.track_output.loc[global_id, 'split'] = 0
+            # get the local ID in the next frame
+            new_local_id = self.get_id_from_mask(label_img=self.inputs[frame_index + 1, ..., 1], mask=daughter_1)
+            global_id, track_id = self._track_cell(frame_index=frame_index + 1, cell_label=new_local_id,
+                                                   global_id=global_id + 1, first_frame=first_frame, track_id=track_id,
+                                                   lineage_id=lineage_id)
+
+        # Case 2: only daughter 2 is present
+        elif daughter_1.sum() == 0 and daughter_2.sum() > 0:
+            # no split occured
+            self.track_output.loc[global_id, 'split'] = 0
+            # get the local ID in the next frame
+            new_local_id = self.get_id_from_mask(label_img=self.inputs[frame_index + 1, ..., 1], mask=daughter_2)
+            global_id, track_id = self._track_cell(frame_index=frame_index + 1, cell_label=new_local_id,
+                                                   global_id=global_id + 1, first_frame=first_frame, track_id=track_id,
+                                                   lineage_id=lineage_id)
+
+        # Case 3: cell split: both daughters are present
+        elif daughter_1.sum() > 0 and daughter_2.sum() > 0:
+            # split occured
+            self.track_output.loc[global_id, 'split'] = 1
+            # update the last frame for all previous cells
+            self.track_output.loc[self.track_output['trackID'] == track_id, 'last_frame'] = frame_index
+
+            # mother id for both cells
+            mother_id = track_id
+
+            # deal with daughter 1, get new local ID, set trackID of daughter for previous cells, tracl
+            new_local_id = self.get_id_from_mask(label_img=self.inputs[frame_index + 1, ..., 1], mask=daughter_1)
+            self.track_output.loc[self.track_output['trackID'] == mother_id, 'trackID_d1'] = track_id + 1
+            global_id, track_id = self._track_cell(frame_index=frame_index + 1, cell_label=new_local_id,
+                                                   global_id=global_id + 1, track_id=track_id + 1, lineage_id=lineage_id,
+                                                   mother_id=mother_id)
+
+            # deal with daughter 2, get new local ID, set trackID of daughter for previous cells, track
+            new_local_id = self.get_id_from_mask(label_img=self.inputs[frame_index + 1, ..., 1], mask=daughter_2)
+            # we do not need to increment track and global id here, since the previous call did that
+            self.track_output.loc[self.track_output['trackID'] == mother_id, 'trackID_d2'] = track_id
+            global_id, track_id = self._track_cell(frame_index=frame_index + 1, cell_label=new_local_id,
+                                                   global_id=global_id, track_id=track_id, lineage_id=lineage_id,
+                                                   mother_id=mother_id)
+
+        # case 4: cell disappears
+        elif daughter_1.sum() == 0 and daughter_2.sum() == 0:
+            # no split occured
+            self.track_output.loc[global_id, 'split'] = 0
+            # update the last frame for all previous cells
+            self.track_output.loc[self.track_output['trackID'] == track_id, 'last_frame'] = frame_index
+            # update global and track id
+            global_id += 1
+            track_id += 1
+
+        return global_id, track_id
+
+    def get_id_from_mask(self, label_img, mask):
         """
-        Initialize dataframe for tracking output.
-        """
-
-        columns = ['frame', 'labelID', 'trackID', 'lineageID', 'trackID_d1', 'trackID_d2', 'split',
-                    'trackID_mother', 'area', 'edges_min_row', 'edges_min_col', 'edges_max_row', 
-                    'edges_max_col', 'intensity_max', 'intensity_mean', 'intensity_min', 
-                    'minor_axis_length', 'major_axis_length', 'frames',
-                    'first_frame', 'last_frame']
-        self.track_output = pd.DataFrame(columns=columns, index=self.global_IDs)
-
-    def __get_localID(self, frame_cell: int, start_ID: int):
-        """
-        Get localID in current time-frame given the startID.
-        :param frame_cell: Number of the current time frame.
-        :param start_ID: GlobalID which is currently processed.
-        :return: The local ID
-        """
-
-        return self.inputs[frame_cell, :, :, 1][self.global_label[frame_cell].astype(
-                    int) == start_ID][0].astype(int)
-
-    def __get_new_daughter_ID(self, daughter: np.ndarray, frame_cell: int):
-        """
-        Extracts global ID of daughter cell in next time frame.
-        :param daughter: Segmentation image of daughter cell generated by the U-Net.
-        :param frame_cell: Number of the current time frame.
-        :return: The global ID of the daughter cell
-        """
-
-        # get center of daughter in current frame
-        daughter_cent = regionprops(daughter.astype(int))[0].centroid
-
-        # get center of single cells in next frame
-        seg_next_frame = self.inputs[frame_cell+1, :, :, 1]
-        segs_next_frame_cents = [
-            r.centroid for r in regionprops(seg_next_frame.astype(int))]
-        min_dist = np.argmin([distance.euclidean(daughter_cent, c)
-                             for c in segs_next_frame_cents])
-
-        # get local ID in next frame from index => + 1
-        new_local_ID = min_dist + 1
-
-        # get global ID in next frame
-        new_global_ID = self.global_label[frame_cell+1][self.inputs[(
-            frame_cell+1), :, :, 1] == new_local_ID][0].astype(int)
-
-        return new_global_ID
-
-    def __get_features(self, frame_cell: int, start_ID: int):
-        """
-        Extracts features for each cell.
-        :param frame_cell: Number of the current time frame.
-        :param start_ID: GlobalID which is currently processed.
-        :return: The features of each cell
-        """
-
-        # get center of daughter in current frame
-        cell = (self.global_label == start_ID)[frame_cell]
-        cell_props = regionprops(cell.astype(int), intensity_image = self.inputs[frame_cell,:, :, 0])[0]
-
-        return cell_props
-
-    def __update_df(self, new_global_ID: int, start_ID: int, trackID: int, trackID_d: Optional[int]=None):
-        """
-        Update track output.
-        :param new_global_ID: global_ID in next tim-fram.
-        :param start_ID: globalID which is currently processed.
-        :param trackID: Unique trackID of current cell.
-        :param trackID_d: Unique trackID of daughter cell.
-        """
-
-        if not trackID_d:
-            self.track_output.loc[new_global_ID, 'trackID'] = trackID
-            self.track_output.loc[start_ID, 'split'] = 0
-
-        elif trackID_d:
-            self.track_output.loc[start_ID, 'trackID_d1'] = trackID_d
-            self.track_output.loc[new_global_ID, 'trackID'] = trackID_d
-            self.track_output.loc[new_global_ID, 'trackID_mother'] = trackID
-            self.track_output.loc[start_ID, 'split'] = 1
-
-    def __remove_global_ID(self, current_ID: int):
-        """
-        Removes global ID from list of all global IDs during the lineage generation.
-        :param current_ID: ID which is currently processed during tracking.
-        """
-
-        # remove current ID from global IDs
-        try:
-            self.global_IDs.remove(current_ID)
-        except ValueError:
-            pass
-
-    def __set_new_trackID(self):
-        """
-        Removes current trackID from list of all trackIDs and sets trackID to next item from list.
-        :return: The new tracking ID
+        Given an labeled image and a mask, return the label of occuring in the mask,
+        :param label_img: The labeled image
+        :param mask: The mask to apply
+        :return: The unique label of the mask, raises an error if multiple labels are within the mask
         """
 
-        new_trackID = self.trackID_list[0]
-        self.trackID_list.remove(new_trackID)
-        return new_trackID
+        masked_id = np.unique(label_img[mask])
 
+        assert len(masked_id) == 1
 
-    def store_lineages(self, logger, output_folder: str):
+        return masked_id[0]
+
+    def store_lineages(self, output_folder: Union[str, bytes, os.PathLike]):
         """
         Store tracking output files: labeled stack, tracking output, input files.
-        :logger: 
         :output_folder: Folder where to store the data
         """
 
-        try:
-            # use the results, this will trigger a file not found error if the tracking did not produce anything
+        # transform to path
+        output_folder = Path(output_folder)
 
-            # Save data
-            self.track_output.to_csv(output_folder + '/track_output_delta.csv', index=True)
+        # save everything
+        self.track_output.to_csv(output_folder.joinpath('track_output_delta.csv'), index=True)
 
-            hf = h5py.File(output_folder + '/raw_inputs_delta.h5', 'w')
-            raw_inputs = self.inputs[:, :, :, 0]
+        raw_inputs = self.inputs[:, :, :, 0]
+        with h5py.File(output_folder.joinpath('raw_inputs_delta.h5'), 'w') as hf:
             hf.create_dataset('raw_inputs', data=raw_inputs)
-            hf.close()
 
-            hf = h5py.File(output_folder + '/segmentations_delta.h5', 'w')
-            segs = self.inputs[0, :, :, 3]
+        segs = self.inputs[0, :, :, 3]
+        with h5py.File(output_folder.joinpath('segmentations_delta.h5'), 'w') as hf:
             hf.create_dataset('segmentations', data=segs)
-            hf.close()
 
-            hf = h5py.File(output_folder + '/label_stack_delta.h5', 'w')
+        with h5py.File(output_folder.joinpath('label_stack_delta.h5'), 'w') as hf:
             hf.create_dataset('label_stack', data=self.label_stack)
-            hf.close()
-
-        except FileNotFoundError:
-            # the is no output for the tracking
-            logger.warning("The tracking does not have produced any output.")
-
-            # we dump an empty file to show that the code did actually run
-            columns = ['frame', 'labelID', 'trackID', 'lineageID', 'trackID_d1', 'trackID_d2', 'split',
-                    'trackID_mother', 'area', 'edges_min_row', 'edges_min_col', 'edges_max_row',
-                    'edges_max_col', 'intensity_max', 'intensity_mean', 'intensity_min',
-                    'minor_axis_length', 'major_axis_length', 'frames',
-                    'first_frame', 'last_frame']
-            track_output = pd.DataFrame(columns=columns)
-            track_output.to_csv(os.path.join(args.path, '/track_output_delta.csv'), index=True)
