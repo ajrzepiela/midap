@@ -283,6 +283,8 @@ def run_module(args=None):
                         config.to_file()
 
     # we cycle through all pos identifiers again to perform all tasks fully
+    #######################################################################
+
     for identifier in config.getlist("General", "IdentifierFound"):
         # read out what we need to do
         run_segmentation = config.get(identifier, "RunOption").lower() in ['both', 'segmentation']
