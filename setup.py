@@ -10,4 +10,9 @@ setup(
     keywords='Segmentation, Tracking, Biology',
     packages=find_packages(include=["midap.*"]),
     project_urls={'Midap': 'https://gitlab.ethz.ch/oschmanf/ackermann-bacteria-segmentation/'},
+    entry_points={
+        'console_scripts': [
+            'correct_segmentation = midap.apps.correct_segmentation:main',
+        ],
+    },
 )

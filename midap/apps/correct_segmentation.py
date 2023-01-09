@@ -4,11 +4,11 @@ Correct segmentations
 
 Correct a segmentation generated with Midap
 """
-import os
-
 import argparse
-import numpy as np
+import os
+from typing import Union
 
+import click
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
 
@@ -20,28 +20,29 @@ def get_args() -> None:
     Get arguments provided over the command line.
     '''
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_img', help='path to images')
+    parser.add_argument('--path_img', type=str, help='path to images')
     parser.add_argument('--path_seg', help='path to segmentations')
     args = parser.parse_args()
     return args
 
 
-def main() -> None:
+@click.command()
+@click.option('--path_img', help='path to images', type=str)
+@click.option('--path_seg', help='path to segmentations', type=str)
+def main(path_img: Union[str, bytes, os.PathLike], path_seg: Union[str, bytes, os.PathLike]) -> None:
     '''
     Main function to run the segmentation correction with napari.
     '''
-    args = get_args()
 
     # get file names
-    files_cut_im = np.sort(os.listdir(args.path_img))
-    files_seg_im = np.sort(os.listdir(args.path_seg))
+    files_cut_im = sorted(os.listdir(path_img))
+    files_seg_im = sorted(os.listdir(path_seg))
 
     # plot first time frame
     fig, ax = plt.subplots()
     fig.subplots_adjust(bottom=0.2)
 
-    callback = Correction(ax, args.path_img,
-                          args.path_seg, files_cut_im, files_seg_im)
+    callback = Correction(ax, path_img, path_seg, files_cut_im, files_seg_im)
     callback.load_img_seg(0)
 
     im1 = ax.imshow(callback.overl)
