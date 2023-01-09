@@ -10,7 +10,7 @@ from skimage.morphology import remove_small_objects
 from skimage.transform import resize
 from tqdm import tqdm
 
-from .deltav2_lineage import DeltaV2Lineages
+from .delta_lineage import DeltaTypeLineages
 from ..utils import get_logger
 
 process = psutil.Process(os.getpid())
@@ -109,8 +109,7 @@ class DeltaTypeTracking(Tracking):
         results_all_red = self.reduce_data(output_folder=output_folder, inputs=inputs, results=results)
 
         if results_all_red is not None:
-            lin = DeltaV2Lineages(inputs=np.array(inputs), results=results_all_red)
-            lin.generate_lineages()
+            lin = DeltaTypeLineages(inputs=np.array(inputs), results=results_all_red)
             lin.store_lineages(output_folder=output_folder)
         else:
             logger.warning("Tracking did not generate any output!")

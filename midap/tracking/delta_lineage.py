@@ -17,7 +17,7 @@ else:
 logger = get_logger(__file__, loglevel)
 
 
-class DeltaV2Lineages:
+class DeltaTypeLineages:
     """
     A class to generate lineages based on trackinng outputs.
     """
