@@ -78,7 +78,7 @@ def run_module(args=None):
     logger.info(f"Importing all dependencies...")
     from .checkpoint import Checkpoint, CheckpointManager
     from .config import Config
-    from .apps import init_GUI, split_frames, cut_chamber, segment_cells, segment_analysis
+    from .apps import init_GUI, split_frames, cut_chamber, segment_cells, segment_analysis, track_cells
     logger.info("Done!")
 
     # create a config file if requested and exit
@@ -358,9 +358,25 @@ def run_module(args=None):
                                           loglevel=args.loglevel)
 
         if run_tracking:
-            pass
+            # run full segmentation (we checkpoint after each channel)
+            for channel in config.getlist(identifier, "Channels"):
+                with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config,
+                                       state=f"Tracking_{channel}", identifier=identifier,
+                                       copy_path=current_path) as checker:
+                    # check to skip
+                    checker.check()
 
-    # TODO: copy settings and delete checkpoint
+                    # track the cells
+                    track_cells.main(path=current_path.joinpath(channel),
+                                     tracking_class=config.get(identifier, "TrackingClass"),
+                                     loglevel=args.loglevel)
+
+        # if we are here, we copy the config file to the identifier and remove the checkpoint from the identifier
+        logger.info(f"Finished with identifier {identifier}, coping settings...")
+        config.to_file(current_path)
+        current_path.joinpath(checkpoint.fname).unlink(missing_ok=True)
+
+    logger.info("Done!")
 
 
 # main routine

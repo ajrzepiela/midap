@@ -3,8 +3,6 @@ import os
 from pathlib import Path
 from typing import Union
 
-import numpy as np
-
 # to get all subclasses
 from midap.tracking import *
 from midap.tracking import base_tracking

@@ -29,6 +29,7 @@ from midap.tracking import *
 from midap.tracking import base_tracking
 
 tracking_subclasses = [subclass.__name__ for subclass in get_inheritors(base_tracking.Tracking)]
+tracking_subclasses.remove("DeltaTypeTracking")
 
 # main function of the App
 ##########################

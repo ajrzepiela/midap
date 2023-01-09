@@ -8,23 +8,26 @@ from typing import Optional, Union
 # Get all subclasses to check validity of config
 ################################################
 
+from midap.utils import get_inheritors
+
 # get all subclasses from the imcut
 from midap.imcut import *
 from midap.imcut import base_cutout
 
-imcut_subclasses = [subclass.__name__ for subclass in base_cutout.CutoutImage.__subclasses__()]
+imcut_subclasses = [subclass.__name__ for subclass in get_inheritors(base_cutout.CutoutImage)]
 
 # get all subclasses from the segmentations
 from midap.segmentation import *
 from midap.segmentation import base_segmentator
 
-segmentation_subclasses = [subclass.__name__ for subclass in base_segmentator.SegmentationPredictor.__subclasses__()]
+segmentation_subclasses = [subclass.__name__ for subclass in get_inheritors(base_segmentator.SegmentationPredictor)]
 
 # get all subclasses from the tracking
 from midap.tracking import *
 from midap.tracking import base_tracking
 
-tracking_subclasses = [subclass.__name__ for subclass in base_tracking.Tracking.__subclasses__()]
+tracking_subclasses = [subclass.__name__ for subclass in get_inheritors(base_tracking.Tracking)]
+tracking_subclasses.remove("DeltaTypeTracking")
 
 class Config(ConfigParser):
     """
@@ -171,9 +174,6 @@ class Config(ConfigParser):
                     model_weights = self.get(id_name, f"ModelWeights_{channel}")
                     if model_weights not in ['bact_phase_cp', 'bact_fluor_cp', 'bact_phase_omni', 'bact_fluor_omni']:
                         raise ValueError(f"Invalid 'ModelWeights' for method 'OmniSegmentation': {model_weights}")
-
-            # TODO: do the check of the remaining variables
-
 
     def getlist(self, section, option):
         """
