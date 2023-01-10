@@ -13,23 +13,16 @@ from matplotlib.widgets import Button
 from midap.correction.napari_correction import Correction
 
 
-def get_args() -> None:
-    '''
-    Get arguments provided over the command line.
-    '''
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--path_img', type=str, help='path to images')
-    parser.add_argument('--path_seg', help='path to segmentations')
-    args = parser.parse_args()
-    return args
-
 def main() -> None:
-    '''
+    """
     Main function to run the segmentation correction with napari.
-    '''
+    """
 
-    # get the args
-    args = get_args()
+    # parse args
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--path_img', type=str, required=True, help='Path to raw image folder.')
+    parser.add_argument('--path_seg', type=str, required=True, help='Path to segmentation folder.')
+    args = parser.parse_args()
 
     # get file names
     files_cut_im = sorted(os.listdir(args.path_img))
