@@ -1,11 +1,12 @@
 import os
 import re
+from abc import ABC, abstractmethod
+from typing import Union
+
 import numpy as np
 import skimage.io as io
-
 from skimage.measure import label, regionprops
 from tqdm import tqdm
-from abc import ABC, abstractmethod
 
 from ..utils import get_logger
 
@@ -25,7 +26,8 @@ class SegmentationPredictor(ABC):
     # this logger will be shared by all instances and subclasses
     logger = logger
 
-    def __init__(self, path_model_weights, postprocessing, div=16, connectivity=1, model_weights=None):
+    def __init__(self, path_model_weights: Union[str, bytes, os.PathLike], postprocessing: bool, div=16, connectivity=1,
+                 model_weights: Union[str, bytes, os.PathLike, None]=None):
         """
         Initializes the SegmentationPredictor instance
         :param path_model_weights: Path to the model weights
@@ -49,7 +51,7 @@ class SegmentationPredictor(ABC):
         self.model_weights = model_weights
         self.segmentation_method = None
 
-    def run_image_stack(self, channel_path):
+    def run_image_stack(self, channel_path: Union[str, bytes, os.PathLike]):
         """
         Performs image segmentation, postprocessing and storage for all images found in channel_path
         :param channel_path: Directory of the channel used for the analysis
@@ -57,7 +59,6 @@ class SegmentationPredictor(ABC):
         path_cut = os.path.join(channel_path, "cut_im")
         path_seg = os.path.join(channel_path, "seg_im")
         path_seg_bin = os.path.join(channel_path, "seg_im_bin")
-        path_seg_track = os.path.join(channel_path, "input_ilastik_tracking")
 
         # get all the images to segment
         path_imgs = np.sort(os.listdir(path_cut))
@@ -92,7 +93,7 @@ class SegmentationPredictor(ABC):
             seg_fname = re.sub("(_cut.tif|_cut.png|.tif)", "_seg_bin.png", p)
             io.imsave(os.path.join(path_seg_bin, seg_fname), (255*seg).astype(np.uint8), check_contrast=False)
 
-    def postprocess_seg(self, seg):
+    def postprocess_seg(self, seg: np.ndarray):
         """
         Performs postprocessing on a segmentation, e.g. remove segmentations that are too small and area closing
         :param seg: The input segmentation
@@ -104,21 +105,22 @@ class SegmentationPredictor(ABC):
         sizes = np.bincount(label_objects.ravel())
         reg = regionprops(label_objects)
         areas = [r.area for r in reg]
+
         # We take everything that is larger than 1% of the average size
         min_size = np.mean(areas)*0.01
-        # mask_sizes = (sizes > min_size)&(sizes < max_size)
         mask_sizes = (sizes > min_size)
         mask_sizes[0] = 0
         img_filt = (mask_sizes[label_objects] > 0).astype(int)
 
         return img_filt
 
-    def scale_pixel_vals(self, img):
+    def scale_pixel_vals(self, img: np.ndarray):
         """
         Scales the values of the pixels of an image such that they are between 0 and 1
         :param img: The input image as array
         :returns: The images with pixels scales between 0 and 1
         """
+
         img = np.array(img)
         return ((img - img.min()) / (img.max() - img.min()))
 

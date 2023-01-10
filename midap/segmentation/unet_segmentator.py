@@ -7,7 +7,7 @@ from skimage.segmentation import watershed
 from skimage.filters import sobel
 from matplotlib.widgets import RadioButtons
 from tqdm import tqdm
-from typing import Iterable
+from typing import Collection, Union
 
 from ..networks.unets import UNetv1
 from .base_segmentator import SegmentationPredictor
@@ -28,7 +28,7 @@ class UNetSegmentation(SegmentationPredictor):
         # base class init
         super().__init__(*args, **kwargs)
 
-    def set_segmentation_method(self, path_to_cutouts: str):
+    def set_segmentation_method(self, path_to_cutouts: Union[str, bytes, os.PathLike]):
         """
         Performs the weight selection for the segmentation network. A custom method should use this function to set
         self.segmentation_method to a function that takes an input images and returns a segmentation of the image,
@@ -108,7 +108,7 @@ class UNetSegmentation(SegmentationPredictor):
         else:
             self.segmentation_method = self.seg_method_unet
 
-    def seg_method_unet(self, imgs_in: Iterable[np.ndarray]):
+    def seg_method_unet(self, imgs_in: Collection[np.ndarray]):
         """
         Performs image segmentation with unet and the selected model weights
         :param imgs_in: List of input images
@@ -136,7 +136,7 @@ class UNetSegmentation(SegmentationPredictor):
 
         return segs
 
-    def seg_method_watershed(self, imgs_in: Iterable[np.ndarray]):
+    def seg_method_watershed(self, imgs_in: Collection[np.ndarray]):
         """
         Performs watershed segmentation with scaling
         :param imgs_in: List of input images
@@ -166,7 +166,7 @@ class UNetSegmentation(SegmentationPredictor):
         segmentation = watershed(elevation_map, markers)
         return (segmentation <= 1).astype(int)
 
-    def pad_image(self, img):
+    def pad_image(self, img: np.ndarray):
         """
         Pad the image in mirror padding to the next higher number that is divisible by the set div attribute
         :param img: The input image as array
@@ -187,7 +187,7 @@ class UNetSegmentation(SegmentationPredictor):
         # add batch and channel dim
         return img_pad[None,...,None]
 
-    def undo_padding(self, img_pad):
+    def undo_padding(self, img_pad: np.ndarray):
         """
         Reverses the padding added by <pad_image>
         :param img_pad: padded image as array
