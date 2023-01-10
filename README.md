@@ -25,22 +25,23 @@ The installation was tested on macOS Big Sur (11.6.7), Ubuntu 22.04 and WSL II o
          conda activate midap
          ```
 
-3. Navigate to the bin directory with `cd bin/`. You can start the pipeline from the command line with `./run_pipeline.sh`. The script accepts arguments and has the following signature:
+3. Once the virtual environment is activated, you can run the module from anywhere via `midap`. The module accepts arguments and has the following signature:
 
 ```
-Syntax: run_pipeline.sh [options]
+usage: midap [-h] [--restart [RESTART]] [--headless] [--loglevel LOGLEVEL] [--cpu_only] [--create_config]
 
-Options:
- -h, --help         Display this help
- --restart [PATH]   Restart pipeline from log file. If PATH is specified
-                    the checkpoint and settings file will be restored from
-                    PATH, otherwise the current working directory is searched
- --headless         Run pipeline in headless mode (no GUI)
- --loglevel         Set logging level of script (0-7), defaults to 7 (max log)
- --cpu_only         Sets CUDA_VISIBLE_DEVICES to -1 which will cause most!
-                    applications to use CPU only.
+Runs the cell segmentation and tracking pipeline.
+
+optional arguments:
+  -h, --help           show this help message and exit
+  --restart [RESTART]  Restart pipeline from log file. If a path is specified the checkpoint and settings file will be restored from the path, otherwise the current working directory is
+                       searched.
+  --headless           Run pipeline in headless mode, ALL parameters have to be set prior in a config file.
+  --loglevel LOGLEVEL  Set logging level of script (0-7), defaults to 7 (max log)
+  --cpu_only           Sets CUDA_VISIBLE_DEVICES to -1 which will cause most! applications to use CPU only.
+  --create_config      If this flag is set, all other arguments will be ignored and a 'settings.ini' config file is generated in the current working directory. This option is meant
+                       generate config file templates for the '--headless' mode. Note that this will overwrite if a file already exists.
 ```
-Note that the `--headless` option currently only skips the first GUI and expects that a `settings.sh` is provided in the working directory.
 
 ## Installation on the Euler cluster
 
@@ -68,29 +69,17 @@ The pipeline requires grayscale tiff-stacks as input files.
 By default the phase images are not segmented. In case you would like to do cell segmentation and tracking for your phase images, place click the box next to the respective field.
 **Please note:** all input fields are case sensitive!
 
-### Manual correction and visuallization of results
+### Manual correction of segmentations
 
-The scripts for manual correction and visualization use the Python package napari. To use these scripts, a new environment has to be created:
+The scripts for manual correction and visualization use the Python package napari. The scrip can be run via the `correct_segmentation` command which has the signature:
 
 ```
-conda create -y -n napari-env -c conda-forge python=3.9
-conda activate napari-env
-python -m pip install "napari[all]"
-```
+usage: correct_segmentation [-h] --path_img PATH_IMG --path_seg PATH_SEG
 
-#### Manual correction of segmentations
-The manual correction can be started with the following commands:
-```
-cd bin/
-python correct_segmentation.py --path_img FOLDER_IMG --path_seg FOLDER_SEG_IMG
-```
-
-The arguments FOLDER_IMG and FOLDER_SEG_IMG are passed as strings and should contain the full path name to the respective folder (e.g. '/Users/Documents/cut_im/' or '/Users/Documents/seg_im/').
-
-#### Visualization of tracking results
-```
-cd bin/
-python visualize_lineages.py --path ../example_data/Glen/{Position}/{Channel}/track_output/
+optional arguments:
+  -h, --help           show this help message and exit
+  --path_img PATH_IMG  Path to raw image folder.
+  --path_seg PATH_SEG  Path to segmentation folder.
 ```
 
 ### Modularity of the Pipeline
@@ -125,7 +114,7 @@ To define a custom method for the cell tracking, you can start by copying the `d
 cd midap/tracking
 cp deltav2_tracking.py <your_filename>.py
 ```
-In the copied file, change the name of the class from `DeltaV2Tracking` to your own class. Choose a descriptive name as the name of this class will be shown in the dropdown menu of the GUI to select the method. Then you can overwrite the `load_model` method with your own method. Note that you should not add additional arguments to the method and the method has to set the attribute `self.model` to a model that performs the cell tracking. This model should be callable like the DeltaV2 model (see the [paper](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1009797) for more information). You can make use of all the attributes that the base class (`Tracking` defined in `base_tracking.py`) sets in its constructor.
+In the copied file, change the name of the class from `DeltaV2Tracking` to your own class. Choose a descriptive name as the name of this class will be shown in the dropdown menu of the GUI to select the method. Then you can overwrite the `load_model` method with your own method. Note that you should not add additional arguments to the method and the method has to set the attribute `self.model` to a model that performs the cell tracking. This model should be callable like the DeltaV2 model (see the [paper](https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1009797) for more information). You can make use of all the attributes that the base class (`DeltaTypeTracking` defined in `base_tracking.py`) sets in its constructor.
 
 ## Training segmentation models
 

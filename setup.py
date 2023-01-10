@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="midap",
-    version="0.2.0",
+    version="0.2.1",
     description='A package for cell segmentation and tracking.',
     author='Oschmann  Franziska, Fluri Janis',
     author_email='franziska.oschmann@id.ethz.ch, janis.fluri@id.ethz.ch',

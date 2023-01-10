@@ -24,7 +24,7 @@ def run_module(args=None):
     # argument parsing
     description = "Runs the cell segmentation and tracking pipeline."
     parser = argparse.ArgumentParser(description=description, add_help=True,
-                                     usage="python -m midap [-h] [--restart [RESTART]] [--headless] "
+                                     usage="midap [-h] [--restart [RESTART]] [--headless] "
                                            "[--loglevel LOGLEVEL] [--cpu_only] [--create_config]")
     # This arge is default if the flag is not set, it is const if it is set without arg, and it is the arg if provided
     parser.add_argument("--restart", nargs="?", default=None, const='.', type=str,
