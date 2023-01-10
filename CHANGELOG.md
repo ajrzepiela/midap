@@ -35,6 +35,8 @@ Feature:
 - New helper routines in utils
 - All apps are now in the apps folder of the package and can be run with command line arguments as well.
 - Cleanup of segmentation
+- GUI based segmentation selection (#8) 
+- Live cutout visualization (#5)
 
 Fix:
 - The test work again
