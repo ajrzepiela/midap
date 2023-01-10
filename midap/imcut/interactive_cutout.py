@@ -44,8 +44,11 @@ class InteractiveCutout(CutoutImage):
         x1, y1 = eclick.xdata, eclick.ydata
         x2, y2 = erelease.xdata, erelease.ydata
 
-        rect = plt.Rectangle( (min(x1,x2),min(y1,y2)), np.abs(x1-x2), np.abs(y1-y2) )
-        self.ax.add_patch(rect)
+        # update the plot on the right
+        self.ax[1].set_xlim(x1, x2)
+        self.ax[1].set_ylim(y2, y1)
+        self.ax[1].relim()
+        plt.draw()
 
     def interactive_cutout(self, img):
         """
@@ -53,21 +56,30 @@ class InteractiveCutout(CutoutImage):
         :param img: The image for the plot as array
         :returns: The corners as (left_x, right_x, lower_y, upper_y)
         """
-        fig, self.ax = plt.subplots()
-        self.ax.imshow(img)
 
-        rs = RectangleSelector(self.ax, self.line_select_callback,
-                       drawtype='box', useblit=False, button=[1],
+        # image and selector
+        fig, self.ax = plt.subplots(1, 2)
+        self.ax[0].imshow(img)
+        self.ax[0].set_xticks([])
+        self.ax[0].set_yticks([])
+        self.ax[0].set_title("Select Region here:")
+        rs = RectangleSelector(self.ax[0], self.line_select_callback,
+                       drawtype='box', useblit=True, button=[1],
                        minspanx=5, minspany=5, spancoords='pixels',
                        interactive=True)
+        x1, x2, y1, y2 = img.shape[0]//4, 3*img.shape[0]//4, img.shape[1]//4, 3*img.shape[1]//4
+        rs.extents = (x1, x2, y1, y2)
+
+        # show the zoom
+        self.ax[1].imshow(img)
+        self.ax[1].set_title("Current Selection:")
+        self.ax[1].set_xticks([])
+        self.ax[1].set_yticks([])
+        self.ax[1].set_xlim(x1, x2)
+        self.ax[1].set_ylim(y2, y1)
         plt.show()
 
         left_x, right_x = rs.corners[0][:2]
         lower_y, upper_y = rs.corners[1][1:3]
-
-        plt.imshow(img)
-        plt.xlim([left_x, right_x])
-        plt.ylim([lower_y, upper_y])
-        plt.show()
 
         return left_x, right_x, lower_y, upper_y
