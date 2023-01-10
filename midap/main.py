@@ -265,7 +265,11 @@ def run_module(args=None):
                 logger.info(f"Segmenting test frames for {identifier}...")
 
                 # cycle through all channels
-                for channel in config.getlist(identifier, "Channels"):
+                for num, channel in enumerate(config.getlist(identifier, "Channels")):
+                    # The phase channel is always the first
+                    if num == 0 and not config.getboolean(identifier, "PhaseSegmentation"):
+                        continue
+
                     # get the current model weight (if defined)
                     model_weights = config.get(identifier, f"ModelWeights_{channel}", fallback=None)
 
@@ -334,7 +338,11 @@ def run_module(args=None):
                 _ = cut_chamber.main(channel=paths, cutout_class=config.get(identifier, "CutImgClass"), corners=corners)
 
             # run full segmentation (we checkpoint after each channel)
-            for channel in config.getlist(identifier, "Channels"):
+            for num, channel in enumerate(config.getlist(identifier, "Channels")):
+                # The phase channel is always the first
+                if num == 0 and not config.getboolean(identifier, "PhaseSegmentation"):
+                    continue
+
                 with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config,
                                        state=f"SegmentationFull_{channel}", identifier=identifier,
                                        copy_path=current_path) as checker:

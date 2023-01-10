@@ -71,6 +71,8 @@ class OmniSegmentation(SegmentationPredictor):
                 plt.savefig(buf, format='png')
                 buf.seek(0)
                 buffers.append(buf.read())
+            # close all figures
+            plt.close("all")
 
             # create the buttons
             num_cols = int(np.ceil(np.sqrt(len(labels))))
@@ -98,7 +100,8 @@ class OmniSegmentation(SegmentationPredictor):
             # The GUI
             layout = buttons
             layout += [[sg.Column([[sg.OK(), sg.Cancel()]], key="col_final")]]
-            window = sg.Window('Segmentation Selection', layout, element_justification='c')
+            channel = os.path.basename(os.path.dirname(path_to_cutouts))
+            window = sg.Window(f'Segmentation Selection for channel: {channel}', layout, element_justification='c')
             print("Starting loop")
             # Event Loop
             while True:
