@@ -1,16 +1,17 @@
-import matplotlib.pyplot as plt
-import numpy as np
-import skimage.io as io
+import io
 import os
-
-from skimage.segmentation import watershed
-from skimage.filters import sobel
-from matplotlib.widgets import RadioButtons
-from tqdm import tqdm
 from typing import Collection, Union
 
-from ..networks.unets import UNetv1
+import PySimpleGUI as sg
+import matplotlib.pyplot as plt
+import numpy as np
+import skimage.io as skio
+from skimage.filters import sobel
+from skimage.segmentation import watershed
+from tqdm import tqdm
+
 from .base_segmentator import SegmentationPredictor
+from ..networks.unets import UNetv1
 
 
 class UNetSegmentation(SegmentationPredictor):
@@ -51,15 +52,16 @@ class UNetSegmentation(SegmentationPredictor):
             path_img = list_files[ix_half]
 
             # scale the image and pad
-            img = self.scale_pixel_vals(io.imread(os.path.join(path_to_cutouts, path_img)))
+            img = self.scale_pixel_vals(skio.imread(os.path.join(path_to_cutouts, path_img)))
             img_pad = self.pad_image(img)
 
-            # try watershed segmentation as classical segmentation method
-            watershed_seg = self.segment_region_based(img, 0.16, 0.19)
-
-            # compute sample segmentations for all stored weights
+            # Get all the labels
+            labels = ['watershed']
             model_weights = os.listdir(self.path_model_weights)
+            labels += [mw.split('.')[0].split('_')[-1] for mw in model_weights]
 
+            # create the segmentations
+            watershed_seg = self.segment_region_based(img, 0.16, 0.19)
             segs = [watershed_seg]
             for m in model_weights:
                 model_pred = UNetv1(input_size=img_pad.shape[1:3] + (1,), inference=True)
@@ -68,37 +70,80 @@ class UNetSegmentation(SegmentationPredictor):
                 seg = (self.undo_padding(y_pred) > 0.5).astype(int)
                 segs.append(seg)
 
-            # TODO: This could be done with tkinter buttons with images
-            # display different segmentation methods (watershed + NN trained for different cell types)
-            labels = ['watershed']
-            labels += [mw.split('.')[0].split('_')[-1] for mw in model_weights]
-            num_subplots = int(np.ceil(np.sqrt(len(segs))))
-            plt.figure(figsize=(10, 10))
-            for i, s in enumerate(segs):
-                plt.subplot(num_subplots, num_subplots, i + 1)
+            # now we create a plot that can be used as a button image
+            buffers = []
+            for seg, model_name in zip(segs, labels):
+                plt.figure(figsize=(3, 3))
                 plt.imshow(img)
-                plt.contour(s, [0.5], colors='r', linewidths=0.5)
-                if i == 0:
-                    plt.title('watershed')
-                else:
-                    plt.title('model trained for ' + labels[i])
+                plt.contour(seg, [0.5], colors='r', linewidths=0.5)
                 plt.xticks([])
                 plt.yticks([])
-            channel = os.path.basename(os.path.dirname(path_to_cutouts))
-            plt.suptitle(f'Select model weights for channel: {channel}')
-            rax = plt.axes([0.3, 0.01, 0.3, 0.08])
-            # visibility = [False for i in range(len(segs))]
-            check = RadioButtons(rax, labels)
+                plt.title(model_name)
+                buf = io.BytesIO()
+                plt.savefig(buf, format='png')
+                buf.seek(0)
+                buffers.append(buf.read())
 
-            plt.show()
+            # create the buttons
+            num_cols = int(np.ceil(np.sqrt(len(labels))))
+            buttons = []
+            new_line = []
+            for i, (b, l) in enumerate(zip(buffers, labels)):
+                # the first button will be marked
+                if i == 0:
+                    new_line.append(sg.Button('', image_data=b,
+                                              button_color=('black', 'yellow'),
+                                              border_width=5, key=l))
+                    marked = l
+                else:
+                    new_line.append(sg.Button('', image_data=b,
+                                              button_color=(
+                                              sg.theme_background_color(), sg.theme_background_color()),
+                                              border_width=5, key=l))
+                # create a new line if necessary
+                if len(new_line) == num_cols:
+                    buttons.append(new_line)
+                    new_line = []
+            # if the current line has element append
+            if len(new_line) > 0:
+                buttons.append(new_line)
 
-            selected_model = check.value_selected
+            # The GUI
+            layout = buttons
+            layout += [[sg.Column([[sg.OK(), sg.Cancel()]], key="col_final")]]
+            window = sg.Window('Segmentation Selection', layout, element_justification='c')
+            print("Starting loop")
+            # Event Loop
+            while True:
+                # Read event
+                event, values = window.read()
+                # break if we have one of these
+                if event in (sg.WIN_CLOSED, 'Exit', 'Cancel', 'OK'):
+                    break
+
+                # get the last event
+                for i, l in enumerate(labels):
+                    # if the last event was an image button click, mark it
+                    if event == l:
+                        marked = l
+                        break
+                # maked button is highlighted
+                for l in labels:
+                    if marked == l:
+                        window[l].update(button_color=('black', 'yellow'))
+                    else:
+                        window[l].update(button_color=(sg.theme_background_color(), sg.theme_background_color()))
+            window.close()
+
+            if event != 'OK':
+                self.logger.critical("GUI was cancelled or unexpectedly closed, exiting...")
+                exit(1)
 
             # set the model weights
-            if selected_model == 'watershed':
+            if marked == 'watershed':
                 self.model_weights = 'watershed'
             else:
-                ix_model_weights = np.where([selected_model == l for l in labels])[0][0]
+                ix_model_weights = np.where([marked == l for l in labels])[0][0]
                 sel_model_weights = model_weights[ix_model_weights - 1]
                 self.model_weights = os.path.join(self.path_model_weights, sel_model_weights)
 
