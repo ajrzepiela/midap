@@ -366,8 +366,12 @@ def run_module(args=None):
                                           loglevel=args.loglevel)
 
         if run_tracking:
-            # run full segmentation (we checkpoint after each channel)
-            for channel in config.getlist(identifier, "Channels"):
+            # run tracking (we checkpoint after each channel)
+            for num, channel in enumerate(config.getlist(identifier, "Channels")):
+                # The phase channel is always the first
+                if num == 0 and not config.getboolean(identifier, "PhaseSegmentation"):
+                    continue
+
                 with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config,
                                        state=f"Tracking_{channel}", identifier=identifier,
                                        copy_path=current_path) as checker:
