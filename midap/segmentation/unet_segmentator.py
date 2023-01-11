@@ -1,17 +1,16 @@
-import io
 import os
 from typing import Collection, Union
 
-import PySimpleGUI as sg
 import matplotlib.pyplot as plt
 import numpy as np
-import skimage.io as skio
+import skimage.io as io
 from skimage.filters import sobel
 from skimage.segmentation import watershed
 from tqdm import tqdm
 
 from .base_segmentator import SegmentationPredictor
 from ..networks.unets import UNetv1
+from ..utils import GUI_selector
 
 
 class UNetSegmentation(SegmentationPredictor):
@@ -49,10 +48,11 @@ class UNetSegmentation(SegmentationPredictor):
                 ix_half = 0
             else:
                 ix_half = int(np.ceil(len(list_files) / 2))
+
             path_img = list_files[ix_half]
 
             # scale the image and pad
-            img = self.scale_pixel_vals(skio.imread(os.path.join(path_to_cutouts, path_img)))
+            img = self.scale_pixel_vals(io.imread(os.path.join(path_to_cutouts, path_img)))
             img_pad = self.pad_image(img)
 
             # Get all the labels
@@ -70,77 +70,23 @@ class UNetSegmentation(SegmentationPredictor):
                 seg = (self.undo_padding(y_pred) > 0.5).astype(int)
                 segs.append(seg)
 
-            # now we create a plot that can be used as a button image
-            buffers = []
+            # now we create a figures for the GUI
+            figures = []
             for seg, model_name in zip(segs, labels):
-                plt.figure(figsize=(3, 3))
-                plt.imshow(img)
-                plt.contour(seg, [0.5], colors='r', linewidths=0.5)
-                plt.xticks([])
-                plt.yticks([])
-                plt.title(model_name)
-                buf = io.BytesIO()
-                plt.savefig(buf, format='png')
-                buf.seek(0)
-                buffers.append(buf.read())
-            # close all figures
-            plt.close("all")
+                fig, ax = plt.subplots(figsize=(3,3))
+                ax.imshow(img)
+                ax.contour(seg, [0.5], colors='r', linewidths=0.5)
+                ax.set_xticks([])
+                ax.set_yticks([])
+                ax.set_title(model_name)
+                figures.append(fig)
 
-            # create the buttons
-            num_cols = int(np.ceil(np.sqrt(len(labels))))
-            buttons = []
-            new_line = []
-            for i, (b, l) in enumerate(zip(buffers, labels)):
-                # the first button will be marked
-                if i == 0:
-                    new_line.append(sg.Button('', image_data=b,
-                                              button_color=('black', 'yellow'),
-                                              border_width=5, key=l))
-                    marked = l
-                else:
-                    new_line.append(sg.Button('', image_data=b,
-                                              button_color=(
-                                              sg.theme_background_color(), sg.theme_background_color()),
-                                              border_width=5, key=l))
-                # create a new line if necessary
-                if len(new_line) == num_cols:
-                    buttons.append(new_line)
-                    new_line = []
-            # if the current line has element append
-            if len(new_line) > 0:
-                buttons.append(new_line)
-
-            # The GUI
-            layout = buttons
-            layout += [[sg.Column([[sg.OK(), sg.Cancel()]], key="col_final")]]
+            # Title for the GUI
             channel = os.path.basename(os.path.dirname(path_to_cutouts))
-            window = sg.Window(f'Segmentation Selection for channel: {channel}', layout, element_justification='c')
-            print("Starting loop")
-            # Event Loop
-            while True:
-                # Read event
-                event, values = window.read()
-                # break if we have one of these
-                if event in (sg.WIN_CLOSED, 'Exit', 'Cancel', 'OK'):
-                    break
+            title = f'Segmentation Selection for channel: {channel}'
 
-                # get the last event
-                for i, l in enumerate(labels):
-                    # if the last event was an image button click, mark it
-                    if event == l:
-                        marked = l
-                        break
-                # maked button is highlighted
-                for l in labels:
-                    if marked == l:
-                        window[l].update(button_color=('black', 'yellow'))
-                    else:
-                        window[l].update(button_color=(sg.theme_background_color(), sg.theme_background_color()))
-            window.close()
-
-            if event != 'OK':
-                self.logger.critical("GUI was cancelled or unexpectedly closed, exiting...")
-                exit(1)
+            # start the gui
+            marked = GUI_selector(figures=figures, labels=labels, title=title)
 
             # set the model weights
             if marked == 'watershed':
