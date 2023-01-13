@@ -4,6 +4,7 @@ import tempfile
 import os
 
 from midap.imcut.interactive_cutout import InteractiveCutout
+from midap.config import Config
 from skimage.io import imread
 from pytest import fixture
 from os import listdir
@@ -21,6 +22,7 @@ def img1():
     img = np.array([[0.0, 0.0, 0.0, 0.0],
                     [0.0, 1.0, 1.0, 0.0],
                     [0.0, 1.0, 1.0, 0.0],
+                    [0.0, 0.0, 0.0, 0.0],
                     [0.0, 0.0, 0.0, 0.0]])
 
     # we pad the image with 0s on all sides to deal with the offset of the cutout
@@ -36,6 +38,7 @@ def img2():
     """
     # define the images
     img = np.array([[0.0, 0.0, 0.0, 0.0],
+                    [0.0, 0.0, 0.0, 0.0],
                     [0.0, 0.0, 0.0, 0.0],
                     [0.0, 0.0, 1.0, 1.0],
                     [0.0, 0.0, 1.0, 1.0]])
@@ -54,10 +57,6 @@ def cutout_instance(monkeypatch, img1, img2):
     :param img2: A test image fixture used as secondary images
     :return: A CutoutImage instance
     """
-
-    # create the settings file
-    with open("settings.sh", "w+") as f:
-        pass
 
     # create a temp directory
     tmpdir = tempfile.TemporaryDirectory()
@@ -109,8 +108,6 @@ def cutout_instance(monkeypatch, img1, img2):
     # clean up
     tmpdir.cleanup()
 
-    # remove the settings file again
-    os.remove("settings.sh")
 
 # Tests
 #######
@@ -125,7 +122,7 @@ def test_align_two_images(cutout_instance, img1, img2):
 
     # align
     alignment = cutout_instance.align_two_images(img1, img2)
-    assert np.all(alignment == np.array([-1, -1]))
+    assert np.all(alignment == np.array([-2, -1]))
 
 def test_align_all_images(cutout_instance):
     """
@@ -137,40 +134,7 @@ def test_align_all_images(cutout_instance):
 
     # check all shifts
     assert len(cutout_instance.shifts) == 2
-    assert np.all([np.all(alignment == np.array([-1, -1])) for alignment in cutout_instance.shifts])
-    # check offset
-    assert cutout_instance.off
-
-def test_save_corners(cutout_instance):
-    """
-    Tests the align_all_images of the InteractiveCutout class
-    :param cutout_instance: A pytest fixture returning an instance the class
-    """
-
-    # set the corners
-    cutout_instance.corners_cut = (1, 2, 3, 4)
-
-    # save the corners
-    cutout_instance.save_corners()
-
-    # check the file
-    with open("settings.sh", "r") as f:
-        content = f.read()
-
-    assert content == "CORNERS=(1 2 3 4)\n"
-
-    # overwrite
-    # set the corners
-    cutout_instance.corners_cut = (11, 22, 33, 44)
-
-    # save the corners
-    cutout_instance.save_corners()
-
-    # check the file
-    with open("settings.sh", "r") as f:
-        content = f.read()
-
-    assert content == "CORNERS=(11 22 33 44)\n"
+    assert np.all([np.all(alignment == np.array([-2, -1])) for alignment in cutout_instance.shifts])
 
 def test_run_align_cutout(monkeypatch, cutout_instance):
     """
@@ -185,13 +149,14 @@ def test_run_align_cutout(monkeypatch, cutout_instance):
         """
 
         # set the corners
-        monkeypatch.setattr(cutout_instance, "corners_cut", (1, 5, 1, 5), raising=False)
+        monkeypatch.setattr(cutout_instance, "corners_cut", (10, 15, 10, 15), raising=False)
 
     # monkey patch
     monkeypatch.setattr(cutout_instance, "cut_corners", dummy_cutout)
 
     # run the stack
     cutout_instance.run_align_cutout()
+    print(cutout_instance.shifts)
 
     # now we read in the images again
     dir_name = os.path.dirname(os.path.dirname(cutout_instance.channels[0][0]))

@@ -1,23 +1,27 @@
-import skimage.io as io
-from skimage.transform import resize
+import os
+from abc import ABC, abstractmethod
+from typing import Collection, Optional, Iterable, Union
 
 import numpy as np
+import psutil
+import skimage.io as io
+from skimage.measure import label, regionprops
+from skimage.morphology import remove_small_objects
+from skimage.transform import resize
 from tqdm import tqdm
-from abc import ABC, abstractmethod
-from typing import Iterable, Optional
 
+from .delta_lineage import DeltaTypeLineages
 from ..utils import get_logger
 
-import os
-import psutil
 process = psutil.Process(os.getpid())
 
 # get the logger we readout the variable or set it to max output
 if "__VERBOSE" in os.environ:
-    loglevel = os.environ["__VERBOSE"]
+    loglevel = int(os.environ["__VERBOSE"])
 else:
     loglevel = 7
 logger = get_logger(__file__, loglevel)
+
 
 class Tracking(ABC):
     """
@@ -27,12 +31,12 @@ class Tracking(ABC):
     # this logger will be shared by all instances and subclasses
     logger = logger
 
-    def __init__(self, imgs: Iterable[str], 
-                        segs: Iterable[str]=None, 
-                        model_weights: Optional[str]=None, 
-                        input_size: Optional[tuple]=None,
-                        target_size: Optional[tuple]=None, 
-                        crop_size: Optional[str]=None):
+    def __init__(self, imgs: Collection[str],
+                 segs: Optional[Collection[str]] = None,
+                 model_weights: Union[str, bytes, os.PathLike, None] = None,
+                 input_size: Optional[tuple] = None,
+                 target_size: Optional[tuple] = None,
+                 crop_size: Optional[tuple] = None):
         """
         Initializes the class instance
         :param imgs: List of files containing the cut out images ordered chronological in time
@@ -57,39 +61,248 @@ class Tracking(ABC):
         if crop_size is not None:
             self.crop_size = crop_size
 
-
     def load_data(self, cur_frame: int):
         """
         Loads and resizes raw images and segmentation images of the previous and current time frame.
         :param cur_frame: Number of the current frame.
         :return: The loaded and resized images of the current frame, the previous frame, the current segmentation and
-                the prvious segmentation
+                the previous segmentation
         """
 
-        img_cur_frame = resize(
-            io.imread(self.imgs[cur_frame]), self.target_size, order=1)
-        img_prev_frame = resize(
-            io.imread(self.imgs[cur_frame - 1]), self.target_size, order=1)
-        seg_cur_frame = (resize(
-            io.imread(self.segs[cur_frame]), self.target_size, order=0) > 0).astype(int)
-        seg_prev_frame = (resize(
-            io.imread(self.segs[cur_frame-1]), self.target_size, order=0) > 0).astype(int)
+        img_cur_frame = resize(io.imread(self.imgs[cur_frame]), self.target_size, order=1)
+        img_prev_frame = resize(io.imread(self.imgs[cur_frame - 1]), self.target_size, order=1)
+        seg_cur_frame = (resize(io.imread(self.segs[cur_frame]), self.target_size, order=0) > 0).astype(int)
+        seg_prev_frame = (resize(io.imread(self.segs[cur_frame - 1]), self.target_size, order=0) > 0).astype(int)
 
         return img_cur_frame, img_prev_frame, seg_cur_frame, seg_prev_frame
 
- 
-    def run_tracking(self, *args, **kwargs): #logger, output_folder
-        """
-        Track all frames using cropped images as input.
-        """
-
-        self.track_all_frames(*args, **kwargs)
-
-        #self.store_data()
-
-
     @abstractmethod
     def track_all_frames(self, *args, **kwargs):
+        """
+        This is an abstract method forcing subclasses to implement it
+        """
+        pass
+
+
+class DeltaTypeTracking(Tracking):
+    """
+    A class for cell tracking using the U-Net Delta V2 model
+    """
+
+    def __init__(self, *args, **kwargs):
+        """
+        Initializes the DeltaV2Tracking using the base class init
+        :param args: Arguments used for the base class init
+        :param kwargs: Keyword arguments used for the baseclass init
+        """
+
+        # base class init
+        super().__init__(*args, **kwargs)
+
+    def track_all_frames(self, output_folder: Union[str, bytes, os.PathLike]):
+        """
+        Tracks all frames and saves the results to the given output folder
+        :param output_folder: The folder to save the results
+        """
+
+        inputs, results = self.run_model_crop()
+        results_all_red = self.reduce_data(output_folder=output_folder, inputs=inputs, results=results)
+
+        if results_all_red is not None:
+            lin = DeltaTypeLineages(inputs=np.array(inputs), results=results_all_red)
+            lin.store_lineages(output_folder=output_folder)
+        else:
+            logger.warning("Tracking did not generate any output!")
+
+    def gen_input_crop(self, cur_frame: int):
+        """
+        Generates the input for the tracking network using cropped images.
+        :param cur_frame: Number of the current frame.
+        :return: Cropped input for the tracking network
+        """
+
+        # Load data
+        img_cur_frame, img_prev_frame, seg_cur_frame, seg_prev_frame = self.load_data(cur_frame)
+
+        # Label of the segmentation of the previous frame
+        label_prev_frame, num_cells = label(seg_prev_frame, return_num=True)
+        label_cur_frame = label(seg_cur_frame)
+        props = regionprops(label_prev_frame)
+
+        # create the input
+        input_whole_frame = np.stack([img_prev_frame, label_prev_frame, img_cur_frame, seg_cur_frame], axis=-1)
+
+        # Crop images/segmentations per cell and combine all images/segmentations for input
+        input_cur_frame = np.zeros((num_cells, self.crop_size[0], self.crop_size[1], 4))
+        crop_box = {}
+        for cell_ix, p in enumerate(props):
+            # get the center
+            row, col = p.centroid
+
+            # create the cropbox
+            radius_row = self.crop_size[0] / 2
+            radius_col = self.crop_size[1] / 2
+
+            # take care of going out of the image
+            min_row = np.maximum(0, int(row - radius_row))
+            min_col = np.maximum(0, int(col - radius_col))
+            max_row = min_row + self.crop_size[0]
+            max_col = min_col + self.crop_size[1]
+
+            # take care of overshooting
+            if max_row > img_cur_frame.shape[0]:
+                max_row = img_cur_frame.shape[0]
+                min_row = max_row - self.crop_size[0]
+            if max_col > img_cur_frame.shape[1]:
+                max_col = img_cur_frame.shape[1]
+                min_col = max_col - self.crop_size[1]
+
+            # get the image with just the current label
+            seed = (label_prev_frame[min_row:max_row, min_col:max_col] == p.label).astype(int)
+            label_cur_frame_crop = label_cur_frame[min_row:max_row, min_col:max_col]
+            # remove cells that were split during the crop
+            seg_clean = self.clean_crop(label_cur_frame, label_cur_frame_crop)
+
+            cell_ix = p.label - 1
+            input_cur_frame[cell_ix, :, :, 0] = img_prev_frame[min_row:max_row, min_col:max_col]
+            input_cur_frame[cell_ix, :, :, 1] = seed
+            input_cur_frame[cell_ix, :, :, 2] = img_cur_frame[min_row:max_row, min_col:max_col]
+            input_cur_frame[cell_ix, :, :, 3] = seg_clean
+
+            crop_box[cell_ix] = (min_row, min_col, max_row, max_col)
+
+        return input_cur_frame, input_whole_frame, crop_box
+
+    def clean_crop(self, seg: np.ndarray, seg_crop: np.ndarray):
+        """
+        Cleans the cropped segmentation by removing all cells which have been cut during the cropping.
+        :param seg: Segmentation of full image.
+        :param seg_crop: Segmentation of cropped image.
+        :return: The cleaned up segmentation
+        """
+
+        # Generate dictionary with cell indices as keys and area as values for the full and cropped segmentation.
+        regs = regionprops(seg)
+        regs_crop = regionprops(seg_crop)
+
+        areas = {r.label: r.area for r in regs}
+        areas_crop = {r.label: r.area for r in regs_crop}
+
+        # Compare area of cell in full and cropped segmentation and remove cells which are smaller than original cell.
+        seg_clean = seg_crop.copy()
+        for k in areas_crop:
+            if areas_crop[k] != areas[k]:
+                seg_clean[seg_crop == k] = 0
+
+        seg_clean_bin = (seg_clean > 0).astype(int)
+
+        return seg_clean_bin
+
+    def run_model_crop(self):
+        """
+        Runs the tracking model
+        """
+
+        # Load model
+        self.load_model()
+
+        # Loop over all time frames
+        results_all = []
+        inputs_all = []
+
+        ram_usg = process.memory_info().rss * 1e-9
+        for cur_frame in (pbar := tqdm(range(1, self.num_time_steps), postfix={"RAM": f"{ram_usg:.1f} GB"})):
+            inputs_cur_frame, input_whole_frame, crop_box = self.gen_input_crop(cur_frame)
+
+            # check if there is a segmentation
+            if inputs_cur_frame.size > 0:
+                results_cur_frame_crop = self.model.predict(inputs_cur_frame, verbose=0)
+            else:
+                results_cur_frame_crop = np.empty_like(inputs_cur_frame)
+
+            # Combine cropped results in one image
+            results_cur_frame = np.zeros((results_cur_frame_crop.shape[0], self.target_size[0],
+                                          self.target_size[1], 1))
+
+            for i in range(len(crop_box)):
+                row_min, col_min, row_max, col_max = crop_box[i]
+                results_cur_frame[i, row_min:row_max, col_min:col_max,:] = results_cur_frame_crop[i]
+
+            # Clean results
+            results_cur_frame_clean = self.clean_cur_frame(input_whole_frame[:, :, 3], results_cur_frame)
+            inputs_all.append(input_whole_frame)
+            results_all.append(results_cur_frame_clean)
+
+            ram_usg = process.memory_info().rss * 1e-9
+            pbar.set_postfix({"RAM": f"{ram_usg:.1f} GB"})
+
+        return inputs_all, results_all
+
+    def clean_cur_frame(self, inp: np.ndarray, res: np.ndarray):
+        """
+        Clean result from cropped image by comparing the segmentation with the result from the tracking.
+        :param inp: Segmentation of full image.
+        :param res: Result of the tracking.
+        :return: The cleaned up tracking result
+        """
+
+        # Labeling of the segmentation.
+        inp_label = label(inp)
+
+        # Compare cell from tracking with cell from segmentation and
+        # find cells which are overlapping most.
+        res_clean = np.zeros(res.shape[:-1] + (2,))
+        for ri, r in enumerate(res):
+
+            r_label = label(r[:, :, 0] > 0.9)
+            r_label = remove_small_objects(r_label, min_size=5)
+
+            overl = inp_label[np.multiply(inp, r_label) > 0]
+            cell_labels = np.unique(overl)
+            overl_areas = [np.count_nonzero(overl == l) for l in cell_labels]
+            ix_max_overl = np.argsort(overl_areas)[-2:]
+            label_max_overl = cell_labels[ix_max_overl]
+
+            for i, c in enumerate(label_max_overl):
+                res_clean[ri, :, :, i][inp_label == c] = 1
+
+        res_clean = np.array(res_clean)
+        return res_clean
+
+    def reduce_data(self, output_folder: Union[str, bytes, os.PathLike], inputs: Collection[np.ndarray],
+                    results: Collection[np.ndarray]):
+        """
+        Reduces the amount of output from the delta model from individual images per cell to full images and saves the
+        output
+        :param output_folder: Where to save the output
+        :param inputs: The inputs used for the tracking
+        :param results: The results
+        :return: The reduced data or None if no cells were tracked
+        """
+
+        # Reduce results file for storage if there is a tracking result
+        if sum([res.size for res in results]) > 0:
+            self.logger.info("Saving results of tracking...")
+            # the first might be emtpy
+            results_all_red = np.zeros((len(results),) + results[0].shape[1:3] + (2,))
+
+            for t in range(len(results)):
+                for ix, cell_id in enumerate(results[t]):
+                    if cell_id[:, :, 0].sum() > 0:
+                        results_all_red[t, cell_id[:, :, 0] > 0, 0] = ix + 1
+                    if cell_id[:, :, 1].sum() > 0:
+                        results_all_red[t, cell_id[:, :, 1] > 0, 1] = ix + 1
+
+            # Save data
+            inputs = np.array(inputs)
+            results_all_red = np.array(results_all_red)
+            np.savez(os.path.join(output_folder, 'inputs_all_red.npz'), inputs_all=inputs)
+            np.savez(os.path.join(output_folder, 'results_all_red.npz'), results_all_red=results_all_red)
+
+            return results_all_red
+
+    @abstractmethod
+    def load_model(self):
         """
         This is an abstract method forcing subclasses to implement it
         """

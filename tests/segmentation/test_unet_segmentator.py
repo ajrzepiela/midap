@@ -49,8 +49,8 @@ def segmentation_instance(monkeypatch, img1):
     os.makedirs(path_cut)
     path_seg = os.path.join(tmpdir.name, "seg_im")
     os.makedirs(path_seg)
-    path_seg_track = os.path.join(tmpdir.name, "input_ilastik_tracking")
-    os.makedirs(path_seg_track)
+    path_seg = os.path.join(tmpdir.name, "seg_im_bin")
+    os.makedirs(path_seg)
 
     def fake_list(directory):
         """
