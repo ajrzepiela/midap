@@ -2,14 +2,14 @@ name: Tests (Conda)
 
 # Define when to run
 on:
-#  schedule:
-#    - cron:  '30 4 1 * *'
+  schedule:
+    - cron:  '30 4 1 * *'
   push:
     branches:
-      - development_CI
+      - development
   pull_request:
     branches:
-      - development_CI
+      - development
 
 # Env variables
 env:
