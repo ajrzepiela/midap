@@ -1,0 +1,94 @@
+name: Tests (Conda)
+
+# Define when to run
+on:
+  schedule:
+    - cron:  '30 4 1 * *'
+  push:
+    branches:
+      - development_CI
+  pull_request:
+    branches:
+      - development_CI
+
+# Env variables
+env:
+  CACHE_NUMBER: 0  # increase to reset cache manually
+
+# Jobs
+jobs:
+  matrix_prep:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Check Env File
+        id: check-env-file
+        uses: tj-actions/changed-files@v35
+        with:
+          files: |
+            environment.yml
+
+      - name: Set Env
+        # trigger if env file change or on schedule
+        if: ${{ steps.check-env-file.outputs.any_changed == 'true' || github.event_name == 'schedule' }}
+        run: echo "ENV_STATE=env_change" >> $GITHUB_ENV
+
+      - id: set-matrix
+        uses: JoshuaTheMiller/conditional-build-matrix@main
+        with:
+          # Run filter -> see matrix_includes.json!
+          filter: '[?runs_when==`${{ env.ENV_STATE }}` || runs_when==`${{ github.event_name }}` || runs_when==`always`]'
+
+  build:
+    # the testing
+    needs: matrix_prep
+    strategy:
+      fail-fast: false # if true all jobs are cancelled if one fails
+      matrix: ${{fromJson(needs.matrix_prep.outputs.matrix)}}
+
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      # checkout the dev branch
+      - uses: actions/checkout@v3
+
+      # setup the conda env
+      - name: Setup Mambaforge
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+            miniforge-variant: Mambaforge
+            miniforge-version: latest
+            activate-environment: midap
+            use-mamba: true
+
+      # date for the cache
+      - name: Set cache date
+        run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+
+      # reset cache if env file changed
+      - uses: actions/cache@v2
+        with:
+          path: ${{ matrix.prefix }}
+          key: ${{ matrix.label }}-conda-${{ hashFiles('environment.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+        id: cache
+
+      # This step is cached in case the env file was not changed
+      - name: Update environment
+        run: mamba env update -f environment.yml
+        if: steps.cache.outputs.cache-hit != 'true'
+
+      - name: Install package
+        shell: bash -l {0}
+        run: pip install -e .
+
+      - name: Run Tests
+        shell: bash -l {0}
+        run: |
+          coverage run --source="midap" -m pytest -v tests
+          coverage report -m
+
