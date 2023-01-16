@@ -3,10 +3,6 @@ import math
 import os
 import re
 
-import matplotlib
-# backend has to be set before the pyplot import, TkAgg is compatible with most clusters
-matplotlib.use('TkAgg')
-
 import skimage.io as io
 from skimage.registration import phase_cross_correlation
 
