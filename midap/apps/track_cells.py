@@ -9,13 +9,12 @@ from midap.tracking import base_tracking
 from midap.utils import get_logger, get_inheritors
 
 
-def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel: int):
+def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel=7):
     """
     The main function to run the tracking
     :param path: Path to the channel
-    :param tracking_class:
-    :param loglevel:
-    :return:
+    :param tracking_class: The name of the tracking class
+    :param loglevel: The loglevel between 0 and 7, defaults to highest level
     """
 
     # logging
@@ -51,8 +50,7 @@ def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel: in
     input_size = crop_size + (4,)
 
     # Process
-    tr = class_instance(img_names_sort, seg_names_sort, model_file,
-                        input_size, target_size, crop_size)
+    tr = class_instance(img_names_sort, seg_names_sort, model_file, input_size, target_size, crop_size)
     tr.track_all_frames(output_folder)
 
 
