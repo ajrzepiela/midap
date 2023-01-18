@@ -11,7 +11,7 @@ from midap.apps.split_frames import main
 def test_main(setup_dir):
     """
     Tests the main routine of the split_frames app
-    :param setup_dir: The path to the temp directory containing the setup
+    :param setup_dir: The path to the temp directory containing the setup and the channel
     """
 
     # unpack
