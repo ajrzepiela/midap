@@ -108,15 +108,21 @@ class Checkpoint(ConfigParser):
             self.to_file()
 
     @classmethod
-    def from_file(cls, fname: str):
+    def from_file(cls, fname: Union[str,bytes,os.PathLike]):
         """
         Creates a Checkpoint instance from a file
         :param fname: The name of the file to read
         :return: An instance of the class
         """
 
+        # get the path
+        fname = Path(fname)
+
         # create a class instance
-        checkpoint = Checkpoint(fname=fname)
+        if fname.is_file():
+            checkpoint = Checkpoint(fname=fname.stem)
+        else:
+            raise FileNotFoundError(f"File {fname} does not exist!")
 
         # read the file
         with open(fname, "r") as f:
