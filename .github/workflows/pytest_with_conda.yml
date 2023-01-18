@@ -129,4 +129,3 @@ jobs:
         run: |
           coverage run --source="midap" -m pytest -v tests
           coverage report -m
-

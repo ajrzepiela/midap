@@ -6,15 +6,9 @@
         "runs_when":"always"
     },
     {
-        "os":"windows-latest",
-        "label":"windows-64",
-        "prefix":"C:\\Miniconda3\\envs\\midap",
-        "runs_when":"env_change"
-    },
-    {
         "os":"macos-latest",
         "label":"osx-64",
         "prefix":"/Users/runner/miniconda3/envs/midap",
-        "runs_when":"schedule"
+        "runs_when":"env_change"
     }
 ]
