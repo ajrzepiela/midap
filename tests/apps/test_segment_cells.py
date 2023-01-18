@@ -1,12 +1,12 @@
+from pathlib import Path
+from shutil import copyfile
+
 import numpy as np
 import pytest
 from pytest import mark
-from shutil import copyfile
-from pathlib import Path
+from skimage import io
 
 from midap.apps.segment_cells import main
-from skimage.measure import label
-from skimage import io
 
 
 # Fixtures
