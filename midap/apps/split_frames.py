@@ -1,4 +1,5 @@
 import numpy as np
+import os
 from tqdm import tqdm
 from scipy.io import loadmat
 from skimage.restoration import richardson_lucy
@@ -8,7 +9,7 @@ from pathlib import Path
 
 from midap.utils import get_logger
 
-def main(path: Union[str,Path], save_dir: Union[str,Path], frames: Iterable[int],
+def main(path: Union[str,bytes,os.PathLike], save_dir: Union[str,bytes,os.PathLike], frames: Iterable[int],
          deconv: Literal["deconv_family_machine", "deconv_well", "no_deconv"], loglevel=7):
     """
     Splits the frames of a given file and saves it in the save dir
@@ -42,8 +43,9 @@ def main(path: Union[str,Path], save_dir: Union[str,Path], frames: Iterable[int]
 
     # split the frames
     logger.info("Splitting frames...")
-    stack = io.imread(path)[frames]
-    for ix, frame in tqdm(zip(frames, stack), total=len(frames)):
+    stack = io.imread(path)
+    for ix in tqdm(frames):
+        frame = stack[ix]
         if deconvolution:
             deconvoluted = richardson_lucy(frame, psf, iterations=10, clip=False)
             io.imsave(save_dir.joinpath(f"{raw_filename}_frame{ix:03d}_deconv.png"),
