@@ -38,7 +38,8 @@ jobs:
         if: ${{ steps.check-env-file.outputs.any_changed == 'true' || github.event_name == 'schedule' }}
         run: echo "ENV_STATE=env_change" >> $GITHUB_ENV
 
-      - id: set-matrix
+      - name: Conditional Matrix
+        id: set-matrix
         uses: JoshuaTheMiller/conditional-build-matrix@main
         with:
           # Run filter -> see matrix_includes.json!
@@ -66,7 +67,7 @@ jobs:
           unzip model_weights.zip
           echo "Remove zip-files"
           rm model_weights.zip
-        if: ${{ steps.cache-npm.outputs.cache-hit != 'true' }}
+        if: ${{ steps.cache_weights.outputs.cache-hit != 'true' }}
 
   build:
     # the testing
