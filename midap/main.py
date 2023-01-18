@@ -59,7 +59,7 @@ def run_module(args=None):
 
     # we do the local imports here to intercept TF import
     if args.cpu_only:
-        os.environ["CUDA_VISIBLE_DEVICES"] = -1
+        os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
     # supress TF blurp
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
@@ -83,8 +83,8 @@ def run_module(args=None):
 
     # create a config file if requested and exit
     if args.create_config:
-        config = Config()
-        config.to_file("settings.ini", overwrite=True)
+        config = Config(fname="settings.ini")
+        config.to_file(overwrite=True)
         return 0
 
     # check if we are restarting
