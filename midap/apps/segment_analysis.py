@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import pandas as pd
 import argparse
@@ -41,7 +43,7 @@ def count_killed(seg: np.ndarray):
 
     return num_killed
 
-def main(path_seg: Union[str,Path], path_result: Union[str,Path], loglevel=7):
+def main(path_seg: Union[str,bytes,os.PathLike], path_result: Union[str,bytes,os.PathLike], loglevel=7):
     """
     Analyses the segmentation images in a given folder
     :param path_seg: The directory containing the segmented images (labelled)
@@ -78,7 +80,7 @@ def main(path_seg: Union[str,Path], path_result: Union[str,Path], loglevel=7):
     df_cells = pd.DataFrame(data=d)
 
     # save
-    df_cells.to_csv(path_result.joinpath('cell_number.csv'))
+    df_cells.to_csv(path_result.joinpath("cell_number.csv"))
 
 # main
 ######
