@@ -75,9 +75,23 @@ class BayesianCellTracking(Tracking):
         self.extract_data()
         self.set_params()
 
+        # choose update method depending on number of cells
+        cum_sum_cells = np.sum([np.max(s) for s in self.seg_imgs])
+        num_frames = len(self.seg_imgs)
+        max_cells_frame = 1_000
+        max_cells_total = num_frames * max_cells_frame
+
+        print(cum_sum_cells)
+        print(max_cells_total)
+
+        if cum_sum_cells < max_cells_total:
+            update_method = BayesianUpdates.EXACT
+        else:
+            update_method = BayesianUpdates.APPROXIMATE
+
         # initialise a tracker session using a context manager
         with btrack.BayesianTracker() as self.tracker:
-            self.tracker.update_method = BayesianUpdates.EXACT
+            self.tracker.update_method = update_method
 
             # configure the tracker using a config file
             self.tracker.configure(self.config_file)
@@ -98,6 +112,7 @@ class BayesianCellTracking(Tracking):
 
             # get the tracks as a python list
             self.tracks = self.tracker.tracks
+
 
     def generate_label_stack(self):
         """
@@ -182,6 +197,7 @@ class BayesianCellTracking(Tracking):
                         pass
 
                 max_t = self.track_output_correct[self.track_output_correct['trackID'] == new_ID_d1]['frame'].max()
+                
                 for t_tmp_2 in range(t, max_t):
 
                     filter_t = self.track_output_correct['frame'] == t_tmp_2
