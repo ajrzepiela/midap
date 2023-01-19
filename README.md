@@ -1,3 +1,9 @@
+<table><tr><td valign="center"> 
+  <img align="left" height="25px" src="https://github.com/Microbial-Systems-Ecology/midap/actions/workflows/pytest_with_conda.yml/badge.svg?branch=development"> 
+  <img align="left" height="25px" src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/jafluri/9219639a376674762e7e29e2fa3cfc9e/raw/midap_coverage.json">
+  <b> (Development Branch) </b>
+</td></tr></table>
+
 # MIDAP
 
 ## Installation on Mac and Linux
