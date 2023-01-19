@@ -66,7 +66,7 @@ class Checkpoint(ConfigParser):
 
         # check
         if not overwrite and fname.exists():
-            FileExistsError(f"File already exists, set overwrite to True to overwrite: {fname}")
+            raise FileExistsError(f"File already exists, set overwrite to True to overwrite: {fname}")
 
         # now we can open a w+ without worrying
         with open(fname, "w+") as f:
@@ -120,7 +120,7 @@ class Checkpoint(ConfigParser):
 
         # create a class instance
         if fname.is_file():
-            checkpoint = Checkpoint(fname=fname.stem)
+            checkpoint = Checkpoint(fname=fname.name)
         else:
             raise FileNotFoundError(f"File {fname} does not exist!")
 
@@ -173,7 +173,7 @@ class CheckpointChecker(object):
             current_state = self.checkpoint.get_state(identifier=True)
             # if the Function value is None, we run everything
             if current_state == ("None", "None"):
-                return
+                return None
 
             if current_state != (self.state, self.identifier):
                 raise AlreadyDoneError(f"Already done this! State: {self.state}, Identifier: {self.identifier}")
@@ -234,8 +234,8 @@ class CheckpointManager(object):
         if isinstance(exc_val, AlreadyDoneError):
             logger.info(f"Skipping {self.state} for {self.identifier}...")
             # we save the original checkpoint
-            self.checkpoint.set_state(state=self.checkpoint_original.get_state(),
-                                      identifier=self.identifier, flush=True)
+            original_state, original_identifier = self.checkpoint_original.get_state(identifier=True)
+            self.checkpoint.set_state(state=original_state, identifier=original_identifier, flush=True)
             self.save_files()
             return True
 
