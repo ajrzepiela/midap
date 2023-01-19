@@ -1,8 +1,5 @@
 import numpy as np
 
-import matplotlib
-# backend has to be set before the pyplot import, TkAgg is compatible with most clusters
-matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 from matplotlib.widgets  import RectangleSelector
 

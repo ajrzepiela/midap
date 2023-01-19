@@ -1,0 +1,132 @@
+name: Tests (Conda)
+
+# Define when to run
+on:
+  schedule:
+    - cron:  '30 4 1 * *'
+  push:
+    branches:
+      - development
+  pull_request:
+    branches:
+      - development
+
+# Env variables
+env:
+  CACHE_NUMBER: 0  # increase to reset cache manually
+
+# Jobs
+jobs:
+  preparation:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Check Env File
+        id: check-env-file
+        uses: tj-actions/changed-files@v35
+        with:
+          files: |
+            environment.yml
+
+      - name: Set Env
+        # trigger if env file change or on schedule
+        if: ${{ steps.check-env-file.outputs.any_changed == 'true' || github.event_name == 'schedule' }}
+        run: echo "ENV_STATE=env_change" >> $GITHUB_ENV
+
+      - name: Conditional Matrix
+        id: set-matrix
+        uses: JoshuaTheMiller/conditional-build-matrix@main
+        with:
+          # Run filter -> see matrix_includes.json!
+          filter: '[?runs_when==`${{ env.ENV_STATE }}` || runs_when==`${{ github.event_name }}` || runs_when==`always`]'
+
+      # date for the cache
+      - name: Set cache date
+        run: echo "DATE_YM=$(date +'%Y%m')" >> $GITHUB_ENV
+
+      - name: Cache weights
+        uses: actions/cache@v3
+        with:
+          path: |
+            model_weights/model_weights_tracking/*
+            model_weights/model_weights_family_mother_machine/model_weights_CB15-WT.h5
+          key: ${{ env.DATE_YM }}-${{ env.CACHE_NUMBER }}
+        id: cache_weights
+
+      - name: Download weights
+        shell: bash -l {0}
+        run: |
+          echo "Download weights"
+          wget -O model_weights.zip https://polybox.ethz.ch/index.php/s/XoaFLr346h8GxzP/download
+          echo "Extract model weights"
+          unzip model_weights.zip
+          echo "Remove zip-files"
+          rm model_weights.zip
+        if: ${{ steps.cache_weights.outputs.cache-hit != 'true' }}
+
+  build:
+    # the testing
+    needs: preparation
+    strategy:
+      fail-fast: false # if true all jobs are cancelled if one fails
+      matrix: ${{fromJson(needs.preparation.outputs.matrix)}}
+
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      # checkout the dev branch
+      - uses: actions/checkout@v3
+
+      # setup the conda env
+      - name: Setup Mambaforge
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+            miniforge-variant: Mambaforge
+            miniforge-version: latest
+            activate-environment: midap
+            use-mamba: true
+
+      # date for the cache
+      - name: Set cache date
+        run: echo "DATE_YM=$(date +'%Y%m')" >> $GITHUB_ENV
+
+      # cache for the weights
+      - name: Cache weights
+        uses: actions/cache@v3
+        with:
+          path: |
+            model_weights/model_weights_tracking/*
+            model_weights/model_weights_family_mother_machine/model_weights_CB15-WT.h5
+          key: ${{ env.DATE_YM }}-${{ env.CACHE_NUMBER }}
+        id: cache_weights
+
+      # date for the cache
+      - name: Set cache date
+        run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+
+      # reset cache if env file changed
+      - uses: actions/cache@v3
+        with:
+          path: ${{ matrix.prefix }}
+          key: ${{ matrix.label }}-conda-${{ hashFiles('environment.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+        id: cache
+
+      # This step is cached in case the env file was not changed
+      - name: Update environment
+        run: mamba env update -f environment.yml
+        if: steps.cache.outputs.cache-hit != 'true'
+
+      - name: Install package
+        shell: bash -l {0}
+        run: pip install -e .
+
+      - name: Run Tests
+        shell: bash -l {0}
+        run: |
+          coverage run --source="midap" -m pytest -v tests
+          coverage report -m
