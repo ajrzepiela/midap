@@ -1,15 +1,14 @@
-import pkg_resources
 import argparse
+import os
 import shutil
 import sys
-import os
-import re
+from glob import glob
+from pathlib import Path
+from shutil import copyfile
 
 import numpy as np
+import pkg_resources
 
-from shutil import copyfile
-from pathlib import Path
-from glob import glob
 
 def run_module(args=None):
     """
@@ -217,6 +216,8 @@ def run_module(args=None):
                 file_ext = config.get("General", "FileType")
                 for channel in config.getlist(identifier, "Channels"):
                     paths = list(current_path.joinpath(channel).glob(f"*.{file_ext}"))
+                    if len(paths) == 0:
+                        raise FileNotFoundError(f"No file of the type '.{file_ext}' exists for channel {channel}")
                     if len(paths) > 1:
                         raise FileExistsError(f"More than one file of the type '.{file_ext}' "
                                               f"exists for channel {channel}")
