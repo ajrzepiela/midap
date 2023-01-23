@@ -2,14 +2,14 @@ name: Tests (Venv)
 
 # Define when to run
 on:
-#  schedule:
-#    - cron:  '30 4 1 * *'
+  schedule:
+    - cron:  '30 4 1 * *'
   push:
     branches:
-      - development_coverage
-#  pull_request:
-#    branches:
-#      - development
+      - development
+  pull_request:
+    branches:
+      - development
 
 # Env variables
 env:
@@ -24,8 +24,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8"]
-        #python-version: ["3.8", "3.9", "3.10"]
+        python-version: ["3.8", "3.9", "3.10"]
 
     steps:
     - uses: actions/checkout@v3
