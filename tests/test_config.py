@@ -1,5 +1,6 @@
 import os
 import tempfile
+from pathlib import Path
 
 import pytest
 
@@ -70,8 +71,18 @@ def test_Config(tmp_dir):
     config.set("pos1", "Corners", "1,2,3,4")
 
     # and the model weights
-    config.set("pos1", "SegmentationClass", "OmniSegmentation")
-    config.set("pos1", "ModelWeights_None", "bact_phase_omni")
+    try:
+        # if omni pose is supported we test it
+        from cellpose import models
+        config.set("pos1", "SegmentationClass", "OmniSegmentation")
+        config.set("pos1", "ModelWeights_None", "bact_phase_omni")
+    except ImportError:
+        # otherwise we use the standard but add existing model weights
+        path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
+                                                                   "model_weights_family_mother_machine",
+                                                                   "model_weights_CB15-WT.h5")
+        config.set("pos1", "ModelWeights_None", f"{path_model_weights}")
+
     config.validate_id_section("pos1", basic=False)
 
     # We save to file

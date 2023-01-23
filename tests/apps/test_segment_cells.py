@@ -85,13 +85,17 @@ def test_main(prep_dirs):
         seg_img = io.imread(seg_f)
         assert np.allclose(sol_img, seg_img)
 
-    # Tests for UNetSegmentation
-    segmentation_class = "OmniSegmentation"
-    network_name = "bact_fluor_omni"
+    # Tests for Omni if supported
+    try:
+        from cellpose import models
+        segmentation_class = "OmniSegmentation"
+        network_name = "bact_fluor_omni"
 
-    # just the selection, testing the actual segmentation would require larger images
-    network_name_new = main(path_model_weights=path_model_weights, path_pos=path_pos, path_channel=path_channel,
-                            segmentation_class=segmentation_class, postprocessing=postprocessing,
-                            network_name=network_name,  just_select=True)
+        # just the selection, testing the actual segmentation would require larger images
+        network_name_new = main(path_model_weights=path_model_weights, path_pos=path_pos, path_channel=path_channel,
+                                segmentation_class=segmentation_class, postprocessing=postprocessing,
+                                network_name=network_name,  just_select=True)
 
-    assert network_name_new == network_name
+        assert network_name_new == network_name
+    except ImportError:
+        pass
