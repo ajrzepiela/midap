@@ -1,4 +1,4 @@
-name: workflow
+name: midap_gpu
 channels:
   - apple
   - conda-forge
