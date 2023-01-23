@@ -63,8 +63,8 @@ jobs:
         python -m pip install --upgrade pip
         # noraml requirements
         pip install -r ./euler/requirements.txt
-        # tensorflow is usually taken from euler, minor flake for linting
-        pip install tensorflow flake8
+        # tensorflow is usually taken from euler, omni is not supported on euler minor flake for linting
+        pip install tensorflow omnipose flake8
         # the package
         pip install -e .
 
