@@ -111,6 +111,8 @@ def test_run_module_restart(prep_dir):
     config.set("General", "IdentifierFound", "pos1")
     config.set_id_section("pos1")
     config.to_file()
+    # create the dir of the pos1 identifier
+    Path(prep_dir).joinpath("pos1").mkdir()
     # make the checkpoint such that all other things are skipped
     checkpoint.set_state(state="impossible state", identifier="impossible identifier")
     run_module(["--restart"])
