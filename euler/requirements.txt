@@ -9,7 +9,6 @@ PyYAML>=6.0
 scikit-image>=0.19.3
 tqdm>=4.64.0
 gitpython
-opencv-python==4.1.2.30
 btrack==0.4.6
 scikit-learn
 pytest

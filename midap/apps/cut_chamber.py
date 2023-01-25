@@ -4,12 +4,12 @@ import os
 # import to get all subclasses
 from midap.imcut import *
 from midap.imcut import base_cutout
-from pathlib import Path
 
 from typing import Optional, Union, Iterable
 
 
-def main(channel: Union[str,Iterable[str],Iterable[Path]], cutout_class: str, corners: Optional[tuple]=None):
+def main(channel: Union[str, Iterable[str], bytes, Iterable[bytes], os.PathLike, Iterable[os.PathLike]],
+         cutout_class: str, corners: Optional[tuple]=None):
     """
     Performs the image cutout and alignment on all images in the paths
     :param channel: A single directory or a list of directories with the images to cut and align

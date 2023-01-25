@@ -18,4 +18,4 @@ $PATH_MINIFORGE/bin/conda update -n base -c conda-forge conda
 $PATH_MINIFORGE/bin/conda env update -f environment_m1.yml
 
 # instal midap
-${HOME}/miniforge3/envs/workflow/bin/python3 -m pip install -e ..
+${HOME}/miniforge3/envs/midap_gpu/bin/python3 -m pip install -e ../..

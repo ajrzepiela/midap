@@ -1,6 +1,7 @@
 import argparse
+import os
 
-from typing import Optional, Union
+from typing import Union
 from pathlib import Path
 
 # to get all subclasses
@@ -10,8 +11,21 @@ from midap.segmentation import base_segmentator
 ### Functions
 #############
 
-def main(path_model_weights: Union[str,Path], path_pos: Union[str, Path], path_channel: str, segmentation_class: str,
-         postprocessing: bool, network_name: Optional[str]=None, just_select=False):
+def main(path_model_weights: Union[str,bytes,os.PathLike], path_pos: Union[str,bytes,os.PathLike], path_channel: str,
+         segmentation_class: str, postprocessing: bool, network_name: Union[str,bytes,os.PathLike,None]=None,
+         just_select=False):
+    """
+    Performs cell segmentation on all images in a given directory
+    :param path_model_weights: The path to the pretrained model weights
+    :param path_pos: The path to the current identifier, the base directory for all data
+    :param path_channel: The name of the current channel
+    :param segmentation_class: The name of the segmentation class to use
+    :param postprocessing: whether to use postprocessing or not
+    :param network_name: Optional name of the network to skip interactive selection
+    :param just_select: If True, just the network selection is performed
+    :return: The name of the selected model weights, note that if just_select is True and the model weights are provided
+             a check is performed if the model class actually exists and the model weights are returned if so
+    """
 
 
     # get the right subclass
