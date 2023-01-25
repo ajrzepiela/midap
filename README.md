@@ -44,7 +44,7 @@ Note that the `--headless` option currently only skips the first GUI and expects
 
 ## Installation on the Euler cluster
 
-The installation on Euler is described in the [README.md](./euler/README.md) of the `euler` directory.
+The installation on Euler is described in the [README.md](./euler/README.md) of the [euler](./euler) directory.
 
 ## User Guide
 
