@@ -9,6 +9,6 @@
         "os":"macos-latest",
         "label":"osx-64",
         "prefix":"/Users/runner/miniconda3/envs/midap",
-        "runs_when":"always"
+        "runs_when":"env_change"
     }
 ]
