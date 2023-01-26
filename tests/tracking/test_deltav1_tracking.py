@@ -83,25 +83,25 @@ def tracking_instance(monkeypatch, img1, img2):
 # Tests
 #######
 
-def test_track_all_frames_crop(tracking_instance):
+def test_run_model_crop(tracking_instance):
     """
     Tests the track_all_frames_crop routine with the DeltaV1Tracking class
     :param tracking_instance: A pytest fixture of an DeltaV1Tracking instance
     """
 
-    tracking_instance.track_all_frames_crop()
+    inputs, results_all = tracking_instance.run_model_crop()
 
     # we should have 1 less result than number of input frames
-    assert len(tracking_instance.results_all) == 2
+    assert len(results_all) == 2
 
     # The first should not have a split
-    first_res = tracking_instance.results_all[0]
+    first_res = results_all[0]
     assert first_res.shape == (1, 512, 512, 2)
     assert first_res[..., 0].sum() != 0
     assert first_res[..., 1].sum() == 0
 
     # The second should have a split
-    second_res = tracking_instance.results_all[1]
+    second_res = results_all[1]
     assert second_res.shape == (1, 512, 512, 2)
     assert second_res[..., 0].sum() != 0
     assert second_res[..., 1].sum() != 0

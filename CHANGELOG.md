@@ -19,6 +19,46 @@ Efficiency:
 Fix:
 - ...
 
+## [0.2.2]
+
+2023-01-23
+
+Feature:
+- Automated testing for github
+- Additional tests for the full pipeline
+- Split installation for GPU and non-GPU support
+- Mode READE contents to wiki
+- Improved checkpointing for errors that kill the python process
+
+Fix:
+- Minor fixes discovered by tests
+
+
+## [0.2.1]
+
+2023-01-10
+
+Feature:
+- Removed all bash script, the pipeline can now be run via CLI `midap`
+- The segmentation correction can also be invoked via CLI `segmentation_correction`
+- New GUI layout for more flexibility
+- New settings file type (config file)
+- Advanced checkpointing options
+- The pipeline always runs in batch mode
+- Split tracking classes into two for easy DeltaType Subclassing
+- Cleanup of Delta lineage
+- New helper routines in utils
+- All apps are now in the apps folder of the package and can be run with command line arguments as well.
+- Cleanup of segmentation
+- GUI based segmentation selection (#8) 
+- Live cutout visualization (#5)
+
+Fix:
+- The test work again
+- Bug fix issue #19
+- Fix bug where Lineage ID was always the same as the tracking ID 
+
+
 ## [0.2.0]
 
 2022-12-15
