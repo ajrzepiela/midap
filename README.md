@@ -47,5 +47,5 @@ The documentation can be found in the [wiki](https://github.com/Microbial-System
 
 ## Issues
 
-If you are having trouble with the package, please have a look at the [trouble shooting page](https://github.com/Microbial-Systems-Ecology/midap/wiki/Trouble-shooting#creating-an-github-issue) 
+If you are having trouble with the package, please have a look at the [trouble shooting page](https://github.com/Microbial-Systems-Ecology/midap/wiki/Troubleshooting#creating-an-github-issue) 
 and if necessary create an issue according to the instructions provided there.  
