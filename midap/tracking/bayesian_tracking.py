@@ -136,15 +136,32 @@ class BayesianCellTracking(Tracking):
         """
 
         self.label_stack = np.zeros(self.seg_imgs.shape)
+
         for tr in self.tracks:
             for i, t in enumerate(tr["t"]):
-                try:
-                    x_coord = tr["coords"][i][:, 0].astype(int)
-                    y_coord = tr["coords"][i][:, 1].astype(int)
-                    self.label_stack[t][x_coord, y_coord] = tr["ID"]
+                # in case coords contains nans, search for closest cell
+                if pd.isna(tr['coords'][i]).sum() > 0:
+                    centroid = (tr['y'][i], tr['x'][i])
+                    coords = self.__find_coords(centroid, self.seg_imgs[t])
+                    row_coord = coords[:, 0].astype(int)
+                    col_coord = coords[:, 1].astype(int)
+                else:
+                    row_coord = tr["coords"][i][:, 0].astype(int)
+                    col_coord = tr["coords"][i][:, 1].astype(int)
+                self.label_stack[t][row_coord, col_coord] = tr["ID"]
 
-                except IndexError:
-                    pass
+
+
+    def __find_coords(self, point: tuple, seg: np.ndarray):
+        """
+        Find coordinates for cell based on centrtoid.
+        :point: Center point of tracked cell
+        :seg: Segmentation image
+        """
+        centroids = [r.centroid for r in regionprops(seg)]
+        coords = [r.coords for r in regionprops(seg)]
+        ix_cell = np.argsort([distance.euclidean(c, point) for c in centroids])[0]
+        return coords[ix_cell]
 
     def __find_nearest_neighbour(self, point: tuple, seg: np.ndarray):
         """
@@ -165,18 +182,6 @@ class BayesianCellTracking(Tracking):
         centroids = [r.centroid for r in regionprops(seg)]
         ix_min = np.argsort([distance.euclidean(c, point) for c in centroids])[0]
         return ix_min
-
-    def correct_label_stack_2(self):
-        """
-        Correct label_stack and track_output to fit to community standard:
-        - add IDs of daughter cells
-        """
-        self.label_stack_correct = self.label_stack
-        self.track_output_correct = self.track_output.copy()
-        self.track_output_correct.rename(columns={"parent": "trackID_mother"})
-
-        self.track_output_correct["trackID_d1"] = self.track_output_correct["trackID"]
-        self.track_output_correct["trackID_d2"] = self.track_output_correct["trackID"]
 
     def correct_label_stack(self):
         """
