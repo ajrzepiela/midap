@@ -133,7 +133,7 @@ jobs:
           coverage report -m
 
       - name: Run Tests (OS-X)
-        if: ${{ matrix.label == 'osx-64' }}
+        if: ${{ matrix.label == 'osx-64-1' || matrix.label == 'osx-64-2' }}
         shell: bash -l {0}
         run: |
           coverage run --source="midap" -m pytest -v tests -k "not test_run_module and not apps"
