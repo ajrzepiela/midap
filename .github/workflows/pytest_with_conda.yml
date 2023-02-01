@@ -125,18 +125,10 @@ jobs:
         shell: bash -l {0}
         run: pip install -e .
 
-      - name: Run Tests (Linux)
-        if: ${{ matrix.label == 'linux-64' }}
+      - name: Run Tests 
         shell: bash -l {0}
         run: |
           coverage run --source="midap" -m pytest -v tests
-          coverage report -m
-
-      - name: Run Tests (OS-X)
-        if: ${{ matrix.label == 'osx-64' }}
-        shell: bash -l {0}
-        run: |
-          coverage run --source="midap" -m pytest -v tests -k "not test_run_module and not apps"
           coverage report -m
 
       - name: Extract Coverage
