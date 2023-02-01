@@ -6,15 +6,9 @@
         "runs_when":"always"
     },
     {
-        "os":"macos-12",
-        "label":"osx-64-1",
+        "os":"macos-latest",
+        "label":"osx-64",
         "prefix":"/Users/runner/miniconda3/envs/midap",
-        "runs_when":"always"
-    },
-    {
-        "os":"macos-11",
-        "label":"osx-64-2",
-        "prefix":"/Users/runner/miniconda3/envs/midap",
-        "runs_when":"always"
+        "runs_when":"env_change"
     }
 ]
