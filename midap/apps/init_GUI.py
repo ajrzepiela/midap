@@ -3,9 +3,10 @@ import logging
 import PySimpleGUI as sg
 import numpy as np
 import re
-import os
 
 from glob import glob
+from pathlib import Path
+
 from midap.config import Config
 from midap.utils import get_logger, get_inheritors
 
@@ -53,7 +54,7 @@ def main(config_file="settings.ini", loglevel=7):
                      [sg.DropDown(key="DataType", values=["Family_Machine"], default_value="Family_Machine")],
                      [sg.Text("Choose the target folder: ", key="title_folder_name", font="bold")],
                      [sg.Input(key="folder_name"), sg.FolderBrowse()],
-                     [sg.Text("Filetype (e.g. tif, tiff, ...)", key="title_file_type", font="bold")],
+                     [sg.Text("Filetype (e.g. tif, tiff, ome.tif)", key="title_file_type", font="bold")],
                      [sg.Input(key="file_type")],
                      [sg.Text("Identifier of Position/Experiment (e.g. Pos, pos)", key="pos_id",
                               font="bold")],
@@ -68,7 +69,7 @@ def main(config_file="settings.ini", loglevel=7):
     window.close()
 
     # Return False if we cancel or press "X"
-    if event == "Cancel" or event == None:
+    if event == "Cancel" or event is None:
         logging.critical("GUI was cancelled or unexpectedly closed, exiting...")
         exit(1)
 
@@ -79,10 +80,13 @@ def main(config_file="settings.ini", loglevel=7):
                "IdentifierName": values["pos"]}
 
     # Get all the idetifiers
-    files = sorted(glob(os.path.join(general["FolderPath"],
-                                     f"*{general['IdentifierName']}*.{general['FileType']}")))
-    unique_identifiers = np.unique([re.search(f"{general['IdentifierName']}\d+",
-                                              os.path.basename(f))[0] for f in files])
+    folder_path = Path(general["FolderPath"])
+    if general["FileType"] == "ome.tif":
+        files = sorted(folder_path.glob(f"*{general['IdentifierName']}*.export"))
+    else:
+        files = sorted(folder_path.glob(f"*{general['IdentifierName']}*.{general['FileType']}"))
+
+    unique_identifiers = np.unique([re.search(f"{general['IdentifierName']}\d+", f.name)[0] for f in files])
     if len(unique_identifiers) > 0:
         logger.info(f"Extracted unique identifiers: {unique_identifiers}")
     else:
@@ -166,7 +170,7 @@ def main(config_file="settings.ini", loglevel=7):
         window.close()
 
         # Return False if we cancel or press "X"
-        if event == "Cancel" or event == None:
+        if event == "Cancel" or event is None:
             logging.critical("GUI was cancelled or unexpectedly closed, exiting...")
             exit(1)
 
@@ -187,7 +191,7 @@ def main(config_file="settings.ini", loglevel=7):
         section["RunOption"] = run_options[ix_cond]
 
         # deconv
-        if values["deconv"] == True:
+        if values["deconv"]:
             section["Deconvolution"] = "deconv_family_machine"
         else:
             section["Deconvolution"] = "no_deconv"

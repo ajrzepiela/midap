@@ -19,6 +19,13 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.1]
+
+2023-01-31
+
+Feature:
+- OME-Tif format now accepted
+
 ## [0.3.0]
 
 2023-01-23

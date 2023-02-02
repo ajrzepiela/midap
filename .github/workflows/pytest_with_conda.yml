@@ -125,7 +125,7 @@ jobs:
         shell: bash -l {0}
         run: pip install -e .
 
-      - name: Run Tests
+      - name: Run Tests 
         shell: bash -l {0}
         run: |
           coverage run --source="midap" -m pytest -v tests
