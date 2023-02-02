@@ -195,7 +195,11 @@ def run_module(args=None):
 
                 # we get all the files in the base bath that match
                 file_ext = config.get("General", "FileType")
-                for fname in base_path.glob(f"*{identifier}*.{file_ext}"):
+                if file_ext == "ome.tif":
+                    files = base_path.glob(f"*{identifier}*/**/*.ome.tif")
+                else:
+                    files = base_path.glob(f"*{identifier}*.{file_ext}")
+                for fname in files:
                     for channel in config.getlist(identifier, "Channels"):
                         if channel in fname.stem:
                             logger.info(f"Copying '{fname.name}'...")
