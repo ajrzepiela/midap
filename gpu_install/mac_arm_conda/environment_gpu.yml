@@ -138,6 +138,7 @@ dependencies:
       - cachetools==5.3.0
       - charset-normalizer==3.0.1
       - contourpy==1.0.7
+      - coverage==7.1.0
       - cycler==0.11.0
       - flatbuffers==23.1.21
       - fonttools==4.38.0
@@ -167,6 +168,7 @@ dependencies:
       - pyasn1-modules==0.2.8
       - pydantic==1.10.4
       - pyparsing==3.0.9
+      - pytest==7.2.1
       - pytz==2022.7.1
       - pywavelets==1.4.1
       - requests==2.28.2
@@ -188,4 +190,3 @@ dependencies:
       - urllib3==1.26.14
       - werkzeug==2.2.2
       - wrapt==1.14.1
-prefix: /Users/franziskaoschmann/miniconda3/envs/midap_gpu
