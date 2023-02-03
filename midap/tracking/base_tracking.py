@@ -36,7 +36,8 @@ class Tracking(ABC):
                  model_weights: Union[str, bytes, os.PathLike, None] = None,
                  input_size: Optional[tuple] = None,
                  target_size: Optional[tuple] = None,
-                 crop_size: Optional[tuple] = None):
+                 crop_size: Optional[tuple] = None,
+                 connectivity: Optional[int] = None):
         """
         Initializes the class instance
         :param imgs: List of files containing the cut out images ordered chronological in time
@@ -60,6 +61,9 @@ class Tracking(ABC):
 
         if crop_size is not None:
             self.crop_size = crop_size
+
+        if connectivity is not None:
+            self.connectivity = connectivity
 
     def load_data(self, cur_frame: int):
         """
@@ -125,8 +129,8 @@ class DeltaTypeTracking(Tracking):
         img_cur_frame, img_prev_frame, seg_cur_frame, seg_prev_frame = self.load_data(cur_frame)
 
         # Label of the segmentation of the previous frame
-        label_prev_frame, num_cells = label(seg_prev_frame, return_num=True)
-        label_cur_frame = label(seg_cur_frame)
+        label_prev_frame, num_cells = label(seg_prev_frame, return_num=True, connectivity=self.connectivity)
+        label_cur_frame = label(seg_cur_frame, connectivity=self.connectivity)
         props = regionprops(label_prev_frame)
 
         # create the input
@@ -247,14 +251,14 @@ class DeltaTypeTracking(Tracking):
         """
 
         # Labeling of the segmentation.
-        inp_label = label(inp)
+        inp_label = label(inp, connectivity=self.connectivity)
 
         # Compare cell from tracking with cell from segmentation and
         # find cells which are overlapping most.
         res_clean = np.zeros(res.shape[:-1] + (2,))
         for ri, r in enumerate(res):
 
-            r_label = label(r[:, :, 0] > 0.9)
+            r_label = label(r[:, :, 0] > 0.9, connectivity=self.connectivity)
             r_label = remove_small_objects(r_label, min_size=5)
 
             overl = inp_label[np.multiply(inp, r_label) > 0]
