@@ -2,7 +2,8 @@ import os
 
 from configparser import ConfigParser
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
+from copy import deepcopy
 from .config import Config
 from .utils import get_logger
 
@@ -18,7 +19,7 @@ class Checkpoint(ConfigParser):
     This class implements the checkpoint files of the MIDAP pipeline as simple config files
     """
 
-    def __init__(self, fname):
+    def __init__(self, fname: Union[str,Path,None]):
         """
         Inits the checkpoint with a given file name. A default restart point is created.
         :param fname: The name of the checkpoint file.
@@ -65,7 +66,7 @@ class Checkpoint(ConfigParser):
 
         # check
         if not overwrite and fname.exists():
-            FileExistsError(f"File already exists, set overwrite to True to overwrite: {fname}")
+            raise FileExistsError(f"File already exists, set overwrite to True to overwrite: {fname}")
 
         # now we can open a w+ without worrying
         with open(fname, "w+") as f:
@@ -83,7 +84,7 @@ class Checkpoint(ConfigParser):
         else:
             return self.get("Checkpoint", "Function")
 
-    def set_state(self, state, identifier="None", flush=True, **kwargs):
+    def set_state(self, state: str, identifier="None", flush=True, **kwargs):
         """
         Sets the state of the checkpoint
         :param state: The state of the checkpoint
@@ -107,15 +108,21 @@ class Checkpoint(ConfigParser):
             self.to_file()
 
     @classmethod
-    def from_file(cls, fname: str):
+    def from_file(cls, fname: Union[str,bytes,os.PathLike]):
         """
         Creates a Checkpoint instance from a file
         :param fname: The name of the file to read
         :return: An instance of the class
         """
 
+        # get the path
+        fname = Path(fname)
+
         # create a class instance
-        checkpoint = Checkpoint(fname=fname)
+        if fname.is_file():
+            checkpoint = Checkpoint(fname=fname.name)
+        else:
+            raise FileNotFoundError(f"File {fname} does not exist!")
 
         # read the file
         with open(fname, "r") as f:
@@ -166,7 +173,7 @@ class CheckpointChecker(object):
             current_state = self.checkpoint.get_state(identifier=True)
             # if the Function value is None, we run everything
             if current_state == ("None", "None"):
-                return
+                return None
 
             if current_state != (self.state, self.identifier):
                 raise AlreadyDoneError(f"Already done this! State: {self.state}, Identifier: {self.identifier}")
@@ -178,7 +185,7 @@ class CheckpointManager(object):
     """
 
     def __init__(self, restart: bool, checkpoint: Checkpoint, config: Config, state: str,
-                 identifier: str, copy_path: Union[str,Path,None]=None, **kwargs):
+                 identifier: str, copy_path: Union[str,Path,None]=None):
         """
         Create a checkpoint manager to run things in a with statement for easy checkpointing
         :param restart: The restart flag of the pipeline, if False, then the code in the with block will always
@@ -188,17 +195,16 @@ class CheckpointManager(object):
         :param state: The new state of the checkpoint in case of failure
         :param identifier: The new identifier of the checkpoint in case of failure
         :param copy_path: A path to copy the checkpoint and config to in case of failure
-        :param kwargs: Additional keyword arguments forwarded to the checkpoint state in case of failure
         """
 
         # set the attributes
         self.restart = restart
+        self.checkpoint_original = deepcopy(checkpoint)
         self.checkpoint = checkpoint
         self.config = config
         self.state = state
         self.identifier = identifier
         self.copy_path = copy_path
-        self.state_kwargs = kwargs
 
     def __enter__(self):
         """
@@ -206,7 +212,12 @@ class CheckpointManager(object):
         :return: A CheckpointChecker object
         """
 
-        return CheckpointChecker(restart=self.restart, checkpoint=self.checkpoint, state=self.state,
+        # update the checkpoint
+        self.checkpoint.set_state(state=self.state, identifier=self.identifier)
+        self.save_files()
+
+        # the checkpoint checker needs to get the original checkpoint not the updated one
+        return CheckpointChecker(restart=self.restart, checkpoint=self.checkpoint_original, state=self.state,
                                  identifier=self.identifier)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -222,28 +233,34 @@ class CheckpointManager(object):
         # if we already did it, there is nothing to do
         if isinstance(exc_val, AlreadyDoneError):
             logger.info(f"Skipping {self.state} for {self.identifier}...")
+            # we save the original checkpoint
+            original_state, original_identifier = self.checkpoint_original.get_state(identifier=True)
+            self.checkpoint.set_state(state=original_state, identifier=original_identifier, flush=True)
+            self.save_files()
             return True
 
         # if there is no Error and we successfully finished the job we reset the checkpoint
-        if exc_val is None and self.restart:
+        if exc_val is None:
             self.checkpoint.set_state(state="None", identifier="None", flush=True)
+            self.save_files()
             return True
 
         # we update the checkpoint if we fail otherwise
         if exc_type is not None:
             logger.info(f"Error while running {self.state} for {self.identifier}")
-
-            # we update the checkpoint file
-            self.checkpoint.set_state(state=self.state, identifier=self.identifier, **self.state_kwargs)
-
-            # save checkpoint and config
-            self.checkpoint.to_file()
-            self.config.to_file()
-
-            # save a copy if we have a path
-            if self.copy_path is not None:
-                logger.info(f"Saving a copy of the checkpoint and settings to: {self.copy_path}")
-                self.checkpoint.to_file(self.copy_path)
-                self.config.to_file(self.copy_path)
-
             return False
+
+    def save_files(self):
+        """
+        Saves the checkpoint and settings, also makes a copy if copy_path is set
+        """
+
+        # save checkpoint and config
+        self.checkpoint.to_file()
+        self.config.to_file()
+
+        # save a copy if we have a path
+        if self.copy_path is not None:
+            logger.info(f"Saving a copy of the checkpoint and settings to: {self.copy_path}")
+            self.checkpoint.to_file(self.copy_path)
+            self.config.to_file(self.copy_path)

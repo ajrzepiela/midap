@@ -1,0 +1,27 @@
+name: midap_gpu
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.8.5
+  - cudatoolkit=11.2
+  - cudnn=8.1.0
+  - pip
+  - pip:
+    - matplotlib>=3.3.0
+    - napari==0.4.16
+    - numpy>=1.23.4#
+    - pandas>=1.5.1
+    - Pillow>=9.3.0
+    - psutil==5.9.0
+    - PySimpleGUI>=4.60.4
+    - PyYAML>=6.0
+    - scikit-image>=0.19.3
+    - tqdm>=4.64.0
+    - gitpython
+    - tensorflow
+    - btrack==0.4.6
+    - scikit-learn>=1.2.0
+    - pytest
+    - coverage
+    - -e ../../

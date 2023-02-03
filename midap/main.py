@@ -1,15 +1,14 @@
-import pkg_resources
 import argparse
+import os
 import shutil
 import sys
-import os
-import re
+from glob import glob
+from pathlib import Path
+from shutil import copyfile
 
 import numpy as np
+import pkg_resources
 
-from shutil import copyfile
-from pathlib import Path
-from glob import glob
 
 def run_module(args=None):
     """
@@ -59,7 +58,7 @@ def run_module(args=None):
 
     # we do the local imports here to intercept TF import
     if args.cpu_only:
-        os.environ["CUDA_VISIBLE_DEVICES"] = -1
+        os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
     # supress TF blurp
     os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
@@ -67,7 +66,7 @@ def run_module(args=None):
     os.environ["__VERBOSE"] = str(args.loglevel)
 
     # create a logger
-    from .utils import get_logger
+    from midap.utils import get_logger
     logger = get_logger("MIDAP", args.loglevel)
 
     # print the version
@@ -76,15 +75,15 @@ def run_module(args=None):
 
     # imports
     logger.info(f"Importing all dependencies...")
-    from .checkpoint import Checkpoint, CheckpointManager
-    from .config import Config
-    from .apps import init_GUI, split_frames, cut_chamber, segment_cells, segment_analysis, track_cells
+    from midap.checkpoint import Checkpoint, CheckpointManager
+    from midap.config import Config
+    from midap.apps import init_GUI, split_frames, cut_chamber, segment_cells, segment_analysis, track_cells
     logger.info("Done!")
 
     # create a config file if requested and exit
     if args.create_config:
-        config = Config()
-        config.to_file("settings.ini", overwrite=True)
+        config = Config(fname="settings.ini")
+        config.to_file(overwrite=True)
         return 0
 
     # check if we are restarting
@@ -165,7 +164,7 @@ def run_module(args=None):
 
             # setup all the directories
             with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="SetupDirs",
-                                   identifier=identifier, copy_path=current_path) as checker:
+                                   identifier=identifier) as checker:
                 # check to skip
                 checker.check()
 
@@ -217,6 +216,8 @@ def run_module(args=None):
                 file_ext = config.get("General", "FileType")
                 for channel in config.getlist(identifier, "Channels"):
                     paths = list(current_path.joinpath(channel).glob(f"*.{file_ext}"))
+                    if len(paths) == 0:
+                        raise FileNotFoundError(f"No file of the type '.{file_ext}' exists for channel {channel}")
                     if len(paths) > 1:
                         raise FileExistsError(f"More than one file of the type '.{file_ext}' "
                                               f"exists for channel {channel}")

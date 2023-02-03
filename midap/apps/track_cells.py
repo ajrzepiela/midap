@@ -3,19 +3,20 @@ import os
 from pathlib import Path
 from typing import Union
 
+from skimage import io
+
 # to get all subclasses
 from midap.tracking import *
 from midap.tracking import base_tracking
 from midap.utils import get_logger, get_inheritors
 
 
-def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel: int):
+def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel=7):
     """
     The main function to run the tracking
     :param path: Path to the channel
-    :param tracking_class:
-    :param loglevel:
-    :return:
+    :param tracking_class: The name of the tracking class
+    :param loglevel: The loglevel between 0 and 7, defaults to highest level
     """
 
     # logging
@@ -47,12 +48,16 @@ def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel: in
 
     # Parameters:
     crop_size = (128, 128)
-    target_size = (512, 512)
+    connectivity = 1
+
+    img = io.imread(img_names_sort[0])
+    row = int(img.shape[0]/8)*4
+    col = int(img.shape[1]/8)*4
+    target_size = (512, 512)#(row, col)
     input_size = crop_size + (4,)
 
     # Process
-    tr = class_instance(img_names_sort, seg_names_sort, model_file,
-                        input_size, target_size, crop_size)
+    tr = class_instance(img_names_sort, seg_names_sort, model_file, input_size, target_size, crop_size, connectivity)
     tr.track_all_frames(output_folder)
 
 

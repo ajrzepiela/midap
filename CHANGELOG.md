@@ -19,6 +19,21 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.0]
+
+2023-01-23
+
+Feature:
+- Automated testing for github
+- Additional tests for the full pipeline
+- Split installation for GPU and non-GPU support
+- Mode READE contents to wiki
+- Improved checkpointing for errors that kill the python process
+
+Fix:
+- Minor fixes discovered by tests
+
+
 ## [0.2.1]
 
 2023-01-10

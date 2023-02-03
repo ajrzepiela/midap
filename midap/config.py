@@ -1,3 +1,5 @@
+import os
+
 import git
 
 from configparser import ConfigParser
@@ -97,7 +99,7 @@ class Config(ConfigParser):
             raise FileNotFoundError(f"'FolderPath' not an existing directory: {folder_path}")
 
         # check if we all Found identifiers are valid
-        for identifier in (ids := self.get("General", "IdentifierFound").split(",")):
+        for identifier in (ids := self.getlist("General", "IdentifierFound")):
             if (id_name := self.get("General", "IdentifierName")) not in identifier:
                 raise ValueError(f"Identifier '{id_name}' not in found identifiers: {ids}")
 
@@ -157,7 +159,7 @@ class Config(ConfigParser):
             # check the corner
             corners = self.get(id_name, "Corners")
             corner_list = self.getlist(id_name, "Corners")
-            if len(corners) != 4:
+            if len(corner_list) != 4:
                 raise ValueError(f"'Corner' is not properly defined: {corners}")
             # check if we have valid integers
             for corner in corner_list:
@@ -185,7 +187,7 @@ class Config(ConfigParser):
 
         return self.get(section=section, option=option).split(",")
 
-    def to_file(self, fname: Union[str,Path,None]=None, overwrite=True):
+    def to_file(self, fname: Union[str,bytes,os.PathLike,None]=None, overwrite=True):
         """
         Write the config into a file
         :param fname: Name of the file to write, defaults to fname attribute. If a directory is specified, the file
@@ -206,14 +208,14 @@ class Config(ConfigParser):
 
         # check
         if not overwrite and fname.exists():
-            FileExistsError(f"File already exists, set overwrite to True to overwrite: {fname}")
+            raise FileExistsError(f"File already exists, set overwrite to True to overwrite: {fname}")
 
         # now we can open a w+ without worrying
         with open(fname, "w+") as f:
             self.write(f)
 
     @classmethod
-    def from_file(cls, fname: str, full_check=False):
+    def from_file(cls, fname:  Union[str,bytes,os.PathLike], full_check=False):
         """
         Initiates a new instance of the class and overwrites the defaults with contents from a file. The contents read
         from the file will be checked for validity.
@@ -222,8 +224,14 @@ class Config(ConfigParser):
         :return: An instance of the class
         """
 
+        # get the path
+        fname = Path(fname)
+
         # create a class instance
-        config = Config(fname=fname)
+        if fname.is_file():
+            config = Config(fname=fname.name)
+        else:
+            raise FileNotFoundError(f"File {fname} does not exist!")
 
         # read the file
         with open(fname, "r") as f:

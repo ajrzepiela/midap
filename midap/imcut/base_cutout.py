@@ -1,14 +1,11 @@
-import numpy as np
-import math
 import os
-import re
+from abc import ABC, abstractmethod
+from typing import Iterable, Union
 
+import numpy as np
 import skimage.io as io
 from skimage.registration import phase_cross_correlation
-
 from tqdm import tqdm
-from abc import ABC, abstractmethod
-from typing import Iterable
 
 from ..utils import get_logger
 
@@ -27,14 +24,14 @@ class CutoutImage(ABC):
     # this logger will be shared by all instances and subclasses
     logger = logger
 
-    def __init__(self, paths: Iterable[str]):
+    def __init__(self, paths: Union[str, bytes, os.PathLike, Iterable[Union[str, bytes, os.PathLike]]]):
         """
         Initializes the class
-        :param paths: List of paths to the directoris containing the files that should be cut
+        :param paths: List of paths to the directories containing the files that should be cut
         """
 
         # if paths is just a single string we pack it into a list
-        if isinstance(paths, str):
+        if isinstance(paths, (str, bytes, os.PathLike)):
             self.paths = [paths]
         else:
             self.paths = paths
