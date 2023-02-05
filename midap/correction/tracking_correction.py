@@ -1,6 +1,10 @@
 from copy import deepcopy
+from pathlib import Path
 
+import h5py
 import napari
+import numpy as np
+import pandas as pd
 from napari.components.viewer_model import ViewerModel
 from napari.layers import Image, Labels, Layer
 from napari.qt import QtViewer
@@ -120,16 +124,24 @@ class ExampleWidget(QWidget):
 class MultipleViewerWidget(QWidget):
     """The main widget of the example."""
 
-    def __init__(self, viewer: napari.Viewer):
+    def __init__(self, viewer: napari.Viewer, images: np.ndarray, labels: np.ndarray, track_df: pd.DataFrame):
+        # TODO: write dockstring
         super().__init__()
 
-        # the main viewer
-        self.viewer = viewer
+        # check if we have at least to images
+        if len(images) < 2:
+            raise ValueError("The viewer needs at least the track of 2 images!")
+        # we need at least 1 tracked cell
+        if len(track_df) == 0:
+            raise ValueError("No cell tracks in the track data frame!")
 
-        # The secondary viewer
-        self.viewer_model1 = ViewerModel(title="model1")
+        # the main viewer
+        self.main_viewer = viewer
+
+        # The secondary viewer (do not change the title)
+        self.side_viewer = ViewerModel(title="model1")
         self._block = False
-        self.qt_viewer1 = QtViewerWrap(viewer, self.viewer_model1)
+        self.qt_viewer1 = QtViewerWrap(viewer, self.side_viewer)
 
         # The tab widget to add additional widgets
         self.tab_widget = QTabWidget()
@@ -141,7 +153,7 @@ class MultipleViewerWidget(QWidget):
         # The napari qt viewer is already in a layout (box)
         # we add the parent to a temp layout to remove it from the window
         tmp_layout = QGridLayout()
-        tmp_layout.addWidget(self.viewer.window._qt_viewer.parent())
+        tmp_layout.addWidget(self.main_viewer.window._qt_viewer.parent())
         tmp_widget = QWidget()
         tmp_widget.setLayout(tmp_layout)
         # now we add just the viewer to the grid layout
@@ -150,7 +162,7 @@ class MultipleViewerWidget(QWidget):
         # add stretch factor to ensure even resize
         layout.setRowStretch(0, 1)
         layout.setColumnStretch(0, 1)
-        layout.addWidget(self.viewer.window._qt_viewer, 0, 0)
+        layout.addWidget(self.main_viewer.window._qt_viewer, 0, 0)
         layout.setColumnStretch(1, 1)
         layout.addWidget(self.qt_viewer1, 0, 1)
         # no stretch factor for the status widget
@@ -158,99 +170,154 @@ class MultipleViewerWidget(QWidget):
         layout.addWidget(self.tab_widget, 0, 2)
         self.setLayout(layout)
 
-        # connect layers etc.
-        self.viewer.layers.events.inserted.connect(self._layer_added)
-        self.viewer.layers.events.removed.connect(self._layer_removed)
-        self.viewer.layers.events.moved.connect(self._layer_moved)
-        self.viewer.layers.selection.events.active.connect(
-            self._layer_selection_changed
-        )
-        self.viewer.dims.events.current_step.connect(self._point_update)
-        self.viewer_model1.dims.events.current_step.connect(self._point_update)
-        self.viewer.dims.events.order.connect(self._order_update)
-        self.viewer.events.reset_view.connect(self._reset_view)
-        self.viewer_model1.events.status.connect(self._status_update)
+        # create the image layers
+        self.current_frame = 0
+        self.n_frames = len(images)
+        self.images = images
+        self.labels = labels
+
+        # the special names are layer that are differently named in both viewer, other layers are the same and copied
+        self.special_names = ["Image", "Labels"]
+
+        # the image layers
+        self.main_img_layer = self.main_viewer.add_image(data=self.images[self.current_frame],
+                                                         name="Image",
+                                                         rgb=False,
+                                                         contrast_limits=[0,1],
+                                                         scale=(1,1))
+        self.side_img_layer = self.side_viewer.add_image(self.images[self.current_frame + 1],
+                                                         name="SideImage",
+                                                         rgb=False,
+                                                         contrast_limits=[0, 1],
+                                                         scale=(1, 1))
+
+        # add the label images
+        self.main_label_layer = self.main_viewer.add_labels(self.labels[self.current_frame],
+                                                            name="Labels",
+                                                            num_colors=50)
+        self.side_label_layer = self.side_viewer.add_labels(self.labels[self.current_frame+1],
+                                                            name="Labels",
+                                                            num_colors=50)
+
+
+        # sync layers (one directional because the tools are only for the main viewer)
+        self.main_viewer.layers.events.inserted.connect(self._layer_added)
+        self.main_viewer.layers.events.removed.connect(self._layer_removed)
+        self.main_viewer.layers.events.moved.connect(self._layer_moved)
+        self.main_viewer.layers.selection.events.active.connect(self._layer_selection_changed)
+
+        # sync status and resets (one directional)
+        self.main_viewer.events.reset_view.connect(self._reset_view)
+        self.side_viewer.events.status.connect(self._status_update)
+
+        # sync dims (just for completion, should not be relevant)
+        self.main_viewer.dims.events.current_step.connect(self._point_update)
+        self.side_viewer.dims.events.current_step.connect(self._point_update)
+        self.main_viewer.dims.events.order.connect(self._order_update)
 
         # sync camera
-        self.viewer.camera.events.zoom.connect(self._viewer_zoom)
-        self.viewer_model1.camera.events.zoom.connect(self._viewer_zoom)
-        self.viewer.camera.events.center.connect(self._viewer_center)
-        self.viewer_model1.camera.events.center.connect(self._viewer_center)
-        self.viewer.camera.events.angles.connect(self._viewer_angles)
-        self.viewer_model1.camera.events.angles.connect(self._viewer_angles)
+        self.main_viewer.camera.events.zoom.connect(self._viewer_zoom)
+        self.side_viewer.camera.events.zoom.connect(self._viewer_zoom)
+        self.main_viewer.camera.events.center.connect(self._viewer_center)
+        self.side_viewer.camera.events.center.connect(self._viewer_center)
+        self.main_viewer.camera.events.angles.connect(self._viewer_angles)
+        self.side_viewer.camera.events.angles.connect(self._viewer_angles)
+
+        # key binds
+        self.main_viewer.bind_key('Left', self.left_arrow_key_bind)
+        self.main_viewer.bind_key('Right', self.right_arrow_key_bind)
 
     def _status_update(self, event):
-        self.viewer.status = event.value
+        """
+        Updates the status of the viewer (message displayer in the lower left corner) only needs to sync in 1 direction
+        :param event: The event that triggered the status change
+        """
+        self.main_viewer.status = event.value
 
     def _reset_view(self):
-        self.viewer_model1.reset_view()
+        """
+        Syncs the reset of the view one-directional
+        """
+        self.side_viewer.reset_view()
 
     def _layer_selection_changed(self, event):
         """
-        update of current active layer
+        Syncs the reset of the view one-directional
         """
         if self._block:
             return
 
         if event.value is None:
-            self.viewer_model1.layers.selection.active = None
+            self.side_viewer.layers.selection.active = None
             return
 
-        self.viewer_model1.layers.selection.active = self.viewer_model1.layers[
-            event.value.name
-        ]
+        # catch special names
+        if (name := event.value.name) in self.special_names:
+            name = f"Side{name}"
+
+        self.side_viewer.layers.selection.active = self.side_viewer.layers[name]
 
     def _point_update(self, event):
-        for model in [self.viewer, self.viewer_model1]:
+        """
+        Syncs the point updates of the view one-directional
+        :param event: The trigger event
+        """
+        for model in [self.main_viewer, self.side_viewer]:
             if model.dims is event.source:
                 continue
             model.dims.current_step = event.value
 
     def _order_update(self):
-        order = list(self.viewer.dims.order)
+        """
+        Order sync for the dims (one-directional)
+        """
+        order = list(self.main_viewer.dims.order)
         if len(order) <= 2:
-            self.viewer_model1.dims.order = order
+            self.side_viewer.dims.order = order
             return
 
         order[-3:] = order[-2], order[-3], order[-1]
-        self.viewer_model1.dims.order = order
+        self.side_viewer.dims.order = order
 
     def _layer_added(self, event):
-        """add layer to additional viewers and connect all required events"""
-        self.viewer_model1.layers.insert(
-            event.index, copy_layer(event.value, "model1")
-        )
+        """
+        Add layer to additional viewers and connect all required events
+        :param event: The event that trigger the layer addition
+        """
+        self.side_viewer.layers.insert(event.index, copy_layer(event.value, "model1"))
 
         for name in get_property_names(event.value):
-            getattr(event.value.events, name).connect(
-                own_partial(self._property_sync, name)
-            )
+            getattr(event.value.events, name).connect(own_partial(self._property_sync, name))
 
         if isinstance(event.value, Labels):
             event.value.events.set_data.connect(self._set_data_refresh)
-            self.viewer_model1.layers[
-                event.value.name
-            ].events.set_data.connect(self._set_data_refresh)
-        if event.value.name != ".cross":
-            self.viewer_model1.layers[event.value.name].events.data.connect(
-                self._sync_data
-            )
+            self.side_viewer.layers[event.value.name].events.set_data.connect(self._set_data_refresh)
+
+        self.side_viewer.layers[event.value.name].events.data.connect(self._sync_data)
 
         event.value.events.name.connect(self._sync_name)
 
         self._order_update()
 
     def _sync_name(self, event):
-        """sync name of layers"""
-        index = self.viewer.layers.index(event.source)
-        self.viewer_model1.layers[index].name = event.source.name
+        """
+        Sync the name of layers (if not special)
+        :param event: The event that triggered the rename
+        """
+
+        if (name := event.source.name) not in self.special_names:
+            index = self.main_viewer.layers.index(event.source)
+            self.side_viewer.layers[index].name = name
 
     def _sync_data(self, event):
-        """sync data modification from additional viewers"""
-        if self._block:
+        """
+        Sync data modification from additional viewers  (not special layers)
+        :param event: The event that changed the data
+        """
+        if self._block or (name := event.source.name) in self.special_names:
             return
-        for model in [self.viewer, self.viewer_model1]:
-            layer = model.layers[event.source.name]
+        for model in [self.main_viewer, self.side_viewer]:
+            layer = model.layers[name]
             if layer is event.source:
                 continue
             try:
@@ -261,12 +328,13 @@ class MultipleViewerWidget(QWidget):
 
     def _set_data_refresh(self, event):
         """
-        synchronize data refresh between layers
+        Synchronize data refresh between layers (not special layers)
+        :param event: Event that triggered the refresh
         """
-        if self._block:
+        if self._block or (name := event.source.name) in self.special_names:
             return
-        for model in [self.viewer, self.viewer_model1]:
-            layer = model.layers[event.source.name]
+        for model in [self.main_viewer, self.side_viewer]:
+            layer = model.layers[name]
             if layer is event.source:
                 continue
             try:
@@ -276,26 +344,36 @@ class MultipleViewerWidget(QWidget):
                 self._block = False
 
     def _layer_removed(self, event):
-        """remove layer in all viewers"""
-        self.viewer_model1.layers.pop(event.index)
+        """
+        Remove layer in all viewers
+        :param event: Event that triggered the removeal
+        """
+        self.side_viewer.layers.pop(event.index)
 
     def _layer_moved(self, event):
-        """update order of layers"""
+        """
+        Update order of layers
+        :param event: Event that triggered the move
+        """
         dest_index = (
             event.new_index
             if event.new_index < event.index
             else event.new_index + 1
         )
-        self.viewer_model1.layers.move(event.index, dest_index)
+        self.side_viewer.layers.move(event.index, dest_index)
 
     def _property_sync(self, name, event):
-        """Sync layers properties (except the name)"""
-        if event.source not in self.viewer.layers:
+        """
+        Sync layers properties (except the name)
+        :param name: Name of the property
+        :param event: event that triggered sync
+        """
+        if event.source not in self.main_viewer.layers:
             return
         try:
             self._block = True
             setattr(
-                self.viewer_model1.layers[event.source.name],
+                self.side_viewer.layers[event.source.name],
                 name,
                 getattr(event.source, name),
             )
@@ -307,29 +385,80 @@ class MultipleViewerWidget(QWidget):
         Syncs the zoom between all the viewers
         :param event: The camera event
         """
-        self.viewer.camera.zoom = event.source.zoom
-        self.viewer_model1.camera.zoom = event.source.zoom
+        self.main_viewer.camera.zoom = event.source.zoom
+        self.side_viewer.camera.zoom = event.source.zoom
 
     def _viewer_center(self, event):
         """
         Syncs the center between all the viewers
         :param event: The camera event
         """
-        self.viewer.camera.center = event.source.center
-        self.viewer_model1.camera.center = event.source.center
+        self.main_viewer.camera.center = event.source.center
+        self.side_viewer.camera.center = event.source.center
 
     def _viewer_angles(self, event):
         """
         Syncs the angles between all the viewers
         :param event: The camera event
         """
-        self.viewer.camera.angles = event.source.angles
-        self.viewer_model1.camera.angles = event.source.angles
+        self.main_viewer.camera.angles = event.source.angles
+        self.side_viewer.camera.angles = event.source.angles
+
+    def change_frame(self, frame: int):
+        """
+        Changes the current frame to frame
+        :param frame: The int of the new frame of the main viewer
+        """
+
+        # catch our of bounds
+        if frame == self.n_frames:
+            frame -= 1
+
+        # update
+        self.main_img_layer.data = self.images[frame]
+        self.main_label_layer.data = self.labels[frame]
+
+        self.side_img_layer.data = self.images[frame + 1]
+        self.side_label_layer.data = self.labels[frame + 1]
+
+        self.current_frame = frame
+
+    def left_arrow_key_bind(self, *args):
+        
+        """
+        Key bind for the left arrow key (decrease frame number)
+        """
+        if self.current_frame == 0:
+            self.main_viewer.status = "Already at first image"
+            return
+        self.change_frame(self.current_frame - 1)
+
+    def right_arrow_key_bind(self, *args):
+        """
+        Key bind for the right arrow key (increase frame number)
+        """
+
+        if self.current_frame + 2 == self.n_frames:
+            self.main_viewer.status = "Already at last image"
+            return
+        self.change_frame(self.current_frame + 1)
 
 
-if __name__ == "__main__":
+def main():
+    # read in the data
+    path = Path("../../../Tests/tracking_tool/test_data")
+    with h5py.File(path.joinpath("label_stack_delta.h5")) as f:
+        labels = f["label_stack"][:].astype(int)
+    with h5py.File(path.joinpath("raw_inputs_delta.h5")) as f:
+        imgs = f["raw_inputs"][:]
+    table = pd.read_csv(path.joinpath("track_output_delta.csv"))
+
     view = napari.Viewer()
     # create the multi view and make it central
-    multi_view = MultipleViewerWidget(view)
+    multi_view = MultipleViewerWidget(view, images=imgs, labels=labels, track_df=table)
     view.window._qt_window.setCentralWidget(multi_view)
     napari.run()
+
+if __name__ == "__main__":
+    main()
+
