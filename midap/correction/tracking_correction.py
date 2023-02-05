@@ -208,7 +208,8 @@ class MultipleViewerWidget(QWidget):
                                                              opacity=1.0)
         self.side_select_layer = self.side_viewer.add_labels(test_select,
                                                              name="SideSelection",
-                                                             color={1: "yellow"},
+                                                             color={1: "yellow",
+                                                                    2: "orange"},
                                                              opacity=1.0)
 
         # connect the special layers
@@ -242,6 +243,10 @@ class MultipleViewerWidget(QWidget):
         # key binds
         self.main_viewer.bind_key('Left', self.left_arrow_key_bind)
         self.main_viewer.bind_key('Right', self.right_arrow_key_bind)
+
+        # mouse clicks
+        self.main_select_layer.mouse_drag_callbacks.append(self.track_clicked)
+        self.side_select_layer.mouse_drag_callbacks.append(self.track_clicked)
 
     def _status_update(self, event):
         """
@@ -388,7 +393,7 @@ class MultipleViewerWidget(QWidget):
             return
         try:
             # catch special names
-            if (layer_name := event.value.name) in self.special_names:
+            if (layer_name := event.source.name) in self.special_names:
                 layer_name = f"Side{name}"
             self._block = True
             setattr(
@@ -452,6 +457,9 @@ class MultipleViewerWidget(QWidget):
 
         self.current_frame = frame
 
+        # selection
+        self.update_selection(selection=self.selection)
+
     def left_arrow_key_bind(self, *args):
 
         """
@@ -472,7 +480,7 @@ class MultipleViewerWidget(QWidget):
             return
         self.change_frame(self.current_frame + 1)
 
-    def track_clicked(layer, event):
+    def track_clicked(self, layer, event):
         """
         Handle for the mouse clicks on the tracks
         :param event: The event of the mouse click
@@ -480,8 +488,48 @@ class MultipleViewerWidget(QWidget):
         # Mouse down
         yield
         # Mouse up
+        data_coordinates = layer.world_to_data(event.position)
+        x, y = np.round(data_coordinates).astype(int)
+        if "Side" in layer.name:
+            val = self.labels[self.current_frame + 1][x, y]
+        else:
+            val = self.labels[self.current_frame][x, y]
+        # a click into nothing-ness
+        if val is None:
+            return
+        # click on the same selection (unselect)
+        if val == self.selection:
+            self.update_selection(None)
+        # normal update
+        else:
+            self.update_selection(val)
 
+    def update_selection(self, selection=None):
+        """
+        Updates the selection to the new value
+        :param selection: The new selection value
+        """
 
+        if selection is None or selection == 0:
+            # Nothin is selected
+            self.selection = None
+            self.main_select_layer.data = np.zeros_like(self.main_select_layer.data)
+            self.side_select_layer.data = np.zeros_like(self.side_select_layer.data)
+        else:
+            # there might be something
+            self.selection = selection
+
+            # we update main
+            main_label = self.labels[self.current_frame]
+            new_data = np.where(main_label == selection, 1, 0)
+            self.main_select_layer.data = new_data
+
+            # update side
+            side_data = self.labels[self.current_frame + 1]
+            new_data = np.where(side_data == selection, 1, 0)
+            self.side_select_layer.data = new_data
+
+            # TODO: add kids
 
 
 def main():
