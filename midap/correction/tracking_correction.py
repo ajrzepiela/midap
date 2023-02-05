@@ -1,0 +1,483 @@
+"""
+This is an example on how to have more than one viewer in the same napari window.
+Additional viewers state will be synchronized with the main viewer.
+Switching to 3D display will only impact the main viewer.
+This example also contain option to enable cross that will be moved to the
+current dims point (`viewer.dims.point`).
+"""
+
+from copy import deepcopy
+
+import napari
+import numpy as np
+from napari.components.layerlist import Extent
+from napari.components.viewer_model import ViewerModel
+from napari.layers import Image, Labels, Layer
+from napari.qt import QtViewer
+from napari.utils.action_manager import action_manager
+from napari.utils.events.event import WarningEmitter
+from napari.utils.notifications import show_info
+from packaging.version import parse as parse_version
+from qtpy.QtCore import Qt, QSize
+from qtpy.QtWidgets import (
+    QGridLayout,
+    QDoubleSpinBox,
+    QPushButton,
+    QSplitter,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
+)
+
+NAPARI_GE_4_16 = parse_version(napari.__version__) > parse_version("0.4.16")
+
+
+def copy_layer_le_4_16(layer: Layer, name: str = ""):
+    res_layer = deepcopy(layer)
+    # this deepcopy is not optimal for labels and images layers
+    if isinstance(layer, (Image, Labels)):
+        res_layer.data = layer.data
+
+    res_layer.metadata["viewer_name"] = name
+
+    res_layer.events.disconnect()
+    res_layer.events.source = res_layer
+    for emitter in res_layer.events.emitters.values():
+        emitter.disconnect()
+        emitter.source = res_layer
+    return res_layer
+
+
+def copy_layer(layer: Layer, name: str = ""):
+    if NAPARI_GE_4_16:
+        return copy_layer_le_4_16(layer, name)
+
+    res_layer = Layer.create(*layer.as_layer_data_tuple())
+    res_layer.metadata["viewer_name"] = name
+    return res_layer
+
+
+def get_property_names(layer: Layer):
+    klass = layer.__class__
+    res = []
+    for event_name, event_emitter in layer.events.emitters.items():
+        if isinstance(event_emitter, WarningEmitter):
+            continue
+        if event_name in ("thumbnail", "name"):
+            continue
+        if (
+            isinstance(getattr(klass, event_name, None), property)
+            and getattr(klass, event_name).fset is not None
+        ):
+            res.append(event_name)
+    return res
+
+
+def center_cross_on_mouse(
+    viewer_model: napari.components.viewer_model.ViewerModel,
+):
+    """move the cross to the mouse position"""
+
+    if not getattr(viewer_model, "mouse_over_canvas", True):
+        # There is no way for napari 0.4.15 to check if mouse is over sending canvas.
+        show_info(
+            "Mouse is not over the canvas. You may need to click on the canvas."
+        )
+        return
+
+    viewer_model.dims.current_step = tuple(
+        np.round(
+            [
+                max(min_, min(p, max_)) / step
+                for p, (min_, max_, step) in zip(
+                    viewer_model.cursor.position, viewer_model.dims.range
+                )
+            ]
+        ).astype(int)
+    )
+
+
+action_manager.register_action(
+    name='napari:move_point',
+    command=center_cross_on_mouse,
+    description='Move dims point to mouse position',
+    keymapprovider=ViewerModel,
+)
+
+action_manager.bind_shortcut('napari:move_point', 'C')
+
+
+class own_partial:
+    """
+    Workaround for deepcopy not copying partial functions
+    (Qt widgets are not serializable)
+    """
+
+    def __init__(self, func, *args, **kwargs):
+        self.func = func
+        self.args = args
+        self.kwargs = kwargs
+
+    def __call__(self, *args, **kwargs):
+        return self.func(*(self.args + args), **{**self.kwargs, **kwargs})
+
+    def __deepcopy__(self, memodict={}):
+        return own_partial(
+            self.func,
+            *deepcopy(self.args, memodict),
+            **deepcopy(self.kwargs, memodict),
+        )
+
+
+class QtViewerWrap(QtViewer):
+    def __init__(self, main_viewer, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.main_viewer = main_viewer
+        self.old_window_width = self.main_viewer.window._qt_window.width()
+
+
+
+        # overwrite the resize event of the window to sync the sizes of the viewers
+        old_resize_event = self.main_viewer.window._qt_window.resizeEvent
+        def new_resize_eventv1(QResizeEvent):
+            print("RESIZE!!")
+            main_view_width = self.main_viewer.window._qt_viewer.width()
+            side_view_width = self.width()
+            window_size_diff = QResizeEvent.size().width() - self.old_window_width
+            new_width = (main_view_width + side_view_width + window_size_diff) // 2
+            if window_size_diff == 0:
+                # if we do not change the width, we do nothing
+                lower_margin = 0
+                upper_margin = 0
+            elif window_size_diff > 0:
+                # if we increase the window size, we allow the stuff to get bigger
+                lower_margin = 1
+                upper_margin = 1
+            else:
+                # if we decrease the window stuff gets smaller
+                lower_margin = new_width - 250
+                upper_margin = new_width - 750
+
+            self.old_window_width = QResizeEvent.size().width()
+
+            self.setMinimumWidth(new_width - lower_margin)
+            self.setMaximumWidth(new_width + upper_margin)
+            self.main_viewer.window._qt_viewer.setMinimumWidth(new_width - lower_margin)
+            self.main_viewer.window._qt_viewer.setMaximumWidth(new_width + upper_margin)
+
+            old_resize_event(QResizeEvent)
+
+        def new_resize_event(QResizeEvent):
+            print("RESIZE!!")
+            print(self.width())
+            old_resize_event(QResizeEvent)
+            print(self.width())
+            main_view_width = self.main_viewer.window._qt_viewer.width()
+            side_view_width = self.width()
+            side_view_height = self.height()
+            new_width = (main_view_width + side_view_width) // 2
+            print(main_view_width, side_view_width, new_width)
+            new_size = QSize(new_width, side_view_height)
+            #self.resize(new_size)
+            #self.main_viewer.window._qt_viewer.resize(new_size)
+            self.setFixedWidth(new_width)
+            self.main_viewer.window._qt_viewer.setFixedWidth(new_width)
+            print(self.width(), self.main_viewer.window._qt_viewer.width())
+
+
+        #self.main_viewer.window._qt_window.resizeEvent = new_resize_event
+
+    def _qt_open(
+        self,
+        filenames: list,
+        stack: bool,
+        plugin: str = None,
+        layer_type: str = None,
+        **kwargs,
+    ):
+        """for drag and drop open files"""
+        self.main_viewer.window._qt_viewer._qt_open(
+            filenames, stack, plugin, layer_type, **kwargs
+        )
+
+    def __resizeEvent(self, QResizeEvent):
+        print("RESIZE!!!")
+        # get the old size of the window and the viewer
+        old_view_width = self.main_viewer.window._qt_viewer.width()
+        old_window_width = self.main_viewer.window._qt_window.width()
+        old_view_height = self.main_viewer.window._qt_viewer.height()
+        old_window_height = self.main_viewer.window._qt_window.height()
+
+        # set size dimension of the viewer (fixed)
+        self.main_viewer.window._qt_viewer.setFixedWidth(QResizeEvent.size().width())
+        self.main_viewer.window._qt_viewer.setFixedHeight(QResizeEvent.size().height())
+
+        # adapt the window size
+        new_size = deepcopy(QResizeEvent.size())
+        new_size.setWidth(old_window_width + (QResizeEvent.size().width() - old_view_width))
+        new_size.setHeight(old_window_height + (QResizeEvent.size().height() - old_view_height))
+        self.main_viewer.window._qt_window.resize(new_size)
+
+        super().resizeEvent(QResizeEvent)
+
+
+class ExampleWidget(QWidget):
+    """
+    Dummy widget showcasing how to place additional widgets to the right
+    of the additional viewers.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.btn = QPushButton("Perform action")
+        self.spin = QDoubleSpinBox()
+        layout = QVBoxLayout()
+        layout.addWidget(self.spin)
+        layout.addWidget(self.btn)
+        layout.addStretch(1)
+        self.setLayout(layout)
+
+
+class MultipleViewerWidget(QWidget):
+    """The main widget of the example."""
+
+    def __init__(self, viewer: napari.Viewer):
+        super().__init__()
+
+        # the main viewer
+        self.viewer = viewer
+
+        # The secondary viewer
+        self.viewer_model1 = ViewerModel(title="model1")
+        self._block = False
+        self.qt_viewer1 = QtViewerWrap(viewer, self.viewer_model1)
+
+        # The tab widget to add additional widgets
+        self.tab_widget = QTabWidget()
+        w1 = ExampleWidget()
+        w2 = ExampleWidget()
+        self.tab_widget.addTab(w1, "Sample 1")
+        self.tab_widget.addTab(w2, "Sample 2")
+
+        # The napari qt viewer is already in a layout (box)
+        # we add the parent to a temp layout to remove it from the window
+        tmp_layout = QGridLayout()
+        tmp_layout.addWidget(self.viewer.window._qt_viewer.parent())
+        tmp_widget = QWidget()
+        tmp_widget.setLayout(tmp_layout)
+        # now we add just the viewer to the grid layout
+        # this way the two viewers will alway be the same size
+        layout = QGridLayout()
+        # add stretch factor to ensure even resize
+        layout.setRowStretch(0, 1)
+        layout.setColumnStretch(0, 1)
+        layout.addWidget(self.viewer.window._qt_viewer, 0, 0)
+        layout.setColumnStretch(1, 1)
+        layout.addWidget(self.qt_viewer1, 0, 1)
+        # no stretch factor for the status widget
+        layout.setColumnStretch(2, 0)
+        layout.addWidget(self.tab_widget, 0, 2)
+        self.setLayout(layout)
+
+        # connect layers etc.
+        self.viewer.layers.events.inserted.connect(self._layer_added)
+        self.viewer.layers.events.removed.connect(self._layer_removed)
+        self.viewer.layers.events.moved.connect(self._layer_moved)
+        self.viewer.layers.selection.events.active.connect(
+            self._layer_selection_changed
+        )
+        self.viewer.dims.events.current_step.connect(self._point_update)
+        self.viewer_model1.dims.events.current_step.connect(self._point_update)
+        self.viewer.dims.events.order.connect(self._order_update)
+        self.viewer.events.reset_view.connect(self._reset_view)
+        self.viewer_model1.events.status.connect(self._status_update)
+
+        # sync width
+
+
+        # sync camera
+        self.viewer.camera.events.zoom.connect(self._viewer_zoom)
+        self.viewer.camera.events.center.connect(self._viewer_center)
+        self.viewer.camera.events.angles.connect(self._viewer_angles)
+
+    def _status_update(self, event):
+        self.viewer.status = event.value
+
+    def _reset_view(self):
+        self.viewer_model1.reset_view()
+
+    def _layer_selection_changed(self, event):
+        """
+        update of current active layer
+        """
+        if self._block:
+            return
+
+        if event.value is None:
+            self.viewer_model1.layers.selection.active = None
+            return
+
+        self.viewer_model1.layers.selection.active = self.viewer_model1.layers[
+            event.value.name
+        ]
+
+    def _point_update(self, event):
+        for model in [self.viewer, self.viewer_model1]:
+            if model.dims is event.source:
+                continue
+            model.dims.current_step = event.value
+
+    def _order_update(self):
+        order = list(self.viewer.dims.order)
+        if len(order) <= 2:
+            self.viewer_model1.dims.order = order
+            return
+
+        order[-3:] = order[-2], order[-3], order[-1]
+        self.viewer_model1.dims.order = order
+
+    def _layer_added(self, event):
+        """add layer to additional viewers and connect all required events"""
+        self.viewer_model1.layers.insert(
+            event.index, copy_layer(event.value, "model1")
+        )
+
+        for name in get_property_names(event.value):
+            getattr(event.value.events, name).connect(
+                own_partial(self._property_sync, name)
+            )
+
+        if isinstance(event.value, Labels):
+            event.value.events.set_data.connect(self._set_data_refresh)
+            self.viewer_model1.layers[
+                event.value.name
+            ].events.set_data.connect(self._set_data_refresh)
+        if event.value.name != ".cross":
+            self.viewer_model1.layers[event.value.name].events.data.connect(
+                self._sync_data
+            )
+
+        event.value.events.name.connect(self._sync_name)
+
+        self._order_update()
+
+    def _sync_name(self, event):
+        """sync name of layers"""
+        index = self.viewer.layers.index(event.source)
+        self.viewer_model1.layers[index].name = event.source.name
+
+    def _sync_data(self, event):
+        """sync data modification from additional viewers"""
+        if self._block:
+            return
+        for model in [self.viewer, self.viewer_model1]:
+            layer = model.layers[event.source.name]
+            if layer is event.source:
+                continue
+            try:
+                self._block = True
+                layer.data = event.source.data
+            finally:
+                self._block = False
+
+    def _set_data_refresh(self, event):
+        """
+        synchronize data refresh between layers
+        """
+        if self._block:
+            return
+        for model in [self.viewer, self.viewer_model1]:
+            layer = model.layers[event.source.name]
+            if layer is event.source:
+                continue
+            try:
+                self._block = True
+                layer.refresh()
+            finally:
+                self._block = False
+
+    def _layer_removed(self, event):
+        """remove layer in all viewers"""
+        self.viewer_model1.layers.pop(event.index)
+
+    def _layer_moved(self, event):
+        """update order of layers"""
+        dest_index = (
+            event.new_index
+            if event.new_index < event.index
+            else event.new_index + 1
+        )
+        self.viewer_model1.layers.move(event.index, dest_index)
+
+    def _property_sync(self, name, event):
+        """Sync layers properties (except the name)"""
+        if event.source not in self.viewer.layers:
+            return
+        try:
+            self._block = True
+            setattr(
+                self.viewer_model1.layers[event.source.name],
+                name,
+                getattr(event.source, name),
+            )
+        finally:
+            self._block = False
+
+    def _viewer_zoom(self, event):
+        """
+        Syncs the zoom between all the viewers
+        :param event: The camera event
+        """
+        self.viewer_model1.camera.zoom = event.source.zoom
+
+    def _viewer_center(self, event):
+        """
+        Syncs the center between all the viewers
+        :param event: The camera event
+        """
+        self.viewer_model1.camera.center = event.source.center
+
+    def _viewer_angles(self, event):
+        """
+        Syncs the angles between all the viewers
+        :param event: The camera event
+        """
+        self.viewer_model1.camera.angles = event.source.angles
+
+
+if __name__ == "__main__":
+    view = napari.Viewer()
+    dock_widget = MultipleViewerWidget(view)
+    view.window._qt_window.setCentralWidget(dock_widget)
+    napari.run()
+
+    # Add to the window
+    dw = view.window.add_dock_widget(dock_widget, name="Sample", add_vertical_stretch=True)
+
+    def _on_visibility_changed(visible: bool):
+        """
+        This is a workaround to remove the ugly menu bar of the dock widgets. Note that we need to do this on
+        visibility change, because napari thought it was a good idea to regenerate everything on a visibility change
+        :param visible: The new state
+        """
+        # reduce the title bar height to 0 and hide it
+        dw.title.setFixedHeight(0)
+        dw.title.hide()
+        # change the orientation of the title bar to trigger the resize of the viewer widget
+        dw._set_title_orientation("bottom")
+        dw.setVisible(True)
+
+
+    new_event = view.window._qt_viewer.resizeEvent
+
+    def override(event):
+        print("RESIZE!!!")
+        new_event(event)
+
+
+    view.window._qt_viewer.resizeEvent = override
+
+    # connect to visibility change
+    dw.visibilityChanged.connect(_on_visibility_changed)
+
+    napari.run()
