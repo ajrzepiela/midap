@@ -73,40 +73,6 @@ def get_property_names(layer: Layer):
     return res
 
 
-def center_cross_on_mouse(
-    viewer_model: napari.components.viewer_model.ViewerModel,
-):
-    """move the cross to the mouse position"""
-
-    if not getattr(viewer_model, "mouse_over_canvas", True):
-        # There is no way for napari 0.4.15 to check if mouse is over sending canvas.
-        show_info(
-            "Mouse is not over the canvas. You may need to click on the canvas."
-        )
-        return
-
-    viewer_model.dims.current_step = tuple(
-        np.round(
-            [
-                max(min_, min(p, max_)) / step
-                for p, (min_, max_, step) in zip(
-                    viewer_model.cursor.position, viewer_model.dims.range
-                )
-            ]
-        ).astype(int)
-    )
-
-
-action_manager.register_action(
-    name='napari:move_point',
-    command=center_cross_on_mouse,
-    description='Move dims point to mouse position',
-    keymapprovider=ViewerModel,
-)
-
-action_manager.bind_shortcut('napari:move_point', 'C')
-
-
 class own_partial:
     """
     Workaround for deepcopy not copying partial functions
@@ -133,59 +99,6 @@ class QtViewerWrap(QtViewer):
     def __init__(self, main_viewer, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.main_viewer = main_viewer
-        self.old_window_width = self.main_viewer.window._qt_window.width()
-
-
-
-        # overwrite the resize event of the window to sync the sizes of the viewers
-        old_resize_event = self.main_viewer.window._qt_window.resizeEvent
-        def new_resize_eventv1(QResizeEvent):
-            print("RESIZE!!")
-            main_view_width = self.main_viewer.window._qt_viewer.width()
-            side_view_width = self.width()
-            window_size_diff = QResizeEvent.size().width() - self.old_window_width
-            new_width = (main_view_width + side_view_width + window_size_diff) // 2
-            if window_size_diff == 0:
-                # if we do not change the width, we do nothing
-                lower_margin = 0
-                upper_margin = 0
-            elif window_size_diff > 0:
-                # if we increase the window size, we allow the stuff to get bigger
-                lower_margin = 1
-                upper_margin = 1
-            else:
-                # if we decrease the window stuff gets smaller
-                lower_margin = new_width - 250
-                upper_margin = new_width - 750
-
-            self.old_window_width = QResizeEvent.size().width()
-
-            self.setMinimumWidth(new_width - lower_margin)
-            self.setMaximumWidth(new_width + upper_margin)
-            self.main_viewer.window._qt_viewer.setMinimumWidth(new_width - lower_margin)
-            self.main_viewer.window._qt_viewer.setMaximumWidth(new_width + upper_margin)
-
-            old_resize_event(QResizeEvent)
-
-        def new_resize_event(QResizeEvent):
-            print("RESIZE!!")
-            print(self.width())
-            old_resize_event(QResizeEvent)
-            print(self.width())
-            main_view_width = self.main_viewer.window._qt_viewer.width()
-            side_view_width = self.width()
-            side_view_height = self.height()
-            new_width = (main_view_width + side_view_width) // 2
-            print(main_view_width, side_view_width, new_width)
-            new_size = QSize(new_width, side_view_height)
-            #self.resize(new_size)
-            #self.main_viewer.window._qt_viewer.resize(new_size)
-            self.setFixedWidth(new_width)
-            self.main_viewer.window._qt_viewer.setFixedWidth(new_width)
-            print(self.width(), self.main_viewer.window._qt_viewer.width())
-
-
-        #self.main_viewer.window._qt_window.resizeEvent = new_resize_event
 
     def _qt_open(
         self,
@@ -199,26 +112,6 @@ class QtViewerWrap(QtViewer):
         self.main_viewer.window._qt_viewer._qt_open(
             filenames, stack, plugin, layer_type, **kwargs
         )
-
-    def __resizeEvent(self, QResizeEvent):
-        print("RESIZE!!!")
-        # get the old size of the window and the viewer
-        old_view_width = self.main_viewer.window._qt_viewer.width()
-        old_window_width = self.main_viewer.window._qt_window.width()
-        old_view_height = self.main_viewer.window._qt_viewer.height()
-        old_window_height = self.main_viewer.window._qt_window.height()
-
-        # set size dimension of the viewer (fixed)
-        self.main_viewer.window._qt_viewer.setFixedWidth(QResizeEvent.size().width())
-        self.main_viewer.window._qt_viewer.setFixedHeight(QResizeEvent.size().height())
-
-        # adapt the window size
-        new_size = deepcopy(QResizeEvent.size())
-        new_size.setWidth(old_window_width + (QResizeEvent.size().width() - old_view_width))
-        new_size.setHeight(old_window_height + (QResizeEvent.size().height() - old_view_height))
-        self.main_viewer.window._qt_window.resize(new_size)
-
-        super().resizeEvent(QResizeEvent)
 
 
 class ExampleWidget(QWidget):
@@ -291,9 +184,6 @@ class MultipleViewerWidget(QWidget):
         self.viewer.dims.events.order.connect(self._order_update)
         self.viewer.events.reset_view.connect(self._reset_view)
         self.viewer_model1.events.status.connect(self._status_update)
-
-        # sync width
-
 
         # sync camera
         self.viewer.camera.events.zoom.connect(self._viewer_zoom)
@@ -447,37 +337,7 @@ class MultipleViewerWidget(QWidget):
 
 if __name__ == "__main__":
     view = napari.Viewer()
-    dock_widget = MultipleViewerWidget(view)
-    view.window._qt_window.setCentralWidget(dock_widget)
-    napari.run()
-
-    # Add to the window
-    dw = view.window.add_dock_widget(dock_widget, name="Sample", add_vertical_stretch=True)
-
-    def _on_visibility_changed(visible: bool):
-        """
-        This is a workaround to remove the ugly menu bar of the dock widgets. Note that we need to do this on
-        visibility change, because napari thought it was a good idea to regenerate everything on a visibility change
-        :param visible: The new state
-        """
-        # reduce the title bar height to 0 and hide it
-        dw.title.setFixedHeight(0)
-        dw.title.hide()
-        # change the orientation of the title bar to trigger the resize of the viewer widget
-        dw._set_title_orientation("bottom")
-        dw.setVisible(True)
-
-
-    new_event = view.window._qt_viewer.resizeEvent
-
-    def override(event):
-        print("RESIZE!!!")
-        new_event(event)
-
-
-    view.window._qt_viewer.resizeEvent = override
-
-    # connect to visibility change
-    dw.visibilityChanged.connect(_on_visibility_changed)
-
+    # create the multi view and make it central
+    multi_view = MultipleViewerWidget(view)
+    view.window._qt_window.setCentralWidget(multi_view)
     napari.run()
