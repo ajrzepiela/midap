@@ -1,29 +1,15 @@
-"""
-This is an example on how to have more than one viewer in the same napari window.
-Additional viewers state will be synchronized with the main viewer.
-Switching to 3D display will only impact the main viewer.
-This example also contain option to enable cross that will be moved to the
-current dims point (`viewer.dims.point`).
-"""
-
 from copy import deepcopy
 
 import napari
-import numpy as np
-from napari.components.layerlist import Extent
 from napari.components.viewer_model import ViewerModel
 from napari.layers import Image, Labels, Layer
 from napari.qt import QtViewer
-from napari.utils.action_manager import action_manager
 from napari.utils.events.event import WarningEmitter
-from napari.utils.notifications import show_info
 from packaging.version import parse as parse_version
-from qtpy.QtCore import Qt, QSize
 from qtpy.QtWidgets import (
     QGridLayout,
     QDoubleSpinBox,
     QPushButton,
-    QSplitter,
     QTabWidget,
     QVBoxLayout,
     QWidget,
@@ -187,8 +173,11 @@ class MultipleViewerWidget(QWidget):
 
         # sync camera
         self.viewer.camera.events.zoom.connect(self._viewer_zoom)
+        self.viewer_model1.camera.events.zoom.connect(self._viewer_zoom)
         self.viewer.camera.events.center.connect(self._viewer_center)
+        self.viewer_model1.camera.events.center.connect(self._viewer_center)
         self.viewer.camera.events.angles.connect(self._viewer_angles)
+        self.viewer_model1.camera.events.angles.connect(self._viewer_angles)
 
     def _status_update(self, event):
         self.viewer.status = event.value
@@ -318,6 +307,7 @@ class MultipleViewerWidget(QWidget):
         Syncs the zoom between all the viewers
         :param event: The camera event
         """
+        self.viewer.camera.zoom = event.source.zoom
         self.viewer_model1.camera.zoom = event.source.zoom
 
     def _viewer_center(self, event):
@@ -325,6 +315,7 @@ class MultipleViewerWidget(QWidget):
         Syncs the center between all the viewers
         :param event: The camera event
         """
+        self.viewer.camera.center = event.source.center
         self.viewer_model1.camera.center = event.source.center
 
     def _viewer_angles(self, event):
@@ -332,6 +323,7 @@ class MultipleViewerWidget(QWidget):
         Syncs the angles between all the viewers
         :param event: The camera event
         """
+        self.viewer.camera.angles = event.source.angles
         self.viewer_model1.camera.angles = event.source.angles
 
 
