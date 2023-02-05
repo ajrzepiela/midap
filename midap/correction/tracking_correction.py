@@ -177,7 +177,7 @@ class MultipleViewerWidget(QWidget):
         self.labels = labels
 
         # the special names are layer that are differently named in both viewer, other layers are the same and copied
-        self.special_names = ["Image", "Labels"]
+        self.special_names = ["Image", "Labels", "Selection"]
 
         # the image layers
         self.main_img_layer = self.main_viewer.add_image(data=self.images[self.current_frame],
@@ -196,9 +196,25 @@ class MultipleViewerWidget(QWidget):
                                                             name="Labels",
                                                             num_colors=50)
         self.side_label_layer = self.side_viewer.add_labels(self.labels[self.current_frame+1],
-                                                            name="Labels",
+                                                            name="SideLabels",
                                                             num_colors=50)
 
+        # the selection
+        self.selection = None
+        test_select = np.zeros_like(self.labels[self.current_frame])
+        self.main_select_layer = self.main_viewer.add_labels(test_select,
+                                                             name="Selection",
+                                                             color={1: "yellow"},
+                                                             opacity=1.0)
+        self.side_select_layer = self.side_viewer.add_labels(test_select,
+                                                             name="SideSelection",
+                                                             color={1: "yellow"},
+                                                             opacity=1.0)
+
+        # connect the special layers
+        self.main_img_layer.events.visible.connect(self._visibility_chane)
+        self.main_label_layer.events.visible.connect(self._visibility_chane)
+        self.main_select_layer.events.visible.connect(self._visibility_chane)
 
         # sync layers (one directional because the tools are only for the main viewer)
         self.main_viewer.layers.events.inserted.connect(self._layer_added)
@@ -371,14 +387,27 @@ class MultipleViewerWidget(QWidget):
         if event.source not in self.main_viewer.layers:
             return
         try:
+            # catch special names
+            if (layer_name := event.value.name) in self.special_names:
+                layer_name = f"Side{name}"
             self._block = True
             setattr(
-                self.side_viewer.layers[event.source.name],
+                self.side_viewer.layers[layer_name],
                 name,
                 getattr(event.source, name),
             )
         finally:
             self._block = False
+
+    def _visibility_chane(self, event):
+        """
+        Syncs the change of visibility from the main to the side special layers
+        :param event: The event for the change
+        """
+        # catch special names
+        if (name := event.source.name) in self.special_names:
+            name = f"Side{name}"
+        self.side_viewer.layers[name].visible = event.source.visible
 
     def _viewer_zoom(self, event):
         """
@@ -424,7 +453,7 @@ class MultipleViewerWidget(QWidget):
         self.current_frame = frame
 
     def left_arrow_key_bind(self, *args):
-        
+
         """
         Key bind for the left arrow key (decrease frame number)
         """
@@ -442,6 +471,17 @@ class MultipleViewerWidget(QWidget):
             self.main_viewer.status = "Already at last image"
             return
         self.change_frame(self.current_frame + 1)
+
+    def track_clicked(layer, event):
+        """
+        Handle for the mouse clicks on the tracks
+        :param event: The event of the mouse click
+        """
+        # Mouse down
+        yield
+        # Mouse up
+
+
 
 
 def main():
