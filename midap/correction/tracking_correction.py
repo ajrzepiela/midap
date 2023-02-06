@@ -1,5 +1,6 @@
 from copy import deepcopy
 from pathlib import Path
+from typing import Optional, Callable
 
 import h5py
 import napari
@@ -10,27 +11,15 @@ from napari.layers import Image, Labels, Layer
 from napari.qt import QtViewer
 from napari.utils.events.event import WarningEmitter
 from packaging.version import parse as parse_version
+from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
     QGridLayout,
-    QDoubleSpinBox,
     QPushButton,
-    QTextEdit,
-    QTableWidget,
-    QTableWidgetItem,
-    QHeaderView,
     QCheckBox,
     QLabel,
-    QTabWidget,
     QVBoxLayout,
     QWidget,
 )
-from typing import Optional, Callable
-from qtpy.QtCore import Qt
-from qtpy.QtGui import QFont, QPalette
-import qdarkstyle
-from textwrap import dedent
-
-import markdown
 
 NAPARI_GE_4_16 = parse_version(napari.__version__) > parse_version("0.4.16")
 
@@ -207,7 +196,8 @@ class SelectionBox(GenericBox):
         if selection is None:
             selection = "N/A"
         # if the selection is in the frame
-        elif selection in self.track_df[self.track_df["frame"] == current_frame]["trackID"].values:
+        elif selection in self.track_df[self.track_df["frame"] == current_frame]["trackID"].values or \
+                selection in self.track_df[self.track_df["frame"] == current_frame + 1]["trackID"].values:
             in_frame = "Yes"
 
         label = f"""
@@ -322,13 +312,13 @@ class FrameInfo(GenericBox):
         if left_frame == 0:
             left_orphans = "N/A"
         else:
-            left_orphans = sum(self.track_df["first_frame"] == left_frame)
-        right_orphans = sum(self.track_df["first_frame"] == right_frame)
-        left_dying = sum(self.track_df["last_frame"] == left_frame)
+            left_orphans = sum((self.track_df["first_frame"] == left_frame) & (self.track_df["frame"] == left_frame))
+        right_orphans = sum((self.track_df["first_frame"] == right_frame) & (self.track_df["frame"] == right_frame))
+        left_dying = sum((self.track_df["last_frame"] == left_frame) & (self.track_df["frame"] == left_frame))
         if right_frame == len(self.labels) - 1:
             right_dying = "N/A"
         else:
-            right_dying = sum(self.track_df["last_frame"] == right_frame)
+            right_dying = sum((self.track_df["last_frame"] == right_frame) & (self.track_df["frame"] == right_frame))
 
         # to table
         frame_info = f"""
@@ -451,9 +441,27 @@ class HelpBox(GenericBox):
         self.label.setTextFormat(Qt.RichText)
         # bitwise or to combine alignments
         self.label.setAlignment(Qt.AlignLeft|Qt.AlignTop)
-        self.label.setText("""
+        self.label.setText(f"""
         <h2><u> Controls </u></h2>
-        
+        <style type="text/css">
+        .tg  {{border-collapse:collapse;border-spacing:0;}}
+        .tg td{{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+          overflow:hidden;padding:2px 2px;word-break:normal;}}
+        .tg .tg-syad{{background-color:#414851;border-color:inherit;color:#ffffff;text-align:left;vertical-align:top;}}
+        .tg .tg-tibk{{background-color:#414851;border-color:inherit;color:#ffffff;text-align:left;vertical-align:top;width:35px;}}
+        </style>
+        <table class="tg">
+        <tbody>
+          <tr>
+            <td class="tg-syad">Click: </td>
+            <td class="tg-tibk">Select cell</td>
+          </tr>
+          <tr>
+            <td class="tg-syad">Arrow keys:</td>
+            <td class="tg-tibk">Change frame</td>
+          </tr>
+        </tbody>
+        </table>
         """)
         layout.addWidget(self.label)
 
@@ -585,6 +593,7 @@ class MultipleViewerWidget(QWidget):
         self.n_frames = len(images)
         self.images = images
         self.labels = labels
+        self.track_df = track_df
 
         # the special names are layer that are differently named in both viewer, other layers are the same and copied
         self.special_names = ["Image", "Labels", "Selection"]
@@ -611,15 +620,18 @@ class MultipleViewerWidget(QWidget):
 
         # the selection
         self.selection = None
+        selection_color_dict = {1: "yellow",
+                                2: "orange",
+                                3: "blue",
+                                4: "red"}
         test_select = np.zeros_like(self.labels[self.current_frame])
         self.main_select_layer = self.main_viewer.add_labels(test_select,
                                                              name="Selection",
-                                                             color={1: "yellow"},
+                                                             color=selection_color_dict,
                                                              opacity=1.0)
         self.side_select_layer = self.side_viewer.add_labels(test_select,
                                                              name="SideSelection",
-                                                             color={1: "yellow",
-                                                                    2: "orange"},
+                                                             color=selection_color_dict,
                                                              opacity=1.0)
 
         # General settings
@@ -937,29 +949,59 @@ class MultipleViewerWidget(QWidget):
         :param selection: The new selection value
         """
 
+        # selection attribute
         if selection is None or selection == 0:
-            # Nothin is selected
             self.selection = None
-            self.main_select_layer.data = np.zeros_like(self.main_select_layer.data)
-            self.side_select_layer.data = np.zeros_like(self.side_select_layer.data)
         else:
-            # there might be something
             self.selection = selection
 
-            # we update main
-            main_label = self.labels[self.current_frame]
-            new_data = np.where(main_label == selection, 1, 0)
-            self.main_select_layer.data = new_data
+        # we update main
+        self.main_select_layer.data = self.get_selection_data(self.current_frame)
 
-            # update side
-            side_data = self.labels[self.current_frame + 1]
-            new_data = np.where(side_data == selection, 1, 0)
-            self.side_select_layer.data = new_data
-
-            # TODO: add kids
+        # update side
+        self.side_select_layer.data = self.get_selection_data(self.current_frame + 1)
 
         # update the info box
         self.info_box.update_info(self.current_frame, self.selection)
+
+    def get_selection_data(self, frame):
+        """
+        Create the selection data for a given frame
+        :param frame: The index of the frame
+        :return: The data that can be used to set the selection layer
+        """
+
+        # get the label
+        label = self.labels[frame]
+
+        # init the new data
+        new_data = np.zeros_like(self.main_select_layer.data)
+
+        # orphan selection
+        if self.mark_orphans and frame != 0:
+            orphan_ids = self.track_df[(self.track_df["first_frame"] == frame) & (self.track_df["frame"] == frame)]["trackID"].values
+            for orphan_id in orphan_ids:
+                new_data = np.where(label == orphan_id, 3, new_data)
+
+        # dying selection
+        if self.mark_dying and frame != self.n_frames - 1:
+            dying_ids = self.track_df[(self.track_df["last_frame"] == frame) & (self.track_df["frame"] == frame)]["trackID"].values
+            for dying_id in dying_ids:
+                new_data = np.where(label == dying_id, 4, new_data)
+
+        # we do this here to overwrite the other data
+        if self.selection is not None:
+            # normal selection
+            new_data = np.where(label == self.selection, 1, new_data)
+
+            # kids selections
+            d1_id = self.track_df.iloc[(self.track_df["trackID"] == self.selection).argmax()]["trackID_d1"]
+            d2_id = self.track_df.iloc[(self.track_df["trackID"] == self.selection).argmax()]["trackID_d2"]
+            if not np.isnan(d1_id) and not np.isnan(d2_id):
+                new_data = np.where(label == d1_id, 2, new_data)
+                new_data = np.where(label == d2_id, 2, new_data)
+
+        return new_data
 
     def update_settings(self, mark_orphans: bool, mark_dying: bool, sync_viewers: bool):
         """
