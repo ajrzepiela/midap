@@ -24,9 +24,9 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from typing import Optional
+from typing import Optional, Callable
 from qtpy.QtCore import Qt
-from qtpy.QtGui import QFont
+from qtpy.QtGui import QFont, QPalette
 import qdarkstyle
 from textwrap import dedent
 
@@ -129,9 +129,21 @@ class GenericBox(QWidget):
         super().__init__()
 
         # style sheet
-        self.setStyleSheet("QWidget { "
-                           "background-color : #414851; "
-                           "border-radius: 3%; }")
+        self.setAttribute(Qt.WA_StyledBackground, True)
+        self.setStyleSheet("GenericBox { "
+                           "background-color: #414851;"
+                           "border-radius: 3%; }"
+                           "QPushButton { "
+                           "background-color : #5a626c; "
+                           "border-radius: 3%; "
+                           "font-family:Arial, sans-serif;"
+                           "font-size:14px;"
+                           "text-align:left;}"
+                           "QPushButton:hover:!pressed:!disabled { "
+                           "border: 1px solid black; }"
+                           "QPushButton:disabled { "
+                           "background-color: #262930;  }"
+                           )
 
 
 class SelectionBox(GenericBox):
@@ -139,51 +151,123 @@ class SelectionBox(GenericBox):
     A box displaying the selection box
     """
 
-    def __init__(self, labels: np.ndarray, track_df: pd.DataFrame):
+    def __init__(self, track_df: pd.DataFrame, change_frame_callback: Callable):
         """
         Inits the widget
-        :param labels: An array of labels corresponding to the images
         :param track_df: The tracking data frame indicating track IDs, cell divisions etc.
+        :param change_frame_callback: A function that changes the frame of the viewer, take the number as input
         """
         # proper init
         super().__init__()
 
         # set attributes
-        self.labels = labels
         self.track_df = track_df
+        self.change_frame_callback = change_frame_callback
 
         # add the subsections
         layout = QVBoxLayout()
         self.label = QLabel()
         self.label.setTextFormat(Qt.RichText)
-        self.label.setText(self.get_selection_label())
         layout.addWidget(self.label)
 
-        # apply layout
+        # buttons
+        self.first_btn = QPushButton("Go to first occurrence: ")
+        self.first_btn.clicked.connect(lambda: self.go_to_click(self.first_btn.text()))
+        layout.addWidget(self.first_btn)
+        self.last_btn = QPushButton("Go to last occurrence: ")
+        self.last_btn.clicked.connect(lambda: self.go_to_click(self.last_btn.text()))
+        layout.addWidget(self.last_btn)
+        self.split_btn = QPushButton("Go to split: ")
+        self.split_btn.clicked.connect(lambda: self.go_to_click(self.split_btn.text()))
+        layout.addWidget(self.split_btn)
+
+        # finalize
         self.setLayout(layout)
+        self.setFixedHeight(180)
 
-    def get_selection_label(self):
+    def update_info(self, current_frame: int, selection: Optional[int]):
+        """
+        Updates the info box for a new frame and selection
+        :param current_frame: The index of the current frame (left viewer)
+        :param selection: The label (track ID) of the current selection, can be None
+        """
 
-        label = """
+        # default is not in frame
+        in_frame = "No"
+
+        # selection number
+        if selection is None:
+            selection = "N/A"
+        # if the selection is in the frame
+        elif selection in self.track_df[self.track_df["frame"] == current_frame]["trackID"].values:
+            in_frame = "Yes"
+
+        label = f"""
         <h2><u> Selection </u></h2>
         <style type="text/css">
-        .tg  {border-collapse:collapse;border-spacing:0;}
-        .tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-          overflow:hidden;padding:2px 2px;word-break:normal;}
-        .tg .tg-syad{background-color:#414851;border-color:inherit;color:#ffffff;text-align:left;vertical-align:top;width:100px;}
-        .tg .tg-tibk{background-color:#414851;border-color:inherit;color:#ffffff;text-align:right;vertical-align:top;width:35px;}
+        .tg  {{border-collapse:collapse;border-spacing:0;}}
+        .tg td{{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+          overflow:hidden;padding:2px 2px;word-break:normal;}}
+        .tg .tg-syad{{background-color:#414851;border-color:inherit;color:#ffffff;text-align:left;vertical-align:top;}}
+        .tg .tg-tibk{{background-color:#414851;border-color:inherit;color:#ffffff;text-align:right;vertical-align:top;width:35px;}}
         </style>
         <table class="tg">
         <tbody>
           <tr>
             <td class="tg-syad">Current Selection:</td>
-            <td class="tg-tibk">0</td>
+            <td class="tg-tibk">{selection}</td>
+          </tr>
+          <tr>
+            <td class="tg-syad">In frame: </td>
+            <td class="tg-tibk">{in_frame}</td>
           </tr>
         </tbody>
         </table>
         """
 
-        return label
+        # update label
+        self.label.setText(label)
+
+        # update the buttons
+        if selection == "N/A":
+            self.first_btn.setText(f"Go to first occurrence: {selection}")
+            self.first_btn.setDisabled(True)
+            self.last_btn.setText(f"Go to last occurrence: {selection}")
+            self.last_btn.setDisabled(True)
+            self.split_btn.setText(f"Go to split: {selection}")
+            self.split_btn.setDisabled(True)
+        else:
+            first_occurrence = int(self.track_df.iloc[(self.track_df["trackID"] == selection).argmax()]["first_frame"])
+            self.first_btn.setText(f"Go to first occurrence: {first_occurrence}")
+            self.first_btn.setDisabled(False)
+            last_occurrence = int(self.track_df.iloc[(self.track_df["trackID"] == selection).argmax()]["last_frame"])
+            self.last_btn.setText(f"Go to last occurrence: {last_occurrence}")
+            self.last_btn.setDisabled(False)
+
+            # the splitting
+            if np.any(self.track_df[self.track_df["trackID"] == selection]["split"] == 1):
+                current_selection = self.track_df[self.track_df["trackID"] == selection]
+                split_frame = int(current_selection.iloc[(current_selection["split"] == 1).argmax()]["frame"])
+                self.split_btn.setText(f"Go to split: {split_frame}")
+                self.split_btn.setDisabled(False)
+            else:
+                self.split_btn.setText(f"Go to split: N/A")
+                self.split_btn.setDisabled(True)
+
+
+    def go_to_click(self, button_text):
+        """
+        This function extract the target frame from the button text and moves there
+        :param button_text: The text on the button
+        """
+
+        frame_number = int(button_text.split(":")[-1])
+        self.change_frame_callback(frame_number)
+
+        # clear the focus of the buttons
+        for button in [self.first_btn, self.last_btn, self.split_btn]:
+            if button.hasFocus():
+                button.clearFocus()
 
 
 class FrameInfo(GenericBox):
@@ -286,20 +370,48 @@ class FrameInfo(GenericBox):
         self.label.setText(frame_info)
 
 
+class HelpBox(GenericBox):
+    """
+    A class to display the help messages
+    """
+
+    def __init__(self):
+        """
+        Inits the widget
+        """
+        # proper init
+        super().__init__()
+
+        layout = QVBoxLayout()
+        self.label = QLabel()
+        self.label.setTextFormat(Qt.RichText)
+        self.label.setText("""
+        <h2> Controls </h2>
+        """)
+        layout.addWidget(self.label)
+
+        # finalize
+        self.setLayout(layout)
+
+
 class InfoBox(QWidget):
     """
     Infobox with all the frames etc.
     """
-    def __init__(self, labels: np.ndarray, track_df: pd.DataFrame):
+    def __init__(self, viewer: napari.Viewer, labels: np.ndarray, track_df: pd.DataFrame,
+                 change_frame_callback: Callable):
         """
         Inits the widget
+        :param viewer: The napari viewer
         :param labels: An array of labels corresponding to the images
         :param track_df: The tracking data frame indicating track IDs, cell divisions etc.
+        :param change_frame_callback: A function that changes the frame of the viewer, take the number as input
         """
         # proper init
         super().__init__()
 
         # set attributes
+        self.viewer = viewer
         self.labels = labels
         self.track_df = track_df
 
@@ -307,7 +419,7 @@ class InfoBox(QWidget):
         layout = QVBoxLayout()
 
         # define some constants
-        width = 250
+        width = 200
 
         # frame stuff
         self.frame_info = FrameInfo(labels=labels, track_df=track_df)
@@ -315,16 +427,20 @@ class InfoBox(QWidget):
         layout.addWidget(self.frame_info)
 
         # Selection stuff
-        self.selection_box = SelectionBox()
+        self.selection_box = SelectionBox(track_df=track_df, change_frame_callback=change_frame_callback)
         self.selection_box.setFixedWidth(width)
         layout.addWidget(self.selection_box)
 
-
         # General Stuff
+
+        # Help
+        self.help_box = HelpBox()
+        self.help_box.setFixedWidth(width)
+        layout.addWidget(self.help_box)
 
         # finalize
         self.setLayout(layout)
-        self.setFixedWidth(200)
+        self.setFixedWidth(width + 15)
 
     def update_info(self, current_frame: int, selection: Optional[int]):
         """
@@ -335,6 +451,10 @@ class InfoBox(QWidget):
 
         # update frame
         self.frame_info.update_info(current_frame)
+        self.selection_box.update_info(current_frame, selection)
+
+        # set the focus to the viewer in case something else was clicked
+        self.viewer.window._qt_viewer.setFocus(True)
 
 
 class MultipleViewerWidget(QWidget):
@@ -366,7 +486,8 @@ class MultipleViewerWidget(QWidget):
         self.qt_viewer1 = QtViewerWrap(viewer, self.side_viewer)
 
         # The info box with al
-        self.info_box = InfoBox(labels=labels, track_df=track_df)
+        self.info_box = InfoBox(viewer=viewer, labels=labels, track_df=track_df,
+                                change_frame_callback=self.change_frame)
 
         # The napari qt viewer is already in a layout (box)
         # we add the parent to a temp layout to remove it from the window
@@ -666,8 +787,8 @@ class MultipleViewerWidget(QWidget):
         """
 
         # catch our of bounds
-        if frame == self.n_frames:
-            frame -= 1
+        if frame >= self.n_frames - 1:
+            frame = self.n_frames - 2
 
         # update
         self.main_img_layer.data = self.images[frame]
@@ -757,6 +878,10 @@ class MultipleViewerWidget(QWidget):
             self.side_select_layer.data = new_data
 
             # TODO: add kids
+
+        # update the info box
+        self.info_box.update_info(self.current_frame, self.selection)
+
 
 
 def main():
