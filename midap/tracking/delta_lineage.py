@@ -72,8 +72,8 @@ class DeltaTypeLineages:
         """
 
         # init the global unique ID and the track ID that track the cell through multiple cells
-        global_id = 0
-        track_id = 0
+        global_id = 1
+        track_id = 1
 
         # this goes through all labeled input the last
         for frame_num, label_inp in enumerate(self.inputs[...,1]):
