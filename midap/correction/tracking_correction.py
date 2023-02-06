@@ -14,10 +14,23 @@ from qtpy.QtWidgets import (
     QGridLayout,
     QDoubleSpinBox,
     QPushButton,
+    QTextEdit,
+    QTableWidget,
+    QTableWidgetItem,
+    QHeaderView,
+    QCheckBox,
+    QLabel,
     QTabWidget,
     QVBoxLayout,
     QWidget,
 )
+from typing import Optional
+from qtpy.QtCore import Qt
+from qtpy.QtGui import QFont
+import qdarkstyle
+from textwrap import dedent
+
+import markdown
 
 NAPARI_GE_4_16 = parse_version(napari.__version__) > parse_version("0.4.16")
 
@@ -104,28 +117,237 @@ class QtViewerWrap(QtViewer):
         )
 
 
-class ExampleWidget(QWidget):
+class GenericBox(QWidget):
     """
-    Dummy widget showcasing how to place additional widgets to the right
-    of the additional viewers.
+    A Generic box with the right background color etx
+    """
+    def __init__(self):
+        """
+        Inits the widget
+        """
+        # proper init
+        super().__init__()
+
+        # style sheet
+        self.setStyleSheet("QWidget { "
+                           "background-color : #414851; "
+                           "border-radius: 3%; }")
+
+
+class SelectionBox(GenericBox):
+    """
+    A box displaying the selection box
     """
 
-    def __init__(self):
+    def __init__(self, labels: np.ndarray, track_df: pd.DataFrame):
+        """
+        Inits the widget
+        :param labels: An array of labels corresponding to the images
+        :param track_df: The tracking data frame indicating track IDs, cell divisions etc.
+        """
+        # proper init
         super().__init__()
-        self.btn = QPushButton("Perform action")
-        self.spin = QDoubleSpinBox()
+
+        # set attributes
+        self.labels = labels
+        self.track_df = track_df
+
+        # add the subsections
         layout = QVBoxLayout()
-        layout.addWidget(self.spin)
-        layout.addWidget(self.btn)
-        layout.addStretch(1)
+        self.label = QLabel()
+        self.label.setTextFormat(Qt.RichText)
+        self.label.setText(self.get_selection_label())
+        layout.addWidget(self.label)
+
+        # apply layout
         self.setLayout(layout)
+
+    def get_selection_label(self):
+
+        label = """
+        <h2><u> Selection </u></h2>
+        <style type="text/css">
+        .tg  {border-collapse:collapse;border-spacing:0;}
+        .tg td{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+          overflow:hidden;padding:2px 2px;word-break:normal;}
+        .tg .tg-syad{background-color:#414851;border-color:inherit;color:#ffffff;text-align:left;vertical-align:top;width:100px;}
+        .tg .tg-tibk{background-color:#414851;border-color:inherit;color:#ffffff;text-align:right;vertical-align:top;width:35px;}
+        </style>
+        <table class="tg">
+        <tbody>
+          <tr>
+            <td class="tg-syad">Current Selection:</td>
+            <td class="tg-tibk">0</td>
+          </tr>
+        </tbody>
+        </table>
+        """
+
+        return label
+
+
+class FrameInfo(GenericBox):
+    """
+    A class to display the Frame info
+    """
+
+    def __init__(self, labels: np.ndarray, track_df: pd.DataFrame):
+        """
+        Inits the widget
+        :param labels: An array of labels corresponding to the images
+        :param track_df: The tracking data frame indicating track IDs, cell divisions etc.
+        """
+        # proper init
+        super().__init__()
+
+        # set attributes
+        self.labels = labels
+        self.track_df = track_df
+
+        # set necessary attributes
+        layout = QVBoxLayout()
+        self.label = QLabel()
+        self.label.setTextFormat(Qt.RichText)
+        layout.addWidget(self.label)
+
+        # finalize
+        self.setLayout(layout)
+        self.setFixedHeight(170)
+
+    def update_info(self, current_frame: int):
+        """
+        Updates the info box for a new frame and selection
+        :param current_frame: The index of the current frame (left viewer)
+        """
+
+        # get infos
+        left_frame = current_frame
+        right_frame = current_frame + 1
+        left_n_cells = np.sum(self.track_df["frame"] == left_frame)
+        right_n_cells = np.sum(self.track_df["frame"] == right_frame)
+        if left_frame == 0:
+            left_orphans = "N/A"
+        else:
+            left_orphans = sum(self.track_df["first_frame"] == left_frame)
+        right_orphans = sum(self.track_df["first_frame"] == right_frame)
+        left_dying = sum(self.track_df["last_frame"] == left_frame)
+        if right_frame == len(self.labels) - 1:
+            right_dying = "N/A"
+        else:
+            right_dying = sum(self.track_df["last_frame"] == right_frame)
+
+        # to table
+        frame_info = f"""
+        <h2><u> Frames </u></h2>
+        <style type="text/css">
+        .tg  {{border-collapse:collapse;border-spacing:0;}}
+        .tg td{{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+          overflow:hidden;padding:2px 2px;word-break:normal;}}
+        .tg th{{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
+          font-weight:normal;overflow:hidden;padding:2px 2px;word-break:normal;}}
+        .tg .tg-syad{{background-color:#414851;border-color:inherit;color:#ffffff;text-align:left;vertical-align:top;width:80px;}}
+        .tg .tg-tibk{{background-color:#414851;border-color:inherit;color:#ffffff;text-align:right;vertical-align:top;
+        width:35px;}}
+        </style>
+        <table class="tg">
+        <thead>
+          <tr>
+            <th class="tg-syad"></th>
+            <th class="tg-tibk"><b>Left</b></th>
+            <th class="tg-tibk"><b>Right</b></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="tg-syad"># Frame:</td>
+            <td class="tg-tibk">{left_frame}</td>
+            <td class="tg-tibk">{right_frame}</td>
+          </tr>
+          <tr>
+            <td class="tg-syad"># Cells:</td>
+            <td class="tg-tibk">{left_n_cells}</td>
+            <td class="tg-tibk">{right_n_cells}</td>
+          </tr>
+          <tr>
+            <td class="tg-syad"># Orphans:</td>
+            <td class="tg-tibk">{left_orphans}</td>
+            <td class="tg-tibk">{right_orphans}</td>
+          </tr>
+          <tr>
+            <td class="tg-syad"># Dying:</td>
+            <td class="tg-tibk">{left_dying}</td>
+            <td class="tg-tibk">{right_dying}</td>
+          </tr>
+        </tbody>
+        </table>
+        """
+
+        # update label text
+        self.label.setText(frame_info)
+
+
+class InfoBox(QWidget):
+    """
+    Infobox with all the frames etc.
+    """
+    def __init__(self, labels: np.ndarray, track_df: pd.DataFrame):
+        """
+        Inits the widget
+        :param labels: An array of labels corresponding to the images
+        :param track_df: The tracking data frame indicating track IDs, cell divisions etc.
+        """
+        # proper init
+        super().__init__()
+
+        # set attributes
+        self.labels = labels
+        self.track_df = track_df
+
+        # add the subsections
+        layout = QVBoxLayout()
+
+        # define some constants
+        width = 250
+
+        # frame stuff
+        self.frame_info = FrameInfo(labels=labels, track_df=track_df)
+        self.frame_info.setFixedWidth(width)
+        layout.addWidget(self.frame_info)
+
+        # Selection stuff
+        self.selection_box = SelectionBox()
+        self.selection_box.setFixedWidth(width)
+        layout.addWidget(self.selection_box)
+
+
+        # General Stuff
+
+        # finalize
+        self.setLayout(layout)
+        self.setFixedWidth(200)
+
+    def update_info(self, current_frame: int, selection: Optional[int]):
+        """
+        Updates the info box for a new frame and selection
+        :param current_frame: The index of the current frame (left viewer)
+        :param selection: The label (track ID) of the current selection, can be None
+        """
+
+        # update frame
+        self.frame_info.update_info(current_frame)
 
 
 class MultipleViewerWidget(QWidget):
     """The main widget of the example."""
 
     def __init__(self, viewer: napari.Viewer, images: np.ndarray, labels: np.ndarray, track_df: pd.DataFrame):
-        # TODO: write dockstring
+        """
+        Inits the widget
+        :param viewer: The napari viewer to use
+        :param images: An array of images
+        :param labels: An array of labels corresponding to the images
+        :param track_df: The tracking data frame indicating track IDs, cell divisions etc.
+        """
         super().__init__()
 
         # check if we have at least to images
@@ -143,12 +365,8 @@ class MultipleViewerWidget(QWidget):
         self._block = False
         self.qt_viewer1 = QtViewerWrap(viewer, self.side_viewer)
 
-        # The tab widget to add additional widgets
-        self.tab_widget = QTabWidget()
-        w1 = ExampleWidget()
-        w2 = ExampleWidget()
-        self.tab_widget.addTab(w1, "Sample 1")
-        self.tab_widget.addTab(w2, "Sample 2")
+        # The info box with al
+        self.info_box = InfoBox(labels=labels, track_df=track_df)
 
         # The napari qt viewer is already in a layout (box)
         # we add the parent to a temp layout to remove it from the window
@@ -167,7 +385,7 @@ class MultipleViewerWidget(QWidget):
         layout.addWidget(self.qt_viewer1, 0, 1)
         # no stretch factor for the status widget
         layout.setColumnStretch(2, 0)
-        layout.addWidget(self.tab_widget, 0, 2)
+        layout.addWidget(self.info_box, 0, 2)
         self.setLayout(layout)
 
         # create the image layers
@@ -211,6 +429,9 @@ class MultipleViewerWidget(QWidget):
                                                              color={1: "yellow",
                                                                     2: "orange"},
                                                              opacity=1.0)
+
+        # info box update
+        self.info_box.update_info(current_frame=self.current_frame, selection=self.selection)
 
         # connect the special layers
         self.main_img_layer.events.visible.connect(self._visibility_chane)
@@ -460,6 +681,9 @@ class MultipleViewerWidget(QWidget):
         # selection
         self.update_selection(selection=self.selection)
 
+        # info
+        self.info_box.update_info(current_frame=self.current_frame, selection=self.selection)
+
     def left_arrow_key_bind(self, *args):
 
         """
@@ -490,13 +714,16 @@ class MultipleViewerWidget(QWidget):
         # Mouse up
         data_coordinates = layer.world_to_data(event.position)
         x, y = np.round(data_coordinates).astype(int)
+        # a click into nothing-ness
+        if x < 0 or x >= self.labels.shape[1]:
+            return
+        if y < 0 or y >= self.labels.shape[2]:
+            return
+        # get the val if
         if "Side" in layer.name:
             val = self.labels[self.current_frame + 1][x, y]
         else:
             val = self.labels[self.current_frame][x, y]
-        # a click into nothing-ness
-        if val is None:
-            return
         # click on the same selection (unselect)
         if val == self.selection:
             self.update_selection(None)
@@ -534,7 +761,7 @@ class MultipleViewerWidget(QWidget):
 
 def main():
     # read in the data
-    path = Path("../../../Tests/tracking_tool/test_data")
+    path = Path("../../../Tests/tracking_tool/test_data/PH")
     with h5py.File(path.joinpath("label_stack_delta.h5")) as f:
         labels = f["label_stack"][:].astype(int)
     with h5py.File(path.joinpath("raw_inputs_delta.h5")) as f:
