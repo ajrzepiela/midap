@@ -143,6 +143,12 @@ class GenericBox(QWidget):
                            "border: 1px solid black; }"
                            "QPushButton:disabled { "
                            "background-color: #262930;  }"
+                           "QCheckBox {"
+                           "font-family:Arial, sans-serif;"
+                           "font-size:14px;"
+                           "text-align:left; }"
+                           "QCheckBox::indicator {"
+                           "background-color: #262930; }"
                            )
 
 
@@ -167,6 +173,8 @@ class SelectionBox(GenericBox):
         # add the subsections
         layout = QVBoxLayout()
         self.label = QLabel()
+        # bitwise or to combine alignments
+        self.label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.label.setTextFormat(Qt.RichText)
         layout.addWidget(self.label)
 
@@ -291,6 +299,8 @@ class FrameInfo(GenericBox):
         # set necessary attributes
         layout = QVBoxLayout()
         self.label = QLabel()
+        # bitwise or to combine alignments
+        self.label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
         self.label.setTextFormat(Qt.RichText)
         layout.addWidget(self.label)
 
@@ -370,6 +380,60 @@ class FrameInfo(GenericBox):
         self.label.setText(frame_info)
 
 
+class GeneralBox(GenericBox):
+    """
+    A class to display the help messages
+    """
+
+    def __init__(self, update_modifier_callback: Callable):
+        """
+        Inits the widget
+        :param update_modifier_callback: A function that changes the general settings for the multiviewer
+        """
+        # proper init
+        super().__init__()
+
+        # set attributes
+        self.update_modifier_callback = update_modifier_callback
+
+        # The title
+        layout = QVBoxLayout()
+        self.label = QLabel()
+        self.label.setTextFormat(Qt.RichText)
+        # bitwise or to combine alignments
+        self.label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
+        self.label.setText("""
+        <h2><u> General </u></h2>
+        """)
+        layout.addWidget(self.label)
+
+        # check boxes
+        self.mark_orphans = QCheckBox("Mark orphans")
+        self.mark_orphans.setChecked(False)
+        self.mark_orphans.toggled.connect(self.box_clicked)
+        layout.addWidget(self.mark_orphans)
+        self.mark_dying = QCheckBox("Mark dying")
+        self.mark_dying.setChecked(False)
+        self.mark_dying.toggled.connect(self.box_clicked)
+        layout.addWidget(self.mark_dying)
+        self.sync_viewer = QCheckBox("Sync viewer")
+        self.sync_viewer.setChecked(True)
+        self.sync_viewer.toggled.connect(self.box_clicked)
+        layout.addWidget(self.sync_viewer)
+
+        # finalize
+        self.setLayout(layout)
+        self.setFixedHeight(130)
+
+    def box_clicked(self):
+        """
+        The call back when a checkbox is clicked
+        """
+
+        self.update_modifier_callback(mark_orphans=self.mark_orphans.isChecked(), mark_dying=self.mark_dying.isChecked(),
+                                      sync_viewers=self.sync_viewer.isChecked())
+
+
 class HelpBox(GenericBox):
     """
     A class to display the help messages
@@ -385,8 +449,11 @@ class HelpBox(GenericBox):
         layout = QVBoxLayout()
         self.label = QLabel()
         self.label.setTextFormat(Qt.RichText)
+        # bitwise or to combine alignments
+        self.label.setAlignment(Qt.AlignLeft|Qt.AlignTop)
         self.label.setText("""
-        <h2> Controls </h2>
+        <h2><u> Controls </u></h2>
+        
         """)
         layout.addWidget(self.label)
 
@@ -399,13 +466,14 @@ class InfoBox(QWidget):
     Infobox with all the frames etc.
     """
     def __init__(self, viewer: napari.Viewer, labels: np.ndarray, track_df: pd.DataFrame,
-                 change_frame_callback: Callable):
+                 change_frame_callback: Callable, update_modifier_callback: Callable):
         """
         Inits the widget
         :param viewer: The napari viewer
         :param labels: An array of labels corresponding to the images
         :param track_df: The tracking data frame indicating track IDs, cell divisions etc.
         :param change_frame_callback: A function that changes the frame of the viewer, take the number as input
+        :param update_modifier_callback: A function that changes the general settings for the multiviewer
         """
         # proper init
         super().__init__()
@@ -432,6 +500,9 @@ class InfoBox(QWidget):
         layout.addWidget(self.selection_box)
 
         # General Stuff
+        self.general_box = GeneralBox(update_modifier_callback=update_modifier_callback)
+        self.general_box.setFixedWidth(width)
+        layout.addWidget(self.general_box)
 
         # Help
         self.help_box = HelpBox()
@@ -486,8 +557,8 @@ class MultipleViewerWidget(QWidget):
         self.qt_viewer1 = QtViewerWrap(viewer, self.side_viewer)
 
         # The info box with al
-        self.info_box = InfoBox(viewer=viewer, labels=labels, track_df=track_df,
-                                change_frame_callback=self.change_frame)
+        self.info_box = InfoBox(viewer=viewer, labels=labels, track_df=track_df, change_frame_callback=self.change_frame,
+                                update_modifier_callback=self.update_settings)
 
         # The napari qt viewer is already in a layout (box)
         # we add the parent to a temp layout to remove it from the window
@@ -550,6 +621,11 @@ class MultipleViewerWidget(QWidget):
                                                              color={1: "yellow",
                                                                     2: "orange"},
                                                              opacity=1.0)
+
+        # General settings
+        self.mark_orphans = False
+        self.mark_dying = False
+        self.sync_viewers = True
 
         # info box update
         self.info_box.update_info(current_frame=self.current_frame, selection=self.selection)
@@ -761,24 +837,27 @@ class MultipleViewerWidget(QWidget):
         Syncs the zoom between all the viewers
         :param event: The camera event
         """
-        self.main_viewer.camera.zoom = event.source.zoom
-        self.side_viewer.camera.zoom = event.source.zoom
+        if self.sync_viewers:
+            self.main_viewer.camera.zoom = event.source.zoom
+            self.side_viewer.camera.zoom = event.source.zoom
 
     def _viewer_center(self, event):
         """
         Syncs the center between all the viewers
         :param event: The camera event
         """
-        self.main_viewer.camera.center = event.source.center
-        self.side_viewer.camera.center = event.source.center
+        if self.sync_viewers:
+            self.main_viewer.camera.center = event.source.center
+            self.side_viewer.camera.center = event.source.center
 
     def _viewer_angles(self, event):
         """
         Syncs the angles between all the viewers
         :param event: The camera event
         """
-        self.main_viewer.camera.angles = event.source.angles
-        self.side_viewer.camera.angles = event.source.angles
+        if self.sync_viewers:
+            self.main_viewer.camera.angles = event.source.angles
+            self.side_viewer.camera.angles = event.source.angles
 
     def change_frame(self, frame: int):
         """
@@ -882,6 +961,27 @@ class MultipleViewerWidget(QWidget):
         # update the info box
         self.info_box.update_info(self.current_frame, self.selection)
 
+    def update_settings(self, mark_orphans: bool, mark_dying: bool, sync_viewers: bool):
+        """
+        Updates the general settings of the multiviewer
+        :param mark_orphans: Whether orphans should be selected in the selection layer
+        :param mark_dying: Whether dying cells should be selected in the selection layer
+        :param sync_viewers: Whether to sync the viewers or not
+        """
+
+        # update the params
+        self.mark_orphans = mark_orphans
+        self.mark_dying = mark_dying
+        self.sync_viewers = sync_viewers
+
+        # if viewers are synced we need to do it manually here
+        if self.sync_viewers:
+            self.side_viewer.camera.zoom = self.main_viewer.camera.zoom
+            self.side_viewer.camera.center = self.main_viewer.camera.center
+            self.side_viewer.camera.angles = self.main_viewer.camera.angles
+
+        # update the selection to update
+        self.update_selection(self.selection)
 
 
 def main():
