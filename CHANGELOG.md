@@ -19,6 +19,16 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.2]
+
+TBD
+
+Feature:
+- OME-Tif format now accepted
+
+Fix:
+- Track ID of delta lineage started with 0, leading to a lost cell
+
 ## [0.3.1]
 
 2023-01-31
