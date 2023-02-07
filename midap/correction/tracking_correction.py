@@ -927,6 +927,8 @@ class MultipleViewerWidget(QWidget):
             dragged = True
             yield
         if dragged:
+            # if we dragged the side viewer, we need to reset the focus manually
+            self.main_viewer.window._qt_viewer.setFocus()
             return
         # An actual click
         data_coordinates = layer.world_to_data(event.position)
