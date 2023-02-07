@@ -140,6 +140,20 @@ class GenericBox(QWidget):
                            "background-color: #262930; }"
                            )
 
+        # table style for html elements
+        self.table_style = f"""
+        <style type="text/css">
+        .tg  {{border-collapse:collapse;border-spacing:0;}}
+        .tg td{{border:None;font-family:Arial, sans-serif;font-size:14px;
+          overflow:hidden;padding:2px 2px;word-break:normal;}}
+        .tg th{{border:None;;font-family:Arial, sans-serif;font-size:14px;
+          font-weight:normal;overflow:hidden;padding:2px 2px;word-break:normal;}}
+        .tg .tg-syad{{background-color:#414851;border:inherit;color:#ffffff;text-align:left;vertical-align:top;}}
+        .tg .tg-tibk{{background-color:#414851;border:inherit;color:#ffffff;text-align:right;vertical-align:top;
+        width:35px;}}
+        </style>
+        """
+
 
 class SelectionBox(GenericBox):
     """
@@ -202,13 +216,7 @@ class SelectionBox(GenericBox):
 
         label = f"""
         <h2><u> Selection </u></h2>
-        <style type="text/css">
-        .tg  {{border-collapse:collapse;border-spacing:0;}}
-        .tg td{{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-          overflow:hidden;padding:2px 2px;word-break:normal;}}
-        .tg .tg-syad{{background-color:#414851;border-color:inherit;color:#ffffff;text-align:left;vertical-align:top;}}
-        .tg .tg-tibk{{background-color:#414851;border-color:inherit;color:#ffffff;text-align:right;vertical-align:top;width:35px;}}
-        </style>
+        {self.table_style}
         <table class="tg">
         <tbody>
           <tr>
@@ -323,16 +331,7 @@ class FrameInfo(GenericBox):
         # to table
         frame_info = f"""
         <h2><u> Frames </u></h2>
-        <style type="text/css">
-        .tg  {{border-collapse:collapse;border-spacing:0;}}
-        .tg td{{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-          overflow:hidden;padding:2px 2px;word-break:normal;}}
-        .tg th{{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-          font-weight:normal;overflow:hidden;padding:2px 2px;word-break:normal;}}
-        .tg .tg-syad{{background-color:#414851;border-color:inherit;color:#ffffff;text-align:left;vertical-align:top;width:80px;}}
-        .tg .tg-tibk{{background-color:#414851;border-color:inherit;color:#ffffff;text-align:right;vertical-align:top;
-        width:35px;}}
-        </style>
+        {self.table_style}
         <table class="tg">
         <thead>
           <tr>
@@ -443,13 +442,7 @@ class HelpBox(GenericBox):
         self.label.setAlignment(Qt.AlignLeft|Qt.AlignTop)
         self.label.setText(f"""
         <h2><u> Controls </u></h2>
-        <style type="text/css">
-        .tg  {{border-collapse:collapse;border-spacing:0;}}
-        .tg td{{border-color:black;border-style:solid;border-width:1px;font-family:Arial, sans-serif;font-size:14px;
-          overflow:hidden;padding:2px 2px;word-break:normal;}}
-        .tg .tg-syad{{background-color:#414851;border-color:inherit;color:#ffffff;text-align:left;vertical-align:top;}}
-        .tg .tg-tibk{{background-color:#414851;border-color:inherit;color:#ffffff;text-align:left;vertical-align:top;width:35px;}}
-        </style>
+        {self.table_style}
         <table class="tg">
         <tbody>
           <tr>
@@ -533,7 +526,7 @@ class InfoBox(QWidget):
         self.selection_box.update_info(current_frame, selection)
 
         # set the focus to the viewer in case something else was clicked
-        self.viewer.window._qt_viewer.setFocus(True)
+        self.viewer.window._qt_viewer.setFocus()
 
 
 class MultipleViewerWidget(QWidget):
@@ -922,8 +915,15 @@ class MultipleViewerWidget(QWidget):
         :param event: The event of the mouse click
         """
         # Mouse down
+        dragged = False
         yield
-        # Mouse up
+        # if we are on the move, we do nothing
+        while event.type == 'mouse_move':
+            dragged = True
+            yield
+        if dragged:
+            return
+        # An actual click
         data_coordinates = layer.world_to_data(event.position)
         x, y = np.round(data_coordinates).astype(int)
         # a click into nothing-ness
@@ -1039,6 +1039,11 @@ def main():
     # create the multi view and make it central
     multi_view = MultipleViewerWidget(view, images=imgs, labels=labels, track_df=table)
     view.window._qt_window.setCentralWidget(multi_view)
+
+    # set the size of the controls
+    view.window._qt_viewer.controls.setMaximumWidth(350)
+
+    # run napari
     napari.run()
 
 if __name__ == "__main__":
