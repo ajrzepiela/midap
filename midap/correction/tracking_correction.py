@@ -23,6 +23,10 @@ from qtpy.QtWidgets import (
 
 NAPARI_GE_4_16 = parse_version(napari.__version__) > parse_version("0.4.16")
 
+# TODO: Split this file into multiple files
+# TODO: Add a class over the track_df and give it functionality like orphans etc.
+# TODO: Only the change_frame funciton should access the labels directly the rest should get the data from the viewers
+# TODO: Think about the action list and undo/redo
 
 def copy_layer_le_4_16(layer: Layer, name: str = ""):
     res_layer = deepcopy(layer)
@@ -313,6 +317,7 @@ class FrameInfo(GenericBox):
         """
 
         # get infos
+        # TODO: Currently splits are considered dying and the kids are orphans
         left_frame = current_frame
         right_frame = current_frame + 1
         left_n_cells = np.sum(self.track_df["frame"] == left_frame)
