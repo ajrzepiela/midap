@@ -51,6 +51,7 @@ jobs:
 
       - name: Cache weights
         uses: actions/cache@v3
+        enableCrossOsArchive: true
         with:
           path: |
             model_weights/model_weights_tracking/*
@@ -98,6 +99,7 @@ jobs:
       # cache for the weights
       - name: Cache weights
         uses: actions/cache@v3
+        enableCrossOsArchive: true
         with:
           path: |
             model_weights/model_weights_tracking/*
