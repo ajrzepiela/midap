@@ -19,6 +19,13 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.2]
+
+2023-02-08
+
+Feature:
+- Env update for Windows support, now only support for python >= 3.9 
+
 ## [0.3.1]
 
 2023-01-31
