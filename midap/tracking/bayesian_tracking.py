@@ -46,7 +46,7 @@ class BayesianCellTracking(Tracking):
             "intensity_max",
             "minor_axis_length",
             "major_axis_length",
-            "coords",
+            #"coords",
         ]
 
         self.objects = btrack.utils.segmentation_to_objects(
@@ -95,7 +95,7 @@ class BayesianCellTracking(Tracking):
         # choose update method depending on number of cells
         cum_sum_cells = np.sum([np.max(s) for s in self.seg_imgs])
         num_frames = len(self.seg_imgs)
-        max_cells_frame = 1_000
+        max_cells_frame = 200
         max_cells_total = num_frames * max_cells_frame
 
         print(cum_sum_cells)
@@ -105,7 +105,7 @@ class BayesianCellTracking(Tracking):
             update_method = BayesianUpdates.EXACT
         else:
             update_method = BayesianUpdates.APPROXIMATE
-
+        print(update_method)
         # initialise a tracker session using a context manager
         with btrack.BayesianTracker() as self.tracker:
             self.tracker.update_method = update_method
@@ -139,17 +139,14 @@ class BayesianCellTracking(Tracking):
 
         for tr in self.tracks:
             for i, t in enumerate(tr["t"]):
-                # in case coords contains nans, search for closest cell
-                if pd.isna(tr['coords'][i]).sum() > 0:
-                    centroid = (tr['y'][i], tr['x'][i])
-                    coords = self.__find_coords(centroid, self.seg_imgs[t])
-                    row_coord = coords[:, 0].astype(int)
-                    col_coord = coords[:, 1].astype(int)
-                else:
-                    row_coord = tr["coords"][i][:, 0].astype(int)
-                    col_coord = tr["coords"][i][:, 1].astype(int)
-                self.label_stack[t][row_coord, col_coord] = tr["ID"]
+                
+                # get coords from labaled segmentations
+                centroid = (tr['y'][i], tr['x'][i])
+                coords = self.__find_coords(centroid, self.seg_imgs[t])
+                row_coord = coords[:, 0].astype(int)
+                col_coord = coords[:, 1].astype(int)
 
+                self.label_stack[t][row_coord, col_coord] = tr["ID"]
 
 
     def __find_coords(self, point: tuple, seg: np.ndarray):
