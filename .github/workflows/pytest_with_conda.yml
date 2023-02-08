@@ -94,6 +94,7 @@ jobs:
 
       # date for the cache
       - name: Set cache date
+        shell: bash -l {0}
         run: echo "DATE_YM=$(date +'%Y%m')" >> $GITHUB_ENV
 
       # cache for the weights
@@ -109,6 +110,7 @@ jobs:
 
       # date for the cache
       - name: Set cache date
+        shell: bash -l {0}
         run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
 
       # reset cache if env file changed
