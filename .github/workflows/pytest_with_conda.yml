@@ -51,8 +51,8 @@ jobs:
 
       - name: Cache weights
         uses: actions/cache@v3
-        enableCrossOsArchive: 'true'
         with:
+          enableCrossOsArchive: 'true'
           path: |
             model_weights/model_weights_tracking/*
             model_weights/model_weights_family_mother_machine/model_weights_CB15-WT.h5
@@ -99,8 +99,8 @@ jobs:
       # cache for the weights
       - name: Cache weights
         uses: actions/cache@v3
-        enableCrossOsArchive: 'true'
         with:
+          enableCrossOsArchive: 'true'
           path: |
             model_weights/model_weights_tracking/*
             model_weights/model_weights_family_mother_machine/model_weights_CB15-WT.h5
