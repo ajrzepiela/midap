@@ -1,14 +1,19 @@
 import argparse
+import numpy as np
 import os
 from pathlib import Path
 from typing import Union
 
 from skimage import io
+from skimage.measure import label
+from skimage.transform import resize
 
 # to get all subclasses
 from midap.tracking import *
 from midap.tracking import base_tracking
 from midap.utils import get_logger, get_inheritors
+
+import time
 
 
 def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel=7):
@@ -50,10 +55,22 @@ def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel=7):
     crop_size = (128, 128)
     connectivity = 1
 
-    img = io.imread(img_names_sort[0])
-    row = int(img.shape[0]/8)*4
-    col = int(img.shape[1]/8)*4
-    target_size = (512, 512)#(row, col)
+    # Check if image resizing merges cells and adjust image size accordingly
+    seg = io.imread(seg_names_sort[0])
+    num_cells_orig = np.max(seg)
+    num_cells_resize = np.max(label(resize(seg > 0, (512, 512))))
+
+    num_cells_lower_thr = num_cells_orig * 0.99
+    num_cells_upper_thr = num_cells_orig * 1.01
+
+    if num_cells_resize > num_cells_lower_thr and num_cells_resize < num_cells_upper_thr:
+        target_size = (512,512)
+    else:
+        img = io.imread(img_names_sort[0])
+        row = int(img.shape[0]/8)*8
+        col = int(img.shape[1]/8)*8
+        target_size = (row, col)
+    
     input_size = crop_size + (4,)
 
     # Process
@@ -63,6 +80,7 @@ def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel=7):
 
 if __name__ == "__main__":
     # arg parsing
+    start = time.time()
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', type=str, required=True, help='path to folder for one with specific channel')
     parser.add_argument("--tracking_class", type=str, required=True,
@@ -73,3 +91,6 @@ if __name__ == "__main__":
 
     # call the main
     main(**vars(args))
+
+    end = time.time()
+    print("Tracking took " + str(end - start) + " secs to finish.")

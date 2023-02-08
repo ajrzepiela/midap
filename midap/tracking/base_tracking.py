@@ -75,8 +75,8 @@ class Tracking(ABC):
 
         img_cur_frame = resize(io.imread(self.imgs[cur_frame]), self.target_size, order=1)
         img_prev_frame = resize(io.imread(self.imgs[cur_frame - 1]), self.target_size, order=1)
-        seg_cur_frame = (resize(io.imread(self.segs[cur_frame]), self.target_size, order=0) > 0).astype(int)
-        seg_prev_frame = (resize(io.imread(self.segs[cur_frame - 1]), self.target_size, order=0) > 0).astype(int)
+        seg_cur_frame = (resize(io.imread(self.segs[cur_frame]) > 0, self.target_size, order=0))#.astype(int)
+        seg_prev_frame = (resize(io.imread(self.segs[cur_frame - 1]) > 0, self.target_size, order=0))#.astype(int)
 
         return img_cur_frame, img_prev_frame, seg_cur_frame, seg_prev_frame
 
@@ -109,8 +109,8 @@ class DeltaTypeTracking(Tracking):
         :param output_folder: The folder to save the results
         """
 
-        inputs, results = self.run_model_crop()
-        results_all_red = self.reduce_data(output_folder=output_folder, inputs=inputs, results=results)
+        inputs = self.run_model_crop(output_folder=output_folder)
+        results_all_red = self.reduce_data(output_folder=output_folder, inputs=inputs)
 
         if results_all_red is not None:
             lin = DeltaTypeLineages(inputs=np.array(inputs), results=results_all_red)
@@ -131,6 +131,7 @@ class DeltaTypeTracking(Tracking):
         # Label of the segmentation of the previous frame
         label_prev_frame, num_cells = label(seg_prev_frame, return_num=True, connectivity=self.connectivity)
         label_cur_frame = label(seg_cur_frame, connectivity=self.connectivity)
+
         props = regionprops(label_prev_frame)
 
         # create the input
@@ -202,7 +203,7 @@ class DeltaTypeTracking(Tracking):
 
         return seg_clean_bin
 
-    def run_model_crop(self):
+    def run_model_crop(self, output_folder):
         """
         Runs the tracking model
         """
@@ -211,8 +212,8 @@ class DeltaTypeTracking(Tracking):
         self.load_model()
 
         # Loop over all time frames
-        results_all = []
-        inputs_all = []
+        self.results_file_names = []
+        inputs_all = np.empty((self.num_time_steps-1,) + self.target_size + (4,))
 
         ram_usg = process.memory_info().rss * 1e-9
         for cur_frame in (pbar := tqdm(range(1, self.num_time_steps), postfix={"RAM": f"{ram_usg:.1f} GB"})):
@@ -234,13 +235,15 @@ class DeltaTypeTracking(Tracking):
 
             # Clean results
             results_cur_frame_clean = self.clean_cur_frame(input_whole_frame[:, :, 3], results_cur_frame)
-            inputs_all.append(input_whole_frame)
-            results_all.append(results_cur_frame_clean)
+
+            inputs_all[cur_frame-1] = input_whole_frame
+            self.results_file_names.append(os.path.join(output_folder, 'tmp_results_clean_' + str(cur_frame) + '.npz'))
+            np.savez(self.results_file_names[-1], data=results_cur_frame_clean)
 
             ram_usg = process.memory_info().rss * 1e-9
             pbar.set_postfix({"RAM": f"{ram_usg:.1f} GB"})
 
-        return inputs_all, results_all
+        return inputs_all
 
     def clean_cur_frame(self, inp: np.ndarray, res: np.ndarray):
         """
@@ -259,7 +262,6 @@ class DeltaTypeTracking(Tracking):
         for ri, r in enumerate(res):
 
             r_label = label(r[:, :, 0] > 0.9, connectivity=self.connectivity)
-            r_label = remove_small_objects(r_label, min_size=5)
 
             overl = inp_label[np.multiply(inp, r_label) > 0]
             cell_labels = np.unique(overl)
@@ -273,8 +275,7 @@ class DeltaTypeTracking(Tracking):
         res_clean = np.array(res_clean)
         return res_clean
 
-    def reduce_data(self, output_folder: Union[str, bytes, os.PathLike], inputs: Collection[np.ndarray],
-                    results: Collection[np.ndarray]):
+    def reduce_data(self, output_folder: Union[str, bytes, os.PathLike], inputs: Collection[np.ndarray]):
         """
         Reduces the amount of output from the delta model from individual images per cell to full images and saves the
         output
@@ -285,17 +286,20 @@ class DeltaTypeTracking(Tracking):
         """
 
         # Reduce results file for storage if there is a tracking result
-        if sum([res.size for res in results]) > 0:
+        if len(self.results_file_names) > 0:
             self.logger.info("Saving results of tracking...")
             # the first might be emtpy
-            results_all_red = np.zeros((len(results),) + results[0].shape[1:3] + (2,))
+            results_all_red = np.zeros((self.num_time_steps,) + self.target_size + (2,))
 
-            for t in range(len(results)):
-                for ix, cell_id in enumerate(results[t]):
+            #for t in range(len(results)):
+            for t in range(len(self.results_file_names)):
+                results = np.load(self.results_file_names[t])['data']
+                for ix, cell_id in enumerate(results):
                     if cell_id[:, :, 0].sum() > 0:
                         results_all_red[t, cell_id[:, :, 0] > 0, 0] = ix + 1
                     if cell_id[:, :, 1].sum() > 0:
                         results_all_red[t, cell_id[:, :, 1] > 0, 1] = ix + 1
+                os.remove(self.results_file_names[t])
 
             # Save data
             inputs = np.array(inputs)
