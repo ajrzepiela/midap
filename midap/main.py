@@ -77,7 +77,12 @@ def run_module(args=None):
     logger.info(f"Importing all dependencies...")
     from midap.checkpoint import Checkpoint, CheckpointManager
     from midap.config import Config
-    from midap.apps import init_GUI, split_frames, cut_chamber, segment_cells, segment_analysis, track_cells
+    from midap.apps import download_files, init_GUI, split_frames, cut_chamber, segment_cells, segment_analysis, track_cells
+    logger.info("Done!")
+
+    # Download the files if necessary
+    logger.info(f"Checking necessary files...")
+    download_files.main(args=[])
     logger.info("Done!")
 
     # create a config file if requested and exit

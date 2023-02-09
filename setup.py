@@ -14,6 +14,7 @@ setup(
         'console_scripts': [
             'midap = midap.main:run_module',
             'correct_segmentation = midap.apps.correct_segmentation:main',
+            'midap_download = midap.apps.download_files:main',
         ],
     },
 )
