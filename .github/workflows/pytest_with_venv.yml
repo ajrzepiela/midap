@@ -56,7 +56,9 @@ jobs:
         echo "Remove zip-files"
         rm model_weights.zip
         touch model_weights/.success
+        mkdir psf
         touch psf/.success
+        mkdir example_data
         touch example_data/.success
       if: ${{ steps.cache_weights.outputs.cache-hit != 'true' }}
 
