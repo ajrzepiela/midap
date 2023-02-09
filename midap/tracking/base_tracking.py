@@ -34,12 +34,12 @@ class Tracking(ABC):
     logger = logger
 
     def __init__(self, imgs: Collection[str],
-                 segs: Optional[Collection[str]] = None,
-                 model_weights: Union[str, bytes, os.PathLike, None] = None,
-                 input_size: Optional[tuple] = None,
-                 target_size: Optional[tuple] = None,
-                 crop_size: Optional[tuple] = None,
-                 connectivity: Optional[int] = None):
+                 segs: Collection[str],
+                 model_weights: Union[str, bytes, os.PathLike, None],
+                 input_size: tuple,
+                 target_size: tuple,
+                 crop_size: tuple,
+                 connectivity=1):
         """
         Initializes the class instance
         :param imgs: List of files containing the cut out images ordered chronological in time
@@ -53,19 +53,13 @@ class Tracking(ABC):
         # set the variables
         self.imgs = imgs
         self.segs = segs
-
-        if self.segs is not None:
-            self.num_time_steps = len(self.segs)
+        self.num_time_steps = len(self.segs)
 
         self.model_weights = model_weights
         self.input_size = input_size
         self.target_size = target_size
-
-        if crop_size is not None:
-            self.crop_size = crop_size
-
-        if connectivity is not None:
-            self.connectivity = connectivity
+        self.crop_size = crop_size
+        self.connectivity = connectivity
 
     def load_data(self, cur_frame: int):
         """
@@ -211,14 +205,14 @@ class DeltaTypeTracking(Tracking):
     def check_process_time(self):
         """
         Estimates time needed for tracking based on tracking for one frame.
-        :return: time in microseconds
+        :return: time in milliseconds
         """
         self.logger.info('Estimate needed time for tracking. This may take a while...')
         
         start = time.time()
         self.load_model()
         inputs_cur_frame, input_whole_frame, crop_box = self.gen_input_crop(1)
-        results_cur_frame_crop = self.model.predict(inputs_cur_frame, verbose=0)
+        _ = self.model.predict(inputs_cur_frame, verbose=0)
         end = time.time()
         
         process_time = int((end-start)*1e3)
@@ -232,11 +226,14 @@ class DeltaTypeTracking(Tracking):
 
         process_time = self.check_process_time()
 
-        print("".join(['\n','─' * 30]))
+        print('\n' + '─' * 30)
         print("PLEASE NOTE \nTracking will take: \n ")
-        print(" ".join([str(datetime.timedelta(microseconds=process_time)), "hours \n"]))
-        print("If the processing time is too \nlong, please consider to cancel \nthe tracking and restart it \non the cluster.")
-        print("".join(['─' * 30,'\n']))
+        print(f"{str(datetime.timedelta(milliseconds=process_time))} hours \n")
+        print("If the processing time is too \n"
+              "long, please consider to cancel \n"
+              "the tracking and restart it \n"
+              "on the cluster.")
+        print("─" * 30 + '\n')
 
     def run_model_crop(self):
         """
