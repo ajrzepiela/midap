@@ -63,7 +63,7 @@ def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel=7):
     num_cells_lower_thr = num_cells_orig * 0.99
     num_cells_upper_thr = num_cells_orig * 1.01
 
-    if num_cells_resize > num_cells_lower_thr and num_cells_resize < num_cells_upper_thr:
+    if num_cells_resize == num_cells_orig:
         target_size = (512,512)
     else:
         img = io.imread(img_names_sort[0])

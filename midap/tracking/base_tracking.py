@@ -109,11 +109,11 @@ class DeltaTypeTracking(Tracking):
         :param output_folder: The folder to save the results
         """
 
-        inputs = self.run_model_crop(output_folder=output_folder)
-        results_all_red = self.reduce_data(output_folder=output_folder, inputs=inputs)
+        inputs, results = self.run_model_crop()
+        self.store_data(output_folder, inputs, results)
 
-        if results_all_red is not None:
-            lin = DeltaTypeLineages(inputs=np.array(inputs), results=results_all_red)
+        if results is not None:
+            lin = DeltaTypeLineages(inputs=np.array(inputs), results=results)
             lin.store_lineages(output_folder=output_folder)
         else:
             logger.warning("Tracking did not generate any output!")
@@ -203,17 +203,18 @@ class DeltaTypeTracking(Tracking):
 
         return seg_clean_bin
 
-    def run_model_crop(self, output_folder):
+    def run_model_crop(self):
         """
         Runs the tracking model
+        :return: Arrays containing input and reduced output of Delta model
         """
 
         # Load model
         self.load_model()
 
         # Loop over all time frames
-        self.results_file_names = []
         inputs_all = np.empty((self.num_time_steps-1,) + self.target_size + (4,))
+        results_all = np.empty((self.num_time_steps-1,) + self.target_size + (2,))
 
         ram_usg = process.memory_info().rss * 1e-9
         for cur_frame in (pbar := tqdm(range(1, self.num_time_steps), postfix={"RAM": f"{ram_usg:.1f} GB"})):
@@ -233,17 +234,19 @@ class DeltaTypeTracking(Tracking):
                 row_min, col_min, row_max, col_max = crop_box[i]
                 results_cur_frame[i, row_min:row_max, col_min:col_max,:] = results_cur_frame_crop[i]
 
-            # Clean results
+            # Clean results and add to array
             results_cur_frame_clean = self.clean_cur_frame(input_whole_frame[:, :, 3], results_cur_frame)
+            results_cur_frame_red = self.reduce_results(results_cur_frame_clean)
+
+            if results_cur_frame_red is not None:
+                results_all[cur_frame-1] = results_cur_frame_red
 
             inputs_all[cur_frame-1] = input_whole_frame
-            self.results_file_names.append(os.path.join(output_folder, 'tmp_results_clean_' + str(cur_frame) + '.npz'))
-            np.savez(self.results_file_names[-1], data=results_cur_frame_clean)
 
             ram_usg = process.memory_info().rss * 1e-9
             pbar.set_postfix({"RAM": f"{ram_usg:.1f} GB"})
 
-        return inputs_all
+        return inputs_all, results_all
 
     def clean_cur_frame(self, inp: np.ndarray, res: np.ndarray):
         """
@@ -275,39 +278,37 @@ class DeltaTypeTracking(Tracking):
         res_clean = np.array(res_clean)
         return res_clean
 
-    def reduce_data(self, output_folder: Union[str, bytes, os.PathLike], inputs: Collection[np.ndarray]):
+
+    def reduce_results(self, results: np.ndarray):
         """
-        Reduces the amount of output from the delta model from individual images per cell to full images and saves the
-        output
+        Reduces the amount of output from the delta model from individual images per cell to full images
         :param output_folder: Where to save the output
-        :param inputs: The inputs used for the tracking
         :param results: The results
         :return: The reduced data or None if no cells were tracked
         """
 
-        # Reduce results file for storage if there is a tracking result
-        if len(self.results_file_names) > 0:
-            self.logger.info("Saving results of tracking...")
-            # the first might be emtpy
-            results_all_red = np.zeros((self.num_time_steps,) + self.target_size + (2,))
+        results_red = np.zeros((1,) + self.target_size + (2,))
+        
+        if len(results) > 0:
+            for ix, cell_id in enumerate(results):
+                if cell_id[:, :, 0].sum() > 0:
+                    results_red[0, cell_id[:, :, 0] > 0, 0] = ix + 1
+                if cell_id[:, :, 1].sum() > 0:
+                    results_red[0, cell_id[:, :, 1] > 0, 1] = ix + 1
 
-            #for t in range(len(results)):
-            for t in range(len(self.results_file_names)):
-                results = np.load(self.results_file_names[t])['data']
-                for ix, cell_id in enumerate(results):
-                    if cell_id[:, :, 0].sum() > 0:
-                        results_all_red[t, cell_id[:, :, 0] > 0, 0] = ix + 1
-                    if cell_id[:, :, 1].sum() > 0:
-                        results_all_red[t, cell_id[:, :, 1] > 0, 1] = ix + 1
-                os.remove(self.results_file_names[t])
+            return results_red
 
-            # Save data
-            inputs = np.array(inputs)
-            results_all_red = np.array(results_all_red)
-            np.savez(os.path.join(output_folder, 'inputs_all_red.npz'), inputs_all=inputs)
-            np.savez(os.path.join(output_folder, 'results_all_red.npz'), results_all_red=results_all_red)
+    def store_data(self, output_folder: Union[str, bytes, os.PathLike], input: np.ndarray, result: np.ndarray):
+        """ 
+        Saves input and output from the Delta model
+        :param output_folder: Where to save the output
+        :param inputs: The inputs used for the tracking
+        :param results: The results
+        :return: None
+        """
 
-            return results_all_red
+        np.savez(os.path.join(output_folder, 'inputs_all_red.npz'), inputs_all=input)
+        np.savez(os.path.join(output_folder, 'results_all_red.npz'), results_all_red=result)
 
     @abstractmethod
     def load_model(self):
