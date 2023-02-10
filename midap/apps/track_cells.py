@@ -56,7 +56,7 @@ def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel=7):
     # Check if image resizing merges cells and adjust image size accordingly
     seg = io.imread(seg_names_sort[0])
     num_cells_orig = np.max(seg)
-    num_cells_resize = np.max(label(resize(seg > 0, (512, 512))))
+    num_cells_resize = np.max(label(resize(seg > 0, (512, 512)),connectivity=connectivity))
 
     num_cells_lower_thr = num_cells_orig * 0.99
     num_cells_upper_thr = num_cells_orig * 1.01
@@ -68,6 +68,10 @@ def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel=7):
         row = int(img.shape[0]/8)*8
         col = int(img.shape[1]/8)*8
         target_size = (row, col)
+
+    # If images are too small, always increase to crop size
+    if target_size[0] < 128 or target_size[1] < 128:
+        target_size = (128,128)
 
     input_size = crop_size + (4,)
 

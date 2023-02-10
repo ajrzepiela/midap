@@ -172,7 +172,7 @@ class DeltaTypeTracking(Tracking):
             label_cur_frame_crop = label_cur_frame[min_row:max_row, min_col:max_col]
             # remove cells that were split during the crop
             seg_clean = self.clean_crop(label_cur_frame, label_cur_frame_crop)
-
+            
             cell_ix = p.label - 1
             input_cur_frame[cell_ix, :, :, 0] = img_prev_frame[min_row:max_row, min_col:max_col]
             input_cur_frame[cell_ix, :, :, 1] = seed
