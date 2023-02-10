@@ -76,7 +76,7 @@ def tracking_instance(monkeypatch, img1, img2):
 
     # get the instance
     deltav1 = DeltaV1Tracking(imgs=imgs, segs=segs, model_weights=weight_path, input_size=input_size,
-                              target_size=target_size, crop_size=crop_size)
+                              target_size=target_size, crop_size=crop_size, connectivity=1)
 
     return deltav1
 
@@ -96,12 +96,12 @@ def test_run_model_crop(tracking_instance):
 
     # The first should not have a split
     first_res = results_all[0]
-    assert first_res.shape == (1, 512, 512, 2)
+    assert first_res.shape == (512, 512, 2)
     assert first_res[..., 0].sum() != 0
     assert first_res[..., 1].sum() == 0
 
     # The second should have a split
     second_res = results_all[1]
-    assert second_res.shape == (1, 512, 512, 2)
+    assert second_res.shape == (512, 512, 2)
     assert second_res[..., 0].sum() != 0
     assert second_res[..., 1].sum() != 0

@@ -63,8 +63,9 @@ def test_main(prep_dirs):
     # check number of frames and number of cells
     delta_track_file = track_output.joinpath("track_output_delta.csv")
     res_df = pd.read_csv(delta_track_file)
+
     assert np.unique(res_df["frame"]).size == 2
-    assert len(res_df) == 55
+    assert len(res_df) == 58
 
     # deltav2 tracking
     delta_track_file.unlink()
@@ -73,6 +74,14 @@ def test_main(prep_dirs):
     # check number of frames and number of cells
     res_df = pd.read_csv(delta_track_file)
     assert np.unique(res_df["frame"]).size == 2
+    assert len(res_df) == 58
+
+    # bayes tracking
+    main(path=prep_dirs, tracking_class="BayesianCellTracking")
+
+    #Check bayes tracking results
+    bayes_track_file = track_output.joinpath("track_output_bayesian.csv")
+    res_df = pd.read_csv(bayes_track_file)
+    assert np.unique(res_df["frame"]).size == 2
     assert len(res_df) == 55
 
-    # TODO: Add tests for BayesianCellTracking
