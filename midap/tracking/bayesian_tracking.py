@@ -95,11 +95,8 @@ class BayesianCellTracking(Tracking):
         # choose update method depending on number of cells
         cum_sum_cells = np.sum([np.max(s) for s in self.seg_imgs])
         num_frames = len(self.seg_imgs)
-        max_cells_frame = 200
+        max_cells_frame = 1_000
         max_cells_total = num_frames * max_cells_frame
-
-        print(cum_sum_cells)
-        print(max_cells_total)
 
         if cum_sum_cells < max_cells_total:
             update_method = BayesianUpdates.EXACT
