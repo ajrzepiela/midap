@@ -11,7 +11,7 @@
 
 The installation was tested on macOS Big Sur (11.6.7), Ubuntu 22.04 and WSL II on Win 11. Note that the standard installation does **not** support GPUs. If you want to run the pipeline with GPU support, please have a look at the relevant sections below.
 
-1. Clone the repo, navigate to the directory containing the pipeline `cd midap` and download model weights and example files from polybox `./download_files.sh`.
+1. Clone the repo, navigate to the directory containing the pipeline `cd midap`.
 
 2. Create and activate the conda environment:
 
@@ -20,7 +20,7 @@ conda env update -f environment.yml
 conda activate midap
 ```
 
-3. Once the conda environment is activated, you can run the module from anywhere via `midap`. The module accepts arguments and has the following signature:
+3. Once the conda environment is activated, you can run the module from anywhere via `midap`. If you run the pipeline for the first time, it will download all the required files (~3 GB). You can also manually (re)download the files using the command `midap_download`. The module accepts arguments and has the following signature:
 
 ```
 usage: midap [-h] [--restart [RESTART]] [--headless] [--loglevel LOGLEVEL] [--cpu_only] [--create_config]
@@ -47,5 +47,5 @@ The documentation can be found in the [wiki](https://github.com/Microbial-System
 
 ## Issues
 
-If you are having trouble with the package, please have a look at the [trouble shooting page](https://github.com/Microbial-Systems-Ecology/midap/wiki/Trouble-shooting#creating-an-github-issue) 
+If you are having trouble with the package, please have a look at the [troubleshooting page](https://github.com/Microbial-Systems-Ecology/midap/wiki/Troubleshooting#creating-an-github-issue) 
 and if necessary create an issue according to the instructions provided there.  

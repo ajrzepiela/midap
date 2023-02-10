@@ -77,7 +77,12 @@ def run_module(args=None):
     logger.info(f"Importing all dependencies...")
     from midap.checkpoint import Checkpoint, CheckpointManager
     from midap.config import Config
-    from midap.apps import init_GUI, split_frames, cut_chamber, segment_cells, segment_analysis, track_cells
+    from midap.apps import download_files, init_GUI, split_frames, cut_chamber, segment_cells, segment_analysis, track_cells
+    logger.info("Done!")
+
+    # Download the files if necessary
+    logger.info(f"Checking necessary files...")
+    download_files.main(args=[])
     logger.info("Done!")
 
     # create a config file if requested and exit
@@ -195,7 +200,11 @@ def run_module(args=None):
 
                 # we get all the files in the base bath that match
                 file_ext = config.get("General", "FileType")
-                for fname in base_path.glob(f"*{identifier}*.{file_ext}"):
+                if file_ext == "ome.tif":
+                    files = base_path.glob(f"*{identifier}*/**/*.ome.tif")
+                else:
+                    files = base_path.glob(f"*{identifier}*.{file_ext}")
+                for fname in files:
                     for channel in config.getlist(identifier, "Channels"):
                         if channel in fname.stem:
                             logger.info(f"Copying '{fname.name}'...")
