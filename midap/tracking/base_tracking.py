@@ -2,12 +2,14 @@ import os
 from abc import ABC, abstractmethod
 from typing import Collection, Optional, Iterable, Union
 
+import datetime
 import numpy as np
 import psutil
 import skimage.io as io
 from skimage.measure import label, regionprops
 from skimage.morphology import remove_small_objects
 from skimage.transform import resize
+import time
 from tqdm import tqdm
 
 from .delta_lineage import DeltaTypeLineages
@@ -108,7 +110,10 @@ class DeltaTypeTracking(Tracking):
         Tracks all frames and saves the results to the given output folder
         :param output_folder: The folder to save the results
         """
+        # Display estimated runtime
+        self.print_process_time()
 
+        # Run tracking
         inputs, results = self.run_model_crop()
         self.store_data(output_folder, inputs, results)
 
@@ -202,6 +207,36 @@ class DeltaTypeTracking(Tracking):
         seg_clean_bin = (seg_clean > 0).astype(int)
 
         return seg_clean_bin
+
+    def check_process_time(self):
+        """
+        Estimates time needed for tracking based on tracking for one frame.
+        :return: time in microseconds
+        """
+        self.logger.info('Estimate needed time for tracking. This may take a while...')
+        
+        start = time.time()
+        self.load_model()
+        inputs_cur_frame, input_whole_frame, crop_box = self.gen_input_crop(1)
+        results_cur_frame_crop = self.model.predict(inputs_cur_frame, verbose=0)
+        end = time.time()
+        
+        process_time = int((end-start)*1e3)
+
+        return process_time
+
+    def print_process_time(self):
+        """
+        Prints estimated time for tracking of all frames
+        """
+
+        process_time = self.check_process_time()
+
+        print("".join(['\n','─' * 30]))
+        print("PLEASE NOTE \nTracking will take: \n ")
+        print(" ".join([str(datetime.timedelta(microseconds=process_time)), "hours \n"]))
+        print("If the processing time is too \nlong, please consider to cancel \nthe tracking and restart it \non the cluster.")
+        print("".join(['─' * 30,'\n']))
 
     def run_model_crop(self):
         """

@@ -13,8 +13,6 @@ from midap.tracking import *
 from midap.tracking import base_tracking
 from midap.utils import get_logger, get_inheritors
 
-import time
-
 
 def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel=7):
     """
@@ -80,7 +78,6 @@ def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel=7):
 
 if __name__ == "__main__":
     # arg parsing
-    start = time.time()
     parser = argparse.ArgumentParser()
     parser.add_argument('--path', type=str, required=True, help='path to folder for one with specific channel')
     parser.add_argument("--tracking_class", type=str, required=True,
@@ -91,6 +88,3 @@ if __name__ == "__main__":
 
     # call the main
     main(**vars(args))
-
-    end = time.time()
-    print("Tracking took " + str(end - start) + " secs to finish.")
