@@ -19,6 +19,23 @@ Efficiency:
 Fix:
 - ...
 
+
+## [0.3.4]
+
+2023-02-10
+
+Feature:
+- Bayes tracking: add tests for Bayes tracking
+- Delta tracking: display expected runtime for tracking
+- Delta tracking: reduce tracking results per processed time frime to reduce used memory
+
+Fix:
+- Bayes tracking: choose approximate update method if timeframe contains more than 1 000 cells
+- Bayes tracking: get coordinates from label stack and not from tracking output (contained NaNs)
+- Delta tracking: use binary segmentation for resize to avoid merge of cells
+- Delta tracking: use original image size for tracking if cells are lost by image resize
+
+
 ## [0.3.3]
 
 2023-02-09
@@ -27,6 +44,7 @@ Feature:
 - File download now integrated into pipeline
 - New CLI `midap_download` to manually download files
 
+
 ## [0.3.2]
 
 2023-02-08
@@ -34,12 +52,14 @@ Feature:
 Feature:
 - Env update for Windows support, now only support for python >= 3.9 
 
+
 ## [0.3.1]
 
 2023-01-31
 
 Feature:
 - OME-Tif format now accepted
+
 
 ## [0.3.0]
 
