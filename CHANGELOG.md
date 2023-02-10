@@ -19,6 +19,14 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.3]
+
+2023-02-09
+
+Feature:
+- File download now integrated into pipeline
+- New CLI `midap_download` to manually download files
+
 ## [0.3.2]
 
 2023-02-08
