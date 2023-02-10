@@ -68,7 +68,7 @@ def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel=7):
         row = int(img.shape[0]/8)*8
         col = int(img.shape[1]/8)*8
         target_size = (row, col)
-    
+
     input_size = crop_size + (4,)
 
     # Process

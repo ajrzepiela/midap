@@ -102,7 +102,7 @@ class BayesianCellTracking(Tracking):
             update_method = BayesianUpdates.EXACT
         else:
             update_method = BayesianUpdates.APPROXIMATE
-        print(update_method)
+
         # initialise a tracker session using a context manager
         with btrack.BayesianTracker() as self.tracker:
             self.tracker.update_method = update_method

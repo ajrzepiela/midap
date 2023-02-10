@@ -19,6 +19,22 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.4]
+
+2023-02-10
+
+Feature:
+- Bayes tracking: add tests for Bayes tracking
+- Delta tracking: display expected runtime for tracking
+- Delta tracking: reduce tracking results per processed time frime to reduce used memory
+
+Fix:
+- Bayes tracking: choose approximate update method if timeframe contains more than 1 000 cells
+- Bayes tracking: get coordinates from label stack and not from tracking output (contained NaNs)
+- Delta tracking: use binary segmentation for resize to avoid merge of cells
+- Delta tracking: use original image size for tracking if cells are lost by image resize
+
+
 ## [0.3.0]
 
 2023-01-23
