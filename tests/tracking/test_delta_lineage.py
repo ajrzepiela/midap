@@ -26,10 +26,10 @@ def fake_data_output(tracking_instance):
 
     # run the tracking
     inputs, results_all = tracking_instance.run_model_crop()
-    results_all_red = tracking_instance.reduce_data(output_folder=tmp_dir.name, inputs=inputs, results=results_all)
+    #results_all_red = tracking_instance.reduce_data(output_folder=tmp_dir.name, inputs=inputs, results=results_all)
 
     # create the instance
-    lin = DeltaTypeLineages(np.array(inputs), results_all_red)
+    lin = DeltaTypeLineages(np.array(inputs), results_all)
 
     # save to file
     out_file = os.path.join(tmp_dir.name, 'track_output_delta.csv')

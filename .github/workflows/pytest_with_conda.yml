@@ -13,7 +13,7 @@ on:
 
 # Env variables
 env:
-  CACHE_NUMBER: 0  # increase to reset cache manually
+  CACHE_NUMBER: 1  # increase to reset cache manually
 
 # Jobs
 jobs:
@@ -52,9 +52,13 @@ jobs:
       - name: Cache weights
         uses: actions/cache@v3
         with:
+          enableCrossOsArchive: 'true'
           path: |
             model_weights/model_weights_tracking/*
             model_weights/model_weights_family_mother_machine/model_weights_CB15-WT.h5
+            model_weights/.success
+            psf/.success
+            example_data/.success
           key: ${{ env.DATE_YM }}-${{ env.CACHE_NUMBER }}
         id: cache_weights
 
@@ -67,6 +71,11 @@ jobs:
           unzip model_weights.zip
           echo "Remove zip-files"
           rm model_weights.zip
+          touch model_weights/.success
+          mkdir psf
+          touch psf/.success
+          mkdir example_data
+          touch example_data/.success
         if: ${{ steps.cache_weights.outputs.cache-hit != 'true' }}
 
   build:
@@ -93,20 +102,26 @@ jobs:
 
       # date for the cache
       - name: Set cache date
+        shell: bash -l {0}
         run: echo "DATE_YM=$(date +'%Y%m')" >> $GITHUB_ENV
 
       # cache for the weights
       - name: Cache weights
         uses: actions/cache@v3
         with:
+          enableCrossOsArchive: 'true'
           path: |
             model_weights/model_weights_tracking/*
             model_weights/model_weights_family_mother_machine/model_weights_CB15-WT.h5
+            model_weights/.success
+            psf/.success
+            example_data/.success
           key: ${{ env.DATE_YM }}-${{ env.CACHE_NUMBER }}
         id: cache_weights
 
       # date for the cache
       - name: Set cache date
+        shell: bash -l {0}
         run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
 
       # reset cache if env file changed
