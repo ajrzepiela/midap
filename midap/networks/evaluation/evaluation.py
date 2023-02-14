@@ -73,4 +73,3 @@ def evaluate_bayes_stats(prediction: np.ndarray, label: np.ndarray):
     tpr = np.where(tp + fn > 0, tp/(tp + fn), 1)
     tnr = np.where(tn + fp > 0, tn/(tn + fp), 1)
     return tpr, 1 - tnr, tnr, 1 - tpr
-
