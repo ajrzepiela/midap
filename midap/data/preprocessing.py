@@ -1,7 +1,7 @@
 import os
 from collections import defaultdict
 from pathlib import Path
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Tuple
 
 import numpy as np
 import skimage.io as io
@@ -11,6 +11,7 @@ from skimage.segmentation import find_boundaries
 from sklearn.model_selection import train_test_split
 from tqdm import tqdm
 
+import tensorflow as tf
 from ..utils import get_logger, set_logger_level
 
 
@@ -372,3 +373,152 @@ class DataProcessor(object):
                     "weight_maps_train": splits[4], "weight_maps_val": splits[5]})
 
         return res
+
+    # TODO: move this to a separate class
+
+    def _map_crop(self, i: tf.Tensor, w: tf.Tensor, l: tf.Tensor, target_size: tuple,
+                  stateless_seed: Optional[tuple]=None):
+        """
+        Performs a crop operation on image, weight and label map
+        :param i: The image tensor
+        :param w: The weights tensor
+        :paran l: The label tensor
+        :param target_size: The target size (with channel dim)
+        :param stateless_seed: If provided, used as input for the stateless crop operation, otherwise and unseeded
+                               stateful crop is used
+        :return: The tensors of value, cropped
+        """
+
+        # combine
+        stack = tf.stack([i, w, l], axis=-1)
+
+        if stateless_seed is None:
+            out = tf.image.random_crop(value=stack, size=target_size + (3, ))
+        else:
+            out = tf.image.stateless_random_crop(value=stack, size=target_size + (3,), seed=stateless_seed)
+
+        return tuple(out[...,i] for i in range(3))
+
+    def _map_brightness(self, i: tf.Tensor, w: tf.Tensor, l: tf.Tensor, max_delta: float,
+                        stateless_seed: Optional[tuple]=None):
+        """
+        Performs a brightness adjust operation on image, leaves weight and label map
+        :param i: The image tensor
+        :param w: The weights tensor
+        :paran l: The label tensor
+        :param max_delta: The maximum delta to adjust the brightness
+        :param stateless_seed: If provided, used as input for the stateless crop operation, otherwise and unseeded
+                               stateful crop is used
+        :return: The tensors of value, cropped
+        """
+
+        if stateless_seed is None:
+            i = tf.image.random_brightness(image=i, max_delta=max_delta)
+        else:
+            i = tf.image.stateless_random_brightness(image=i, max_delta=max_delta, seed=stateless_seed)
+
+        return i, w, l
+
+    def _map_contrast(self, i: tf.Tensor, w: tf.Tensor, l: tf.Tensor, lower: float, upper: float,
+                      stateless_seed: Optional[tuple]=None):
+        """
+        Performs a contrast adjust operation on image, leaves weight and label map
+        :param i: The image tensor
+        :param w: The weights tensor
+        :paran l: The label tensor
+        :param lower: The lower bound for the contrast adjust
+        :param upper: The upper bound for the contrast adjust
+        :param stateless_seed: If provided, used as input for the stateless crop operation, otherwise and unseeded
+                               stateful crop is used
+        :return: The tensors of value, cropped
+        """
+
+        if stateless_seed is None:
+            i = tf.image.random_contrast(image=i, lower=lower, upper=upper)
+        else:
+            i = tf.image.stateless_random_contrast(image=i, lower=lower, upper=upper, seed=stateless_seed)
+
+        return i, w, l
+
+    def zip_inputs(self, images: np.ndarray, weights: np.ndarray, segmentations: np.ndarray):
+        """
+        Puts images, weights and segmentations (labels) into a TF dataset
+        :param images: The BWHC input of the images
+        :param weights: The BWHC input of the weights
+        :param segmentations: The BWHC input of the labels
+        :return: A single TF dataset containing the elements in that sequence
+        """
+
+        img_dset = tf.data.Dataset.from_tensor_slices(images.astype(np.float32))
+        w_dset = tf.data.Dataset.from_tensor_slices(weights.astype(np.float32))
+        seg_dset = tf.data.Dataset.from_tensor_slices(segmentations.astype(np.float32))
+
+        return tf.data.Dataset.zip((img_dset, w_dset, seg_dset))
+
+    def get_tf_dsets(self, shuffle_buffer=128, image_size=(128, 128, 1), delta_brightness: Optional[float] = 0.4,
+                     lower_contrast: Optional[float] = 0.2, upper_contrast: Optional[float] = 0.5,
+                     n_repeats: Optional[int] = 50, train_seed: Optional[tuple] = None, val_seed=(11, 12),
+                     test_seed=(13, 14)):
+
+        # get the datasets as dicts
+        data_dict = self.get_dset()
+
+        # stack imgs, weights and labels together
+        dsets_train = [self.zip_inputs(i, w, l) for i, w, l in zip(data_dict["X_train"],
+                                                                   data_dict["weight_maps_train"],
+                                                                   data_dict["y_train"])]
+        dsets_test = [self.zip_inputs(i, w, l) for i, w, l in zip(data_dict["X_test"],
+                                                                  data_dict["weight_maps_test"],
+                                                                  data_dict["y_test"])]
+        dsets_val = [self.zip_inputs(i, w, l) for i, w, l in zip(data_dict["X_val"],
+                                                                 data_dict["weight_maps_val"],
+                                                                 data_dict["y_val"])]
+
+        # now we repeat each dataset, such that we can have multple different crops etc.
+        dsets_train = [d.repeat(n_repeats) for d in dsets_train]
+        dsets_test = [d.repeat(n_repeats) for d in dsets_test]
+        dsets_val = [d.repeat(n_repeats) for d in dsets_val]
+
+        # crop
+        dsets_train = [d.map(lambda i, w, l: self._map_crop(i, w, l, target_size=image_size, stateless_seed=train_seed))
+                       for d in dsets_train]
+        dsets_test = [d.map(lambda i, w, l: self._map_crop(i, w, l, target_size=image_size, stateless_seed=test_seed))
+                      for d in dsets_test]
+        dsets_val = [d.map(lambda i, w, l: self._map_crop(i, w, l, target_size=image_size, stateless_seed=val_seed))
+                     for d in dsets_val]
+        # perform the augmentations
+        if delta_brightness is not None:
+            dsets_train = [d.map(
+                lambda i, w, l: self._map_brightness(i, w, l, max_delta=delta_brightness, stateless_seed=train_seed))
+                for d in dsets_train]
+            dsets_test = [d.map(
+                lambda i, w, l: self._map_brightness(i, w, l, max_delta=delta_brightness, stateless_seed=test_seed))
+                for d in dsets_test]
+            dsets_val = [d.map(
+                lambda i, w, l: self._map_brightness(i, w, l, max_delta=delta_brightness, stateless_seed=val_seed))
+                for d in dsets_val]
+        if lower_contrast is not None and upper_contrast is not None:
+            dsets_train = [d.map(lambda i, w, l: self._map_contrast(i, w, l, lower=lower_contrast, upper=upper_contrast,
+                                                                    stateless_seed=train_seed))
+                           for d in dsets_train]
+            dsets_test = [d.map(lambda i, w, l: self._map_contrast(i, w, l, lower=lower_contrast, upper=upper_contrast,
+                                                                   stateless_seed=test_seed))
+                          for d in dsets_test]
+            dsets_val = [d.map(lambda i, w, l: self._map_contrast(i, w, l, lower=lower_contrast, upper=upper_contrast,
+                                                                  stateless_seed=val_seed))
+                         for d in dsets_val]
+
+        # finalize train dset
+        dset_train = tf.data.Dataset.sample_from_datasets(dsets_train)
+        dset_train = dset_train.shuffle(shuffle_buffer)
+
+        # test and vl are just concatenated
+        dset_test = dsets_test[0]
+        for d in dsets_test[1:]:
+            dset_test.concatenate(d)
+        val_test = dsets_val[0]
+        for d in dsets_val[1:]:
+            val_test.concatenate(d)
+
+
+        return dset_train, dset_test, val_test
