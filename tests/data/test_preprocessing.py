@@ -163,6 +163,7 @@ def test_generate_weight_map(dir_setup):
     expected = w_c0 + w_0 * np.exp(-3 ** 2 / (2 * sigma ** 2))
     assert np.isclose(weights[2, 1], expected)
 
+
 def test_compute_pixel_ratio():
     """
     Tests the compute_pixel_ratio() function of the DataProcessor class
@@ -189,6 +190,7 @@ def test_compute_pixel_ratio():
     assert ratio.shape == (2, )
     # check the ratio
     assert np.allclose(ratio, np.array([4.0/(n*m), 0.0]))
+
 
 def test_get_quantile_classes():
     """
@@ -218,6 +220,7 @@ def test_get_quantile_classes():
     assert np.unique(labels).size == n
     # check for correct labels
     assert np.all(labels == np.array([0, 0, 0, 1, 1, 2, 2, 3, 3]))
+
 
 def test_split_data(dir_setup):
     """
@@ -261,6 +264,7 @@ def test_split_data(dir_setup):
 
     # checl that everything is there only once
     assert np.unique(np.concatenate([splits["X_train"], splits["X_val"], splits["X_test"]])).size == n
+
 
 def test_get_dset(dir_setup, monkeypatch):
     """
