@@ -1,98 +1,192 @@
-import tensorflow as tf
+import re
+from configparser import ConfigParser
+
+import click
 import numpy as np
-import argparse
+import tensorflow as tf
 
 from midap.utils import get_logger
+from midap.data.tf_pipeline import TFPipe
 
-# Parsing
-#########
+def configure(ctx: click.Context, param: click.Option, filename: str):
+    """
+    The callback for the config file parameter that sets the default map
+    :param ctx: The context
+    :param param: The name of the parameter
+    :param filename: The file name of the config file
+    """
+    cfg = ConfigParser()
+    cfg.read(filename)
+    try:
+        options = dict(cfg['TFTraining'])
+    except KeyError:
+        options = {}
+    ctx.default_map = options
 
-# TODO: Add the preprocessing
-# TODO: Option for on the fly data augmentation
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--save_path", type=str, required=True,
-                    help="The path in which the results should be saved, this directory should exists.")
-parser.add_argument("--train_data", type=str, default="./training_data/ZF270g/train/training_data_ZF270g_1.npz",
-                    help="Path to the numpy file archive (.npz) that contains the training data")
-parser.add_argument("--batch_size", type=int, default=2,
-                    help="Batch size used for the training.")
-parser.add_argument("--epochs", type=int, default=50,
-                    help="Number of epochs used for the training.")
-parser.add_argument("--custom_model", type=str, default=None,
-                    help="Name of the class of the custom model to train, this class has to be implemented in "
-                         "custom_model.py and has to accept input_size and dropout as keyword arguments in "
-                         "the constructor method.")
-parser.add_argument("--restore_path", type=str, default=None,
-                    help="Path to restore the model from, note that it will use the model.save_weights routine")
-parser.add_argument("--tfboard_logdir", type=str, default=None,
-                    help="Logdir used for the Tensorboard callback, defaults to None -> no callback.")
-parser.add_argument("--save_model", action="store_true",
-                    help="If this flag is set, the model will be saved using tf.keras.models.save_model "
-                         "instead of just saving the weights.")
-parser.add_argument("--loglevel", type=int, default=7,
-                    help="Loglevel of the script can range from 0 (no output) to 7 (debug, default)")
-args = parser.parse_args()
+def get_files(ctx: click.Context, param: click.Argument, filename: tuple):
+    """
+    The callback for the file_name arguments of the main function. Arguments won't be mapped through the default map
+    defined in the configure function, so we need to manually extract them if provided.
+    :param ctx: The context
+    :param param: The name of the parameter
+    :param filename: The file name of the train file(s)
+    """
 
-# logging
-logger = get_logger(__file__, args.loglevel)
+    # if we just want to gen a config file we don't care
+    if "gen_config" in ctx.params:
+        return filename
 
-# Load and readout data
-logger.info("Loading data...")
-data = np.load(args.train_data)
+    # if we have something specified we just return it
+    if len(filename) > 0:
+        return list(filename)
+    else:
+        # check if its in the default map
+        filename = ctx.default_map.get(param.name, None)
+        if filename is None:
+            raise click.BadParameter("Please specify at least one filename as argument or in config file")
+        # return the extraced filenames
+        filename = re.findall('\"(.*)\"', filename)
+        if len(filename) == 0:
+            raise click.BadParameter('No valid filename found in the config file, please make sure each file name '
+                                     'is surrounded by quites, e.g.  "img_1_raw.tif"')
+        return filename
 
-X_train = data['X_train']
-y_train = data['y_train']
-weight_maps_train = data['weight_maps_train']
-ratio_cell_train = data['ratio_cell_train']
-X_val = data['X_val']
-y_val = data['y_val']
-weight_maps_val = data['weight_maps_val']
-ratio_cell_val = data['ratio_cell_val']
-logger.info("done!")
 
-# import the right model
-if args.custom_model is None:
-    logger.info("Loading standard UNet")
-    from midap.networks.unets import UNetv1 as ModelClass
-else:
-    logger.info(f"Loading custom class {args.custom_model}")
-    import custom_model
-    ModelClass = getattr(custom_model, args.custom_model)
+@click.command(context_settings={"ignore_unknown_options": True})
+@click.option('-c', '--config', type=click.Path(dir_okay=False), default='tf_train_config.ini', callback=configure,
+              is_eager=True, expose_value=False, help='Read option defaults from the specified INI file',
+              show_default=True, )
+# general
+@click.option('--gen_config', type=click.Path(), default=None,
+              help="Creates a config file with all fields set and exits.")
+@click.option('--loglevel', type=int, default=7,
+              help='Loglevel of the script can range from 0 (no output) to 7 (debug, default)')
+# training data
+@click.option('--n_grid', type=int, default=4,
+              help='The grid used to split the original image into distinct patches for train, test and val dsets')
+@click.option('--test_size', type=float, default=0.15, help='Ratio for the test set')
+@click.option('--val_size', type=float, default=0.2, help='Ratio for the validation set')
+@click.option('--sigma', type=float, default=2.0, help='sigma parameter used for the weight map calculation [1]')
+@click.option('--w_0', type=float, default=2.0, help='w_0 parameter used for the weight map calculation [1]')
+@click.option('--w_c0', type=float, default=1.0,
+              help='basic class weight for non-cell pixel parameter used for the weight map calculation [1]')
+@click.option('--w_c1', type=float, default=1.1,
+              help='basic class weight for cell pixel parameter used for the weight map calculation [1]')
+@click.option('--loglevel', type=int, default=7,
+              help='The loglevel of the logger instance, 0 -> no output, 7 (default) -> max output')
+@click.option('--shuffle_buffer', type=int, default=128, help='The shuffle buffer used for the training set')
+@click.option('--image_size', type=(int, int, int), default=(128, 128, 1),
+              help='The target image size including channel dimension')
+@click.option('--delta_brightness', type=float, default=0.4,
+              help='The max delta_brightness for random brightness adjustments, can be None -> no adjustments')
+@click.option('--lower_contrast', type=float, default=0.2,
+              help='The lower limit for random contrast adjustments, can be None -> no adjustments')
+@click.option('--upper_contrast', type=float, default=0.5,
+              help='The upper limit for random contrast adjustments, can be None -> no adjustments')
+@click.option('--n_repeats', type=int, default=50,
+              help='The number of repeats of random operations per original image, i.e. number of data augmentations')
+@click.option('--train_seed', type=(int, int), default=None,
+              help='A tuple of two seed used to seed the stateless random operations of the training dataset. '
+                   'If set to None (default) each iteration through the training set will have different random '
+                   'augmentations, if set the same augmentations will be used every iteration. Note that even if this '
+                   'seed is set, the shuffling operation will still be truly random if the shuffle_buffer > 1')
+@click.option('--val_seed', type=(int, int), default=(11, 12),
+              help='The seed for the validation set (see train_seed), defaults to (11, 12) for reproducibility')
+@click.option('--test_seed', type=(int, int), default=(13, 14),
+              help='The seed for the test set (see train_seed), defaults to (13, 14) for reproducibility')
+# train specific params
+@click.option('--batch_size', type=int, default=2, help='Batch size used for the training.')
+@click.option('--epochs', type=int, default=50, help='Number of epochs used for the training.')
+@click.option('--custom_model', type=str, default=None,
+              help='Name of the class of the custom model to train, this class has to be implemented in '
+                   'custom_model.py and has to accept input_size and dropout as keyword arguments in the constructor '
+                   'method.')
+@click.option('--restore_path', type=str, default=None,
+              help='Path to restore the model from, note that it will use the model.save_weights routine')
+@click.option('--tfboard_logdir', type=str, default=None,
+              help='Logdir used for the Tensorboard callback, defaults to None -> no callback.')
+@click.option("--save_path", type=click.Path(exists=True, file_okay=False), default=".",
+              help="The path in which the results should be saved, this directory should exists.")
+@click.option('--save_model', is_flag=True,
+              help='If this flag is set, the model will be saved using tf.keras.models.save_model instead of just '
+                   'saving the weights.')
+@click.argument('train_files', nargs=-1, type=click.Path(), callback=get_files)
+def main(**kwargs):
+    """
+    A function that performs model training
+    """
+    # create the config
+    config = ConfigParser()
+    config.read_dict({"TFTraining": {k: f"{v}" for k, v in kwargs.items()}})
+    # remove the config name
+    config.remove_option("TFTraining", "gen_config")
 
-# initialize the model
-model = ModelClass(input_size=X_train.shape[1:], dropout=0.5)
+    # format to the train_files, this can be None in case we just want a config
+    if len(kwargs["train_files"]) == 0:
+        train_files = ['This is a filename', 'Please do not forget the quotes']
+    else:
+        train_files = kwargs["train_files"]
+    config.set("TFTraining", "train_files", " \n".join([f'\"{f}\"' for f in train_files]))
 
-# load the weights
-if (restore_path := args.restore_path) is not None:
-    logger.info(f"Restoring weights from: {restore_path}")
-    model.load_weights(restore_path)
+    # to file
+    if kwargs["gen_config"] is not None:
+        with open(kwargs["gen_config"], "w+") as f:
+            config.write(f)
+        return
 
-# callbacks
-callbacks = [tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)]
-if (log_dir := args.tfboard_logdir) is not None:
-    logger.info(f"Setting TF board log dir: {log_dir}")
-    callbacks.append(tf.keras.callbacks.TensorBoard(log_dir=log_dir))
+    # logging
+    logger = get_logger(__file__, kwargs["loglevel"])
 
-# Fit the model
-model.fit(x=[X_train,
-             weight_maps_train,
-             y_train],  # we need to provide this here for the custom loss
-          y=y_train,  # here for the accuracy metric
-          sample_weight=ratio_cell_train,
-          epochs=args.epochs,
-          validation_data=([X_val,
-                            weight_maps_val,
-                            y_val],
-                            y_val),
-          batch_size=args.batch_size,
-          callbacks=callbacks,
-          shuffle=True)
+    # create the TFPipe
+    logger.info("Initializing the data pipelines...")
+    tf_pipe = TFPipe(paths=kwargs["train_files"], n_grid=kwargs["n_grid"], test_size=kwargs["test_size"],
+                     val_size=kwargs["val_size"], sigma=kwargs["sigma"], w_0=kwargs["w_0"], w_c0=kwargs["w_c0"],
+                     w_c1=kwargs["w_c1"], loglevel=kwargs["loglevel"], shuffle_buffer=kwargs["shuffle_buffer"],
+                     image_size=kwargs["image_size"], delta_brightness=kwargs["delta_brightness"],
+                     lower_contrast=kwargs["lower_contrast"], upper_contrast=kwargs["upper_contrast"],
+                     n_repeats=kwargs["n_repeats"], train_seed=kwargs["train_seed"], val_seed=kwargs["val_seed"],
+                     test_seed=kwargs["val_seed"])
 
-# save the results
-if args.save_model:
-    logger.info(f"Saving model to: {args.save_path}")
-    model.save(args.save_path)
-else:
-    logger.info(f"Saving weights to: {args.save_path}")
-    model.save_weights(args.save_path)
+    # import the right model
+    if kwargs["custom_model"] is None:
+        logger.info("Loading standard UNet")
+        from midap.networks.unets import UNetv1 as ModelClass
+    else:
+        logger.info(f'Loading custom class {kwargs["custom_model"]}')
+        import custom_model
+        ModelClass = getattr(custom_model, kwargs["custom_model"])
+
+    # initialize the model
+    model = ModelClass(input_size=kwargs["image_size"], dropout=0.5)
+
+    # load the weights
+    if (restore_path := kwargs["restore_path"]) is not None:
+        logger.info(f"Restoring weights from: {restore_path}")
+        model.load_weights(restore_path)
+
+    # callbacks
+    callbacks = [tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)]
+    if (log_dir := kwargs["tfboard_logdir"]) is not None:
+        logger.info(f"Setting TF board log dir: {log_dir}")
+        callbacks.append(tf.keras.callbacks.TensorBoard(log_dir=log_dir))
+
+    # Fit the model
+    model.fit(x=tf_pipe.dset_train,
+              epochs=kwargs["epochs"],
+              validation_data=tf_pipe.dset_val,
+              # TODO: batch size is not necessary for a dataset
+              batch_size=kwargs["batch_size"],
+              callbacks=callbacks)
+
+    # save the results
+    if kwargs["save_model"]:
+        logger.info(f'Saving model to: {kwargs["save_path"]}')
+        model.save(kwargs["save_path"])
+    else:
+        logger.info(f'Saving weights to: {kwargs["save_path"]}')
+        model.save_weights(kwargs["save_path"])
+
+
+if __name__ == '__main__':
+    main()

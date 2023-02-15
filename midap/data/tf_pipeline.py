@@ -246,3 +246,9 @@ class TFPipe(DataProcessor):
         self.dset_val = self.dsets_val[0]
         for d in self.dsets_val[1:]:
             self.dset_val.concatenate(d)
+
+        # remap all the datasets such that they are compatible with the fit function
+        # TODO: batch the data
+        self.dset_train = self.dset_train.map(lambda i, w, l: ((i, w, l), l))
+        self.dset_test = self.dset_test.map(lambda i, w, l: ((i, w, l), l))
+        self.dset_val = self.dset_val.map(lambda i, w, l: ((i, w, l), l))
