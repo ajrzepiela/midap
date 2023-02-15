@@ -132,15 +132,12 @@ def test_generate_weight_map(dir_setup):
     # extract paths
     tmpdir, paths = dir_setup
 
-    # set seed
-    seed = 11
-
     # get the instance
     sigma = 2.0
     w_0 = 2.0
     w_c0 = 1.0
     w_c1 = 1.1
-    data_processor = DataProcessor(paths=paths, np_random_seed=seed, sigma=sigma, w_0=w_0, w_c0=w_c0, w_c1=w_c1)
+    data_processor = DataProcessor(paths=paths, sigma=sigma, w_0=w_0, w_c0=w_c0, w_c1=w_c1)
 
     # create a test_mask
     test_mask = np.array([[1, 0, 0, 0, 0, 0],
@@ -168,12 +165,6 @@ def test_compute_pixel_ratio():
     """
     Tests the compute_pixel_ratio() function of the DataProcessor class
     """
-
-    # set seed
-    seed = 11
-
-    # get the instance
-    np.random.seed(seed)
 
     # create a test_mask
     n, m = 23, 11
@@ -232,13 +223,10 @@ def test_split_data(dir_setup):
     # extract paths
     tmpdir, paths = dir_setup
 
-    # set seed
-    seed = 11
-
     # get the instance
     test_size = 0.2
     val_size = 0.125
-    data_processor = DataProcessor(paths=paths, np_random_seed=seed, test_size=test_size, val_size=val_size)
+    data_processor = DataProcessor(paths=paths, test_size=test_size, val_size=val_size)
 
     # test data
     n = 16
@@ -276,14 +264,11 @@ def test_get_dset(dir_setup, monkeypatch):
     # extract paths
     tmpdir, paths = dir_setup
 
-    # set seed
-    seed = 11
-
     # get the instance
     n_grid = 4
     test_size = 0.2
     val_size = 0.1
-    data_processor = DataProcessor(paths=paths, np_random_seed=seed, n_grid=n_grid, test_size=test_size,
+    data_processor = DataProcessor(paths=paths, n_grid=n_grid, test_size=test_size,
                                    val_size=val_size)
 
     # This is a helper function
