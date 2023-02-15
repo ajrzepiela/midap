@@ -261,6 +261,9 @@ def test_get_dset(dir_setup, monkeypatch):
                       DataProcessor
     """
 
+    # set seed
+    np.random.seed(11)
+
     # extract paths
     tmpdir, paths = dir_setup
 
