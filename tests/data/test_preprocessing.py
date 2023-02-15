@@ -1,51 +1,17 @@
-from midap.data import DataProcessor
-import skimage.io as io
-import numpy as np
-import pytest
-import tempfile
 from pathlib import Path
 
-# Fixtures
-##########
+import numpy as np
+import pytest
+import skimage.io as io
+from pytest import mark
 
-@pytest.fixture()
-def tmpdir():
-    """
-    Creates a temporary directory and returns the value
-    :return: The path to the temporary directory as pathlib path
-    """
-
-    # create
-    tmp_dir = tempfile.TemporaryDirectory()
-
-    # yield
-    yield Path(tmp_dir.name)
-
-    # cleanup
-    tmp_dir.cleanup()
-
-@pytest.fixture()
-def dir_setup(tmpdir):
-    """
-    Sets up a directory that can be used to test the DataProcessor
-    :param tmpdir: A tmp dir to create the files
-    :return: A tuple (tmpdir, paths) of pathlib Path objects, the first indicating the tmp directory
-             the second is a list of paths that can be used for the DataProcessor init function
-    """
-
-    # create the necessary files
-    img = tmpdir.joinpath("img_raw.tif")
-    img.touch()
-    seg = tmpdir.joinpath("img_seg.tif")
-    seg.touch()
-    paths = [img]
-
-    return tmpdir, paths
+from midap.data import DataProcessor
 
 
 # Tests
 #######
 
+@mark.usefixtures("tmpdir")
 def test_init(tmpdir):
     """
     Tests the __init__ function of the DataProcessor class
@@ -122,6 +88,7 @@ def test_scale_pixel_vals():
     assert np.isclose(scales_img.min(), 0.0)
 
 
+@mark.usefixtures("dir_setup")
 def test_generate_weight_map(dir_setup):
     """
     Tests the generate_weight_map() function of the DataProcessor class
@@ -213,6 +180,7 @@ def test_get_quantile_classes():
     assert np.all(labels == np.array([0, 0, 0, 1, 1, 2, 2, 3, 3]))
 
 
+@mark.usefixtures("dir_setup")
 def test_split_data(dir_setup):
     """
     Tests the split_data() function of the DataProcessor class
@@ -254,6 +222,7 @@ def test_split_data(dir_setup):
     assert np.unique(np.concatenate([splits["X_train"], splits["X_val"], splits["X_test"]])).size == n
 
 
+@mark.usefixtures("dir_setup")
 def test_get_dset(dir_setup, monkeypatch):
     """
     Tests the get_dset function of the DataProcessor class
