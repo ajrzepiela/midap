@@ -15,7 +15,7 @@ class TFPipe(DataProcessor):
 
     def __init__(self, paths: Union[str, bytes, os.PathLike, List[Union[str, bytes, os.PathLike]]],
                  n_grid=4, test_size=0.15, val_size=0.2, sigma=2.0, w_0=2.0, w_c0=1.0, w_c1=1.1, loglevel=7,
-                 shuffle_buffer=128, image_size=(128, 128, 1), delta_brightness: Optional[float] = 0.4,
+                 batch_size=32, shuffle_buffer=128, image_size=(128, 128, 1), delta_brightness: Optional[float] = 0.4,
                  lower_contrast: Optional[float] = 0.2, upper_contrast: Optional[float] = 0.5,
                  n_repeats: Optional[int] = 50, train_seed: Optional[tuple] = None, val_seed=(11, 12),
                  test_seed=(13, 14)):
@@ -33,6 +33,7 @@ class TFPipe(DataProcessor):
         :param w_c0: basic class weight for non-cell pixel parameter used for the weight map calculation [1]
         :param w_c1: basic class weight for cell pixel parameter used for the weight map calculation [1]
         :param loglevel: The loglevel of the logger instance, 0 -> no output, 7 (default) -> max output
+        :param batch_size: The batch size of the data sets
         :param shuffle_buffer: The shuffle buffer used for the training set
         :param image_size: The target image size including channel dimension
         :param delta_brightness: The max delta_brightness for random brightness adjustments,
@@ -60,10 +61,19 @@ class TFPipe(DataProcessor):
         # get the datasets
         self.data_dict = self.get_dset()
 
+        # check the size
+        shapes = [x.shape[1:] for x in self.data_dict["X_train"]]
+        min_shape = np.min(np.array(shapes), axis=0)
+        for i in range(3):
+            if min_shape[i] < image_size[i]:
+                raise ValueError(f"The image_size of {image_size} is not compatible with the training data, "
+                                 f"max possible shape is {tuple(min_shape)}!")
+
         # set the TF datasets
-        self.set_tf_dsets(shuffle_buffer=shuffle_buffer, image_size=image_size, delta_brightness=delta_brightness,
-                          lower_contrast=lower_contrast, upper_contrast=upper_contrast, n_repeats=n_repeats,
-                          train_seed=train_seed, val_seed=val_seed, test_seed=test_seed)
+        self.set_tf_dsets(batch_size=batch_size, shuffle_buffer=shuffle_buffer, image_size=image_size,
+                          delta_brightness=delta_brightness, lower_contrast=lower_contrast,
+                          upper_contrast=upper_contrast, n_repeats=n_repeats, train_seed=train_seed, val_seed=val_seed,
+                          test_seed=test_seed)
 
         # create the config for the meta data
         self.config = ConfigParser()
@@ -158,12 +168,13 @@ class TFPipe(DataProcessor):
 
         return tf.data.Dataset.zip((img_dset, w_dset, seg_dset))
 
-    def set_tf_dsets(self, shuffle_buffer=128, image_size=(128, 128, 1), delta_brightness: Optional[float] = 0.4,
+    def set_tf_dsets(self, batch_size, shuffle_buffer=128, image_size=(128, 128, 1), delta_brightness: Optional[float] = 0.4,
                      lower_contrast: Optional[float] = 0.2, upper_contrast: Optional[float] = 0.5,
                      n_repeats: Optional[int] = 50, train_seed: Optional[tuple] = None, val_seed=(11, 12),
                      test_seed=(13, 14)):
         """
         Creates train, test and validation TF datasets.
+        :param batch_size: The batch size of the data sets
         :param shuffle_buffer: The shuffle buffer used for the training set
         :param image_size: The target image size including channel dimension
         :param delta_brightness: The max delta_brightness for random brightness adjustments, 
@@ -181,19 +192,16 @@ class TFPipe(DataProcessor):
         :param test_seed: The seed for the test set (see train_seed), defaults to (13, 14) for reproducibility 
         """
 
-        # get the datasets as dicts
-        data_dict = self.get_dset()
-
         # stack imgs, weights and labels together
-        self.dsets_train = [self.zip_inputs(i, w, l) for i, w, l in zip(data_dict["X_train"],
-                                                                        data_dict["weight_maps_train"],
-                                                                        data_dict["y_train"])]
-        self.dsets_test = [self.zip_inputs(i, w, l) for i, w, l in zip(data_dict["X_test"],
-                                                                       data_dict["weight_maps_test"],
-                                                                       data_dict["y_test"])]
-        self.dsets_val = [self.zip_inputs(i, w, l) for i, w, l in zip(data_dict["X_val"],
-                                                                      data_dict["weight_maps_val"],
-                                                                      data_dict["y_val"])]
+        self.dsets_train = [self.zip_inputs(i, w, l) for i, w, l in zip(self.data_dict["X_train"],
+                                                                        self.data_dict["weight_maps_train"],
+                                                                        self.data_dict["y_train"])]
+        self.dsets_test = [self.zip_inputs(i, w, l) for i, w, l in zip(self.data_dict["X_test"],
+                                                                       self.data_dict["weight_maps_test"],
+                                                                       self.data_dict["y_test"])]
+        self.dsets_val = [self.zip_inputs(i, w, l) for i, w, l in zip(self.data_dict["X_val"],
+                                                                      self.data_dict["weight_maps_val"],
+                                                                      self.data_dict["y_val"])]
 
         # now we repeat each dataset, such that we can have multple different crops etc.
         self.dsets_train = [d.repeat(n_repeats) for d in self.dsets_train]
@@ -247,8 +255,7 @@ class TFPipe(DataProcessor):
         for d in self.dsets_val[1:]:
             self.dset_val.concatenate(d)
 
-        # remap all the datasets such that they are compatible with the fit function
-        # TODO: batch the data
-        self.dset_train = self.dset_train.map(lambda i, w, l: ((i, w, l), l))
-        self.dset_test = self.dset_test.map(lambda i, w, l: ((i, w, l), l))
-        self.dset_val = self.dset_val.map(lambda i, w, l: ((i, w, l), l))
+        # batch remap all the datasets such that they are compatible with the fit function
+        self.dset_train = self.dset_train.batch(batch_size).map(lambda i, w, l: ((i, w, l), l))
+        self.dset_test = self.dset_test.batch(batch_size).map(lambda i, w, l: ((i, w, l), l))
+        self.dset_val = self.dset_val.batch(batch_size).map(lambda i, w, l: ((i, w, l), l))

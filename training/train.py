@@ -1,12 +1,13 @@
 import re
 from configparser import ConfigParser
+from pathlib import Path
 
 import click
-import numpy as np
 import tensorflow as tf
 
-from midap.utils import get_logger
 from midap.data.tf_pipeline import TFPipe
+from midap.utils import get_logger
+
 
 def configure(ctx: click.Context, param: click.Option, filename: str):
     """
@@ -75,6 +76,7 @@ def get_files(ctx: click.Context, param: click.Argument, filename: tuple):
               help='basic class weight for cell pixel parameter used for the weight map calculation [1]')
 @click.option('--loglevel', type=int, default=7,
               help='The loglevel of the logger instance, 0 -> no output, 7 (default) -> max output')
+@click.option('--batch_size', type=int, default=32, help='The batch size of the data sets for training.')
 @click.option('--shuffle_buffer', type=int, default=128, help='The shuffle buffer used for the training set')
 @click.option('--image_size', type=(int, int, int), default=(128, 128, 1),
               help='The target image size including channel dimension')
@@ -138,15 +140,21 @@ def main(**kwargs):
     # logging
     logger = get_logger(__file__, kwargs["loglevel"])
 
+    # save the config
+    config_file = Path(kwargs["save_path"]).joinpath("train_config.ini")
+    logger.info(f'Saving config to: {config_file}')
+    with open(config_file, "w+") as f:
+        config.write(f)
+
     # create the TFPipe
     logger.info("Initializing the data pipelines...")
     tf_pipe = TFPipe(paths=kwargs["train_files"], n_grid=kwargs["n_grid"], test_size=kwargs["test_size"],
                      val_size=kwargs["val_size"], sigma=kwargs["sigma"], w_0=kwargs["w_0"], w_c0=kwargs["w_c0"],
-                     w_c1=kwargs["w_c1"], loglevel=kwargs["loglevel"], shuffle_buffer=kwargs["shuffle_buffer"],
-                     image_size=kwargs["image_size"], delta_brightness=kwargs["delta_brightness"],
-                     lower_contrast=kwargs["lower_contrast"], upper_contrast=kwargs["upper_contrast"],
-                     n_repeats=kwargs["n_repeats"], train_seed=kwargs["train_seed"], val_seed=kwargs["val_seed"],
-                     test_seed=kwargs["val_seed"])
+                     w_c1=kwargs["w_c1"], loglevel=kwargs["loglevel"], batch_size=kwargs["batch_size"],
+                     shuffle_buffer=kwargs["shuffle_buffer"], image_size=kwargs["image_size"],
+                     delta_brightness=kwargs["delta_brightness"], lower_contrast=kwargs["lower_contrast"],
+                     upper_contrast=kwargs["upper_contrast"], n_repeats=kwargs["n_repeats"],
+                     train_seed=kwargs["train_seed"], val_seed=kwargs["val_seed"], test_seed=kwargs["val_seed"])
 
     # import the right model
     if kwargs["custom_model"] is None:
@@ -175,8 +183,6 @@ def main(**kwargs):
     model.fit(x=tf_pipe.dset_train,
               epochs=kwargs["epochs"],
               validation_data=tf_pipe.dset_val,
-              # TODO: batch size is not necessary for a dataset
-              batch_size=kwargs["batch_size"],
               callbacks=callbacks)
 
     # save the results
