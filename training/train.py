@@ -6,6 +6,7 @@ import click
 import tensorflow as tf
 
 from midap.data.tf_pipeline import TFPipe
+from midap.networks.evaluation import tf_metrics
 from midap.utils import get_logger
 
 
@@ -100,10 +101,12 @@ def get_files(ctx: click.Context, param: click.Argument, filename: tuple):
 # train specific params
 @click.option('--batch_size', type=int, default=2, help='Batch size used for the training.')
 @click.option('--epochs', type=int, default=50, help='Number of epochs used for the training.')
+@click.option('--iou_threshold', type=float, default=0.9,
+              help='IoU threshold for the AveragePrecision (average Jaccard index for a given threshold) metric.')
 @click.option('--custom_model', type=str, default=None,
               help='Name of the class of the custom model to train, this class has to be implemented in '
-                   'custom_model.py and has to accept input_size and dropout as keyword arguments in the constructor '
-                   'method.')
+                   'custom_model.py and has to accept input_size, dropout and metrics as keyword arguments in the '
+                   'constructor method.')
 @click.option('--restore_path', type=str, default=None,
               help='Path to restore the model from, note that it will use the model.save_weights routine')
 @click.option('--tfboard_logdir', type=str, default=None,
@@ -166,7 +169,9 @@ def main(**kwargs):
         ModelClass = getattr(custom_model, kwargs["custom_model"])
 
     # initialize the model
-    model = ModelClass(input_size=kwargs["image_size"], dropout=0.5)
+    model = ModelClass(input_size=kwargs["image_size"], dropout=0.5,
+                       metrics=[tf_metrics.AveragePrecision(kwargs['iou_threshold']),
+                                tf_metrics.ROIAccuracy()])
 
     # load the weights
     if (restore_path := kwargs["restore_path"]) is not None:
@@ -174,7 +179,8 @@ def main(**kwargs):
         model.load_weights(restore_path)
 
     # callbacks
-    callbacks = [tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5)]
+    callbacks = [tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=5),
+                 tf_metrics.ToggleMetrics(toggle_metrics=["average_precision"])]
     if (log_dir := kwargs["tfboard_logdir"]) is not None:
         logger.info(f"Setting TF board log dir: {log_dir}")
         callbacks.append(tf.keras.callbacks.TensorBoard(log_dir=log_dir))

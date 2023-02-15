@@ -1,6 +1,9 @@
+from typing import List, Optional
+
+import numpy as np
 import tensorflow as tf
 from cellpose import metrics
-from typing import List, Optional
+
 
 class ToggleMetrics(tf.keras.callbacks.Callback):
     """
@@ -46,26 +49,111 @@ class ToggleMetrics(tf.keras.callbacks.Callback):
                 if custom_metric in metric.name:
                     metric.on.assign(False)
 
-class AveragePrecision(tf.keras.metrics.Metrics):
+
+class ROIAccuracy(tf.keras.metrics.Metric):
     """
-    This is a TF metric used for to calculate the average precision
+    Calculates the accuracy within the regions of interest
+    Note: This metric can be toggled
     """
 
-    def __init__(self, **kwargs):
-        # Initialise as normal and add flag variable for when to run computation
-        super(MyCustomMetric, self).__init__(**kwargs)
-        self.metric_variable = self.add_weight(name='metric_varaible', initializer='zeros')
-        self.on = tf.Variable(False)
+    def __init__(self, on_start=True, **kwargs):
+        """
+        Inits the metric
+        :param on_start: Wheter the metric is turned on on start
+        :param kwargs: keyword arguments forwarded to the base class init
+        """
+
+        # base class init
+        super().__init__(**kwargs)
+        self.tp = self.add_weight(name=f'true_positive', initializer='zeros')
+        self.total_roi = self.add_weight(name=f'total_roi', initializer='zeros')
+        self.on = tf.Variable(on_start)
 
     def update_state(self, y_true, y_pred, sample_weight=None):
+        """
+        Updates the state of the metric
+        :param y_true: The label of the batch
+        :param y_pred: The predictions of the batch
+        :param sample_weight: Sample weights
+        """
+        # Use conditional to determine if computation is done
+        if self.on:
+            tp = tf.reduce_sum(tf.cast(y_pred > 0.5, tf.int32)*tf.cast(y_true > 0.5, tf.int32))
+            self.tp.assign_add(tf.cast(tp, tf.float32))
+            total_roi = tf.reduce_sum(tf.cast(y_true > 0.5, tf.int32))
+            self.total_roi.assign_add(tf.cast(total_roi, tf.float32))
+
+    def result(self):
+        """
+        Calculates the current result of the metric
+        :return: The current result
+        """
+        return self.tp/self.total_roi
+
+    def reset_state(self):
+        """
+        Resets the metric to default state
+        """
+        self.tp.assign(0.)
+        self.total_roi.assign(0.0)
+
+
+class AveragePrecision(tf.keras.metrics.Metric):
+    """
+    This is a TF metric used for to calculate the average precision for a given threshold,
+    note that this is quite slow compared to the other TF functions because it is not a graph function
+    Note: This metric can be toggled
+    """
+
+    def __init__(self, threshold, name=None, on_start=False, **kwargs):
+        """
+        Inits the metric
+        :param threshold: The threshold used fort the calculation
+        :param name: The name of the metrics to display
+        :param on_start: Wheter the metric is turned on on start
+        :param kwargs: Keyword arguments forwarded to the metric base class
+        """
+        # Initialise as normal and add flag variable for when to run computation
+        if name is None:
+            name = f"average_precision_{threshold}"
+        super().__init__(name=name, **kwargs)
+        self.threshold = threshold
+        self.tp = self.add_weight(name=f'true_positive', initializer='zeros')
+        self.fp = self.add_weight(name=f'false_positive', initializer='zeros')
+        self.fn = self.add_weight(name=f'false_negative', initializer='zeros')
+        self.on = tf.Variable(on_start)
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        """
+        Updates the state of the metric
+        :param y_true: The label of the batch
+        :param y_pred: The predictions of the batch
+        :param sample_weight: Sample weights
+        """
         # Use conditional to determine if computation is done
         if self.on:
             # run computation
-            self.metric_variable.assign_add(computation_result)
+            ap, tp, fp, fn = tf.numpy_function(lambda true, pred, thres: metrics.average_precision(true, pred, thres),
+                                               [tf.cast(y_true[...,0] > 0.5, tf.int32),
+                                                tf.cast(y_pred[...,0] > 0.5, tf.int32),
+                                                [self.threshold]],
+                                               Tout=(tf.float32, tf.float32, tf.float32, tf.float32))
+            self.tp.assign_add(tf.reduce_sum(tp))
+            self.fp.assign_add(tf.reduce_sum(fp))
+            self.fn.assign_add(tf.reduce_sum(fn))
 
     def result(self):
-        return self.metric_variable
+        """
+        Calculates the current result of the metric
+        :return: The current result
+        """
+        return self.tp/(self.tp + self.fp + self.fn)
 
-    def reset_states(self):
-        self.metric_variable.assign(0.)
+    def reset_state(self):
+        """
+        Resets the metric to default state
+        """
+        self.tp.assign(0.)
+        self.fp.assign(0.)
+        self.fn.assign(0.)
 
