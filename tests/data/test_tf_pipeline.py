@@ -1,12 +1,12 @@
-from midap.data.tf_pipeline import TFPipe
-import tensorflow as tf
-from pathlib import Path
-from skimage import io
-from skimage.io import imread
-from pytest import mark
-import pytest
-import numpy as np
 from typing import Callable
+
+import numpy as np
+import pytest
+import tensorflow as tf
+from pytest import mark
+
+from midap.data.tf_pipeline import TFPipe
+
 
 # Fixtures
 ##########

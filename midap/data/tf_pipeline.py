@@ -1,11 +1,11 @@
 import os
+from configparser import ConfigParser
 from typing import Optional, List, Union
 
 import numpy as np
 import tensorflow as tf
 
 from .preprocessing import DataProcessor
-from configparser import ConfigParser
 
 
 class TFPipe(DataProcessor):
