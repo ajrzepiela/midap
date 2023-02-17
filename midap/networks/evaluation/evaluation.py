@@ -12,6 +12,8 @@ def evaluate_accuracy(prediction: np.ndarray, label: np.ndarray, roi_only=False)
     """
 
     # check dimensions
+    if prediction.ndim != 3 and prediction.ndim != 4:
+        raise ValueError("prediction and segmentation should have shape BWHC or WHC!")
     if prediction.ndim == 3:
         prediction = prediction[None,...]
         label = label[None,...]
@@ -47,6 +49,8 @@ def evaluate_bayes_stats(prediction: np.ndarray, label: np.ndarray):
     """
 
     # check dimensions
+    if prediction.ndim != 3 and prediction.ndim != 4:
+        raise ValueError("prediction and segmentation should have shape BWHC or WHC!")
     if prediction.ndim == 3:
         prediction = prediction[None, ...]
         label = label[None, ...]
