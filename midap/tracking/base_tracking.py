@@ -2,12 +2,14 @@ import os
 from abc import ABC, abstractmethod
 from typing import Collection, Optional, Iterable, Union
 
+import datetime
 import numpy as np
 import psutil
 import skimage.io as io
 from skimage.measure import label, regionprops
 from skimage.morphology import remove_small_objects
 from skimage.transform import resize
+import time
 from tqdm import tqdm
 
 from .delta_lineage import DeltaTypeLineages
@@ -32,11 +34,12 @@ class Tracking(ABC):
     logger = logger
 
     def __init__(self, imgs: Collection[str],
-                 segs: Optional[Collection[str]] = None,
-                 model_weights: Union[str, bytes, os.PathLike, None] = None,
-                 input_size: Optional[tuple] = None,
-                 target_size: Optional[tuple] = None,
-                 crop_size: Optional[tuple] = None):
+                 segs: Collection[str],
+                 model_weights: Union[str, bytes, os.PathLike, None],
+                 input_size: tuple,
+                 target_size: tuple,
+                 crop_size: tuple,
+                 connectivity=1):
         """
         Initializes the class instance
         :param imgs: List of files containing the cut out images ordered chronological in time
@@ -50,16 +53,13 @@ class Tracking(ABC):
         # set the variables
         self.imgs = imgs
         self.segs = segs
-
-        if self.segs is not None:
-            self.num_time_steps = len(self.segs)
+        self.num_time_steps = len(self.segs)
 
         self.model_weights = model_weights
         self.input_size = input_size
         self.target_size = target_size
-
-        if crop_size is not None:
-            self.crop_size = crop_size
+        self.crop_size = crop_size
+        self.connectivity = connectivity
 
     def load_data(self, cur_frame: int):
         """
@@ -71,8 +71,8 @@ class Tracking(ABC):
 
         img_cur_frame = resize(io.imread(self.imgs[cur_frame]), self.target_size, order=1)
         img_prev_frame = resize(io.imread(self.imgs[cur_frame - 1]), self.target_size, order=1)
-        seg_cur_frame = (resize(io.imread(self.segs[cur_frame]), self.target_size, order=0) > 0).astype(int)
-        seg_prev_frame = (resize(io.imread(self.segs[cur_frame - 1]), self.target_size, order=0) > 0).astype(int)
+        seg_cur_frame = (resize(io.imread(self.segs[cur_frame]) > 0, self.target_size, order=0))#.astype(int)
+        seg_prev_frame = (resize(io.imread(self.segs[cur_frame - 1]) > 0, self.target_size, order=0))#.astype(int)
 
         return img_cur_frame, img_prev_frame, seg_cur_frame, seg_prev_frame
 
@@ -104,12 +104,15 @@ class DeltaTypeTracking(Tracking):
         Tracks all frames and saves the results to the given output folder
         :param output_folder: The folder to save the results
         """
+        # Display estimated runtime
+        self.print_process_time()
 
+        # Run tracking
         inputs, results = self.run_model_crop()
-        results_all_red = self.reduce_data(output_folder=output_folder, inputs=inputs, results=results)
+        self.store_data(output_folder, inputs, results)
 
-        if results_all_red is not None:
-            lin = DeltaTypeLineages(inputs=np.array(inputs), results=results_all_red)
+        if results is not None:
+            lin = DeltaTypeLineages(inputs=np.array(inputs), results=results)
             lin.store_lineages(output_folder=output_folder)
         else:
             logger.warning("Tracking did not generate any output!")
@@ -125,8 +128,9 @@ class DeltaTypeTracking(Tracking):
         img_cur_frame, img_prev_frame, seg_cur_frame, seg_prev_frame = self.load_data(cur_frame)
 
         # Label of the segmentation of the previous frame
-        label_prev_frame, num_cells = label(seg_prev_frame, return_num=True)
-        label_cur_frame = label(seg_cur_frame)
+        label_prev_frame, num_cells = label(seg_prev_frame, return_num=True, connectivity=self.connectivity)
+        label_cur_frame = label(seg_cur_frame, connectivity=self.connectivity)
+
         props = regionprops(label_prev_frame)
 
         # create the input
@@ -162,7 +166,7 @@ class DeltaTypeTracking(Tracking):
             label_cur_frame_crop = label_cur_frame[min_row:max_row, min_col:max_col]
             # remove cells that were split during the crop
             seg_clean = self.clean_crop(label_cur_frame, label_cur_frame_crop)
-
+            
             cell_ix = p.label - 1
             input_cur_frame[cell_ix, :, :, 0] = img_prev_frame[min_row:max_row, min_col:max_col]
             input_cur_frame[cell_ix, :, :, 1] = seed
@@ -198,17 +202,51 @@ class DeltaTypeTracking(Tracking):
 
         return seg_clean_bin
 
+    def check_process_time(self):
+        """
+        Estimates time needed for tracking based on tracking for one frame.
+        :return: time in milliseconds
+        """
+        self.logger.info('Estimate needed time for tracking. This may take a while...')
+        
+        start = time.time()
+        self.load_model()
+        inputs_cur_frame, input_whole_frame, crop_box = self.gen_input_crop(1)
+        _ = self.model.predict(inputs_cur_frame, verbose=0)
+        end = time.time()
+        
+        process_time = int((end-start)*1e3)
+
+        return process_time
+
+    def print_process_time(self):
+        """
+        Prints estimated time for tracking of all frames
+        """
+
+        process_time = self.check_process_time()
+
+        print('\n' + '─' * 30)
+        print("PLEASE NOTE \nTracking will take: \n ")
+        print(f"{str(datetime.timedelta(milliseconds=process_time))} hours \n")
+        print("If the processing time is too \n"
+              "long, please consider to cancel \n"
+              "the tracking and restart it \n"
+              "on the cluster.")
+        print("─" * 30 + '\n')
+
     def run_model_crop(self):
         """
         Runs the tracking model
+        :return: Arrays containing input and reduced output of Delta model
         """
 
         # Load model
         self.load_model()
 
         # Loop over all time frames
-        results_all = []
-        inputs_all = []
+        inputs_all = np.empty((self.num_time_steps-1,) + self.target_size + (4,))
+        results_all = np.empty((self.num_time_steps-1,) + self.target_size + (2,))
 
         ram_usg = process.memory_info().rss * 1e-9
         for cur_frame in (pbar := tqdm(range(1, self.num_time_steps), postfix={"RAM": f"{ram_usg:.1f} GB"})):
@@ -228,10 +266,14 @@ class DeltaTypeTracking(Tracking):
                 row_min, col_min, row_max, col_max = crop_box[i]
                 results_cur_frame[i, row_min:row_max, col_min:col_max,:] = results_cur_frame_crop[i]
 
-            # Clean results
+            # Clean results and add to array
             results_cur_frame_clean = self.clean_cur_frame(input_whole_frame[:, :, 3], results_cur_frame)
-            inputs_all.append(input_whole_frame)
-            results_all.append(results_cur_frame_clean)
+            results_cur_frame_red = self.reduce_results(results_cur_frame_clean)
+
+            if results_cur_frame_red is not None:
+                results_all[cur_frame-1] = results_cur_frame_red
+
+            inputs_all[cur_frame-1] = input_whole_frame
 
             ram_usg = process.memory_info().rss * 1e-9
             pbar.set_postfix({"RAM": f"{ram_usg:.1f} GB"})
@@ -247,15 +289,14 @@ class DeltaTypeTracking(Tracking):
         """
 
         # Labeling of the segmentation.
-        inp_label = label(inp)
+        inp_label = label(inp, connectivity=self.connectivity)
 
         # Compare cell from tracking with cell from segmentation and
         # find cells which are overlapping most.
         res_clean = np.zeros(res.shape[:-1] + (2,))
         for ri, r in enumerate(res):
 
-            r_label = label(r[:, :, 0] > 0.9)
-            r_label = remove_small_objects(r_label, min_size=5)
+            r_label = label(r[:, :, 0] > 0.9, connectivity=self.connectivity)
 
             overl = inp_label[np.multiply(inp, r_label) > 0]
             cell_labels = np.unique(overl)
@@ -269,37 +310,37 @@ class DeltaTypeTracking(Tracking):
         res_clean = np.array(res_clean)
         return res_clean
 
-    def reduce_data(self, output_folder: Union[str, bytes, os.PathLike], inputs: Collection[np.ndarray],
-                    results: Collection[np.ndarray]):
+
+    def reduce_results(self, results: np.ndarray):
         """
-        Reduces the amount of output from the delta model from individual images per cell to full images and saves the
-        output
+        Reduces the amount of output from the delta model from individual images per cell to full images
         :param output_folder: Where to save the output
-        :param inputs: The inputs used for the tracking
         :param results: The results
         :return: The reduced data or None if no cells were tracked
         """
 
-        # Reduce results file for storage if there is a tracking result
-        if sum([res.size for res in results]) > 0:
-            self.logger.info("Saving results of tracking...")
-            # the first might be emtpy
-            results_all_red = np.zeros((len(results),) + results[0].shape[1:3] + (2,))
+        results_red = np.zeros((1,) + self.target_size + (2,))
+        
+        if len(results) > 0:
+            for ix, cell_id in enumerate(results):
+                if cell_id[:, :, 0].sum() > 0:
+                    results_red[0, cell_id[:, :, 0] > 0, 0] = ix + 1
+                if cell_id[:, :, 1].sum() > 0:
+                    results_red[0, cell_id[:, :, 1] > 0, 1] = ix + 1
 
-            for t in range(len(results)):
-                for ix, cell_id in enumerate(results[t]):
-                    if cell_id[:, :, 0].sum() > 0:
-                        results_all_red[t, cell_id[:, :, 0] > 0, 0] = ix + 1
-                    if cell_id[:, :, 1].sum() > 0:
-                        results_all_red[t, cell_id[:, :, 1] > 0, 1] = ix + 1
+            return results_red
 
-            # Save data
-            inputs = np.array(inputs)
-            results_all_red = np.array(results_all_red)
-            np.savez(os.path.join(output_folder, 'inputs_all_red.npz'), inputs_all=inputs)
-            np.savez(os.path.join(output_folder, 'results_all_red.npz'), results_all_red=results_all_red)
+    def store_data(self, output_folder: Union[str, bytes, os.PathLike], input: np.ndarray, result: np.ndarray):
+        """ 
+        Saves input and output from the Delta model
+        :param output_folder: Where to save the output
+        :param inputs: The inputs used for the tracking
+        :param results: The results
+        :return: None
+        """
 
-            return results_all_red
+        np.savez(os.path.join(output_folder, 'inputs_all_red.npz'), inputs_all=input)
+        np.savez(os.path.join(output_folder, 'results_all_red.npz'), results_all_red=result)
 
     @abstractmethod
     def load_model(self):

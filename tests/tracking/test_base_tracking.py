@@ -7,4 +7,4 @@ def test_base_cutout():
     """
 
     with pytest.raises(TypeError):
-        _ = Tracking(imgs=None, segs=None, model_weights=None, input_size=None, target_size=None)
+        _ = Tracking(imgs=None, segs=None, model_weights=None, input_size=None, target_size=None, connectivity=1)

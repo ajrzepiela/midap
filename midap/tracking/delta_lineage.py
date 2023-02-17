@@ -6,6 +6,7 @@ import h5py
 import numpy as np
 import pandas as pd
 from skimage.measure import regionprops, label
+from tqdm import tqdm
 
 from ..utils import get_logger
 
@@ -70,18 +71,18 @@ class DeltaTypeLineages:
         """
         Generates lineages based on output of tracking (U-Net) network.
         """
-
+        self.logger.info('Generate lineages...')
         # init the global unique ID and the track ID that track the cell through multiple cells
         global_id = 1
         track_id = 1
 
         # this goes through all labeled input the last
-        for frame_num, label_inp in enumerate(self.inputs[...,1]):
+        for frame_num, label_inp in tqdm(enumerate(self.inputs[...,1])):
             # we get all cells in the frame, first element is background
             current_local_ids = np.unique(label_inp)[1:]
 
             # cycle through all local ids
-            for local_id in current_local_ids:
+            for local_id in tqdm(current_local_ids):
                 # track the cell if it's not already part of a lineage
                 if local_id not in self.track_output.loc[self.track_output["frame"] == frame_num, "labelID"].values:
                     global_id, track_id = self._track_cell(frame_index=frame_num, cell_label=local_id,

@@ -2,13 +2,14 @@ name: midap
 channels:
   - defaults
 dependencies:
-  - python=3.8.5
+  - python=3.9
   - tensorflow
   - pytorch
   - pip
+  - pyqt
   - pip:
-    - matplotlib>=3.3.0
-    - napari==0.4.16
+    - matplotlib>=3.3.0,<=3.7.0
+    - napari
     - PySimpleGUI>=4.60.4
     - scikit-image>=0.19.3
     - gitpython
