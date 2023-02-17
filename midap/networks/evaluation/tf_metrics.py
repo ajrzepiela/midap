@@ -1,8 +1,8 @@
 from typing import List, Optional
 
-import numpy as np
 import tensorflow as tf
 from cellpose import metrics
+from skimage.measure import label
 
 
 class ToggleMetrics(tf.keras.callbacks.Callback):
@@ -133,7 +133,9 @@ class AveragePrecision(tf.keras.metrics.Metric):
         # Use conditional to determine if computation is done
         if self.on:
             # run computation
-            ap, tp, fp, fn = tf.numpy_function(lambda true, pred, thres: metrics.average_precision(true, pred, thres),
+            ap, tp, fp, fn = tf.numpy_function(lambda true, pred, thres: metrics.average_precision(label(true),
+                                                                                                   label(pred),
+                                                                                                   thres),
                                                [tf.cast(y_true[...,0] > 0.5, tf.int32),
                                                 tf.cast(y_pred[...,0] > 0.5, tf.int32),
                                                 [self.threshold]],
