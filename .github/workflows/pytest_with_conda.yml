@@ -119,6 +119,23 @@ jobs:
           key: ${{ env.DATE_YM }}-${{ env.CACHE_NUMBER }}
         id: cache_weights
 
+      # We need to do this here because the cross OS cache bugs out sometimes
+      - name: Download weights Windows
+        shell: bash -l {0}
+        run: |
+          echo "Download weights"
+          wget -O model_weights.zip https://polybox.ethz.ch/index.php/s/XoaFLr346h8GxzP/download
+          echo "Extract model weights"
+          unzip model_weights.zip
+          echo "Remove zip-files"
+          rm model_weights.zip
+          touch model_weights/.success
+          mkdir psf
+          touch psf/.success
+          mkdir example_data
+          touch example_data/.success
+        if: ${{ steps.cache_weights.outputs.cache-hit != 'true' && matrix.label == 'windows-64'}}
+
       # date for the cache
       - name: Set cache date
         shell: bash -l {0}
