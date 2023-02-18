@@ -1,8 +1,6 @@
 from typing import Optional, Callable
 
 import napari
-import numpy as np
-import pandas as pd
 from qtpy.QtCore import Qt
 from qtpy.QtWidgets import (
     QPushButton,
@@ -11,6 +9,8 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from midap.correction.data_handler import CorrectionData
 
 
 class GenericBox(QWidget):
@@ -67,17 +67,17 @@ class SelectionBox(GenericBox):
     A box displaying the selection box
     """
 
-    def __init__(self, track_df: pd.DataFrame, change_frame_callback: Callable):
+    def __init__(self, correction_data: CorrectionData, change_frame_callback: Callable):
         """
         Inits the widget
-        :param track_df: The tracking data frame indicating track IDs, cell divisions etc.
+        :param correction_data: The correction data that should be displayed
         :param change_frame_callback: A function that changes the frame of the viewer, take the number as input
         """
         # proper init
         super().__init__()
 
         # set attributes
-        self.track_df = track_df
+        self.correction_data = correction_data
         self.change_frame_callback = change_frame_callback
 
         # add the subsections
@@ -117,8 +117,8 @@ class SelectionBox(GenericBox):
         if selection is None:
             selection = "N/A"
         # if the selection is in the frame
-        elif selection in self.track_df[self.track_df["frame"] == current_frame]["trackID"].values or \
-                selection in self.track_df[self.track_df["frame"] == current_frame + 1]["trackID"].values:
+        elif self.correction_data.tracking_data.cell_in_frame(selection, current_frame) or \
+                self.correction_data.tracking_data.cell_in_frame(selection, current_frame + 1):
             in_frame = "Yes"
 
         label = f"""
@@ -150,17 +150,15 @@ class SelectionBox(GenericBox):
             self.split_btn.setText(f"Go to split: {selection}")
             self.split_btn.setDisabled(True)
         else:
-            first_occurrence = int(self.track_df.iloc[(self.track_df["trackID"] == selection).argmax()]["first_frame"])
+            first_occurrence = self.correction_data.tracking_data.get_first_occurrence(selection)
             self.first_btn.setText(f"Go to first occurrence: {first_occurrence}")
             self.first_btn.setDisabled(False)
-            last_occurrence = int(self.track_df.iloc[(self.track_df["trackID"] == selection).argmax()]["last_frame"])
+            last_occurrence = self.correction_data.tracking_data.get_last_occurrence(selection)
             self.last_btn.setText(f"Go to last occurrence: {last_occurrence}")
             self.last_btn.setDisabled(False)
 
             # the splitting
-            if np.any(self.track_df[self.track_df["trackID"] == selection]["split"] == 1):
-                current_selection = self.track_df[self.track_df["trackID"] == selection]
-                split_frame = int(current_selection.iloc[(current_selection["split"] == 1).argmax()]["frame"])
+            if (split_frame := self.correction_data.tracking_data.get_splitting_frame(selection)) is not None:
                 self.split_btn.setText(f"Go to split: {split_frame}")
                 self.split_btn.setDisabled(False)
             else:
@@ -188,18 +186,17 @@ class FrameInfo(GenericBox):
     A class to display the Frame info
     """
 
-    def __init__(self, labels: np.ndarray, track_df: pd.DataFrame):
+    def __init__(self, correction_data: CorrectionData):
         """
         Inits the widget
-        :param labels: An array of labels corresponding to the images
-        :param track_df: The tracking data frame indicating track IDs, cell divisions etc.
+        :param correction_data: The correction data that should be displayed
         """
         # proper init
         super().__init__()
 
         # set attributes
-        self.labels = labels
-        self.track_df = track_df
+        self.correction_data = correction_data
+        self.n_frames = len(self.correction_data.images)
 
         # set necessary attributes
         layout = QVBoxLayout()
@@ -223,18 +220,24 @@ class FrameInfo(GenericBox):
         # TODO: Currently splits are considered dying and the kids are orphans
         left_frame = current_frame
         right_frame = current_frame + 1
-        left_n_cells = np.sum(self.track_df["frame"] == left_frame)
-        right_n_cells = np.sum(self.track_df["frame"] == right_frame)
+
+        # number of cells
+        left_n_cells = self.correction_data.tracking_data.get_number_of_cells(frame_number=left_frame)
+        right_n_cells = self.correction_data.tracking_data.get_number_of_cells(frame_number=right_frame)
+
+        # orphans
         if left_frame == 0:
             left_orphans = "N/A"
         else:
-            left_orphans = sum((self.track_df["first_frame"] == left_frame) & (self.track_df["frame"] == left_frame))
-        right_orphans = sum((self.track_df["first_frame"] == right_frame) & (self.track_df["frame"] == right_frame))
-        left_dying = sum((self.track_df["last_frame"] == left_frame) & (self.track_df["frame"] == left_frame))
-        if right_frame == len(self.labels) - 1:
+            left_orphans = self.correction_data.tracking_data.get_number_of_orphans(frame_number=left_frame)
+        right_orphans = self.correction_data.tracking_data.get_number_of_orphans(frame_number=right_frame)
+
+        # dying cells
+        left_dying = self.correction_data.tracking_data.get_number_of_dying(frame_number=left_frame)
+        if right_frame == self.n_frames - 1:
             right_dying = "N/A"
         else:
-            right_dying = sum((self.track_df["last_frame"] == right_frame) & (self.track_df["frame"] == right_frame))
+            right_dying = self.correction_data.tracking_data.get_number_of_dying(frame_number=right_frame)
 
         # to table
         frame_info = f"""
@@ -374,13 +377,12 @@ class InfoBox(QWidget):
     """
     Infobox with all the frames etc.
     """
-    def __init__(self, viewer: napari.Viewer, labels: np.ndarray, track_df: pd.DataFrame,
+    def __init__(self, viewer: napari.Viewer, correction_data: CorrectionData,
                  change_frame_callback: Callable, update_modifier_callback: Callable):
         """
         Inits the widget
         :param viewer: The napari viewer
-        :param labels: An array of labels corresponding to the images
-        :param track_df: The tracking data frame indicating track IDs, cell divisions etc.
+        :param correction_data: The correction data that should be displayed
         :param change_frame_callback: A function that changes the frame of the viewer, take the number as input
         :param update_modifier_callback: A function that changes the general settings for the multiviewer
         """
@@ -389,8 +391,7 @@ class InfoBox(QWidget):
 
         # set attributes
         self.viewer = viewer
-        self.labels = labels
-        self.track_df = track_df
+        self.correction_data = correction_data
 
         # add the subsections
         layout = QVBoxLayout()
@@ -399,12 +400,12 @@ class InfoBox(QWidget):
         width = 200
 
         # frame stuff
-        self.frame_info = FrameInfo(labels=labels, track_df=track_df)
+        self.frame_info = FrameInfo(correction_data=correction_data)
         self.frame_info.setFixedWidth(width)
         layout.addWidget(self.frame_info)
 
         # Selection stuff
-        self.selection_box = SelectionBox(track_df=track_df, change_frame_callback=change_frame_callback)
+        self.selection_box = SelectionBox(correction_data=correction_data, change_frame_callback=change_frame_callback)
         self.selection_box.setFixedWidth(width)
         layout.addWidget(self.selection_box)
 

@@ -1,10 +1,8 @@
 from copy import deepcopy
 from pathlib import Path
 
-import h5py
 import napari
 import numpy as np
-import pandas as pd
 from napari.components.viewer_model import ViewerModel
 from napari.layers import Image, Labels, Layer
 from napari.qt import QtViewer
@@ -15,12 +13,11 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
+from midap.correction.data_handler import CorrectionData
 from midap.correction.side_panel_gui import InfoBox
 
 NAPARI_GE_4_16 = parse_version(napari.__version__) > parse_version("0.4.16")
 
-# TODO: Split this file into multiple files
-# TODO: Add a class over the track_df and give it functionality like orphans etc.
 # TODO: Only the change_frame funciton should access the labels directly the rest should get the data from the viewers
 # TODO: Think about the action list and undo/redo
 
@@ -109,21 +106,23 @@ class QtViewerWrap(QtViewer):
 class MultipleViewerWidget(QWidget):
     """The main widget of the example."""
 
-    def __init__(self, viewer: napari.Viewer, images: np.ndarray, labels: np.ndarray, track_df: pd.DataFrame):
+    def __init__(self, viewer: napari.Viewer, correction_data: CorrectionData):
         """
         Inits the widget
         :param viewer: The napari viewer to use
-        :param images: An array of images
-        :param labels: An array of labels corresponding to the images
-        :param track_df: The tracking data frame indicating track IDs, cell divisions etc.
+        :param correction_data: The correction data that should be displayed
         """
         super().__init__()
 
+        # get the number of frames
+        self.correction_data = correction_data
+        self.n_frames, self.data_width, self.data_height = self.correction_data.images.shape
+
         # check if we have at least to images
-        if len(images) < 2:
+        if self.n_frames < 2:
             raise ValueError("The viewer needs at least the track of 2 images!")
         # we need at least 1 tracked cell
-        if len(track_df) == 0:
+        if len(self.correction_data.tracking_data.track_df) == 0:
             raise ValueError("No cell tracks in the track data frame!")
 
         # the main viewer
@@ -135,7 +134,7 @@ class MultipleViewerWidget(QWidget):
         self.qt_viewer1 = QtViewerWrap(viewer, self.side_viewer)
 
         # The info box with al
-        self.info_box = InfoBox(viewer=viewer, labels=labels, track_df=track_df, change_frame_callback=self.change_frame,
+        self.info_box = InfoBox(viewer=viewer, correction_data=correction_data, change_frame_callback=self.change_frame,
                                 update_modifier_callback=self.update_settings)
 
         # The napari qt viewer is already in a layout (box)
@@ -160,31 +159,27 @@ class MultipleViewerWidget(QWidget):
 
         # create the image layers
         self.current_frame = 0
-        self.n_frames = len(images)
-        self.images = images
-        self.labels = labels
-        self.track_df = track_df
 
         # the special names are layer that are differently named in both viewer, other layers are the same and copied
         self.special_names = ["Image", "Labels", "Selection"]
 
         # the image layers
-        self.main_img_layer = self.main_viewer.add_image(data=self.images[self.current_frame],
+        self.main_img_layer = self.main_viewer.add_image(data=self.correction_data.get_image(self.current_frame),
                                                          name="Image",
                                                          rgb=False,
                                                          contrast_limits=[0,1],
                                                          scale=(1,1))
-        self.side_img_layer = self.side_viewer.add_image(self.images[self.current_frame + 1],
+        self.side_img_layer = self.side_viewer.add_image(data=self.correction_data.get_image(self.current_frame + 1),
                                                          name="SideImage",
                                                          rgb=False,
                                                          contrast_limits=[0, 1],
                                                          scale=(1, 1))
 
         # add the label images
-        self.main_label_layer = self.main_viewer.add_labels(self.labels[self.current_frame],
+        self.main_label_layer = self.main_viewer.add_labels(data=self.correction_data.get_label(self.current_frame),
                                                             name="Labels",
                                                             num_colors=50)
-        self.side_label_layer = self.side_viewer.add_labels(self.labels[self.current_frame+1],
+        self.side_label_layer = self.side_viewer.add_labels(data=self.correction_data.get_label(self.current_frame + 1),
                                                             name="SideLabels",
                                                             num_colors=50)
 
@@ -194,12 +189,12 @@ class MultipleViewerWidget(QWidget):
                                 2: "orange",
                                 3: "blue",
                                 4: "red"}
-        test_select = np.zeros_like(self.labels[self.current_frame])
-        self.main_select_layer = self.main_viewer.add_labels(test_select,
+        test_select = np.zeros_like(self.correction_data.get_label(frame_number=0))
+        self.main_select_layer = self.main_viewer.add_labels(data=test_select,
                                                              name="Selection",
                                                              color=selection_color_dict,
                                                              opacity=1.0)
-        self.side_select_layer = self.side_viewer.add_labels(test_select,
+        self.side_select_layer = self.side_viewer.add_labels(data=test_select,
                                                              name="SideSelection",
                                                              color=selection_color_dict,
                                                              opacity=1.0)
@@ -452,11 +447,11 @@ class MultipleViewerWidget(QWidget):
             frame = self.n_frames - 2
 
         # update
-        self.main_img_layer.data = self.images[frame]
-        self.main_label_layer.data = self.labels[frame]
+        self.main_img_layer.data = self.correction_data.get_image(frame_number=frame)
+        self.main_label_layer.data = self.correction_data.get_label(frame_number=frame)
 
-        self.side_img_layer.data = self.images[frame + 1]
-        self.side_label_layer.data = self.labels[frame + 1]
+        self.side_img_layer.data = self.correction_data.get_image(frame_number=frame + 1)
+        self.side_label_layer.data = self.correction_data.get_label(frame_number=frame + 1)
 
         self.current_frame = frame
 
@@ -506,15 +501,15 @@ class MultipleViewerWidget(QWidget):
         data_coordinates = layer.world_to_data(event.position)
         x, y = np.round(data_coordinates).astype(int)
         # a click into nothing-ness
-        if x < 0 or x >= self.labels.shape[1]:
+        if x < 0 or x >= self.data_width:
             return
-        if y < 0 or y >= self.labels.shape[2]:
+        if y < 0 or y >= self.data_height:
             return
         # get the val if
         if "Side" in layer.name:
-            val = self.labels[self.current_frame + 1][x, y]
+            val = self.correction_data.get_label(self.current_frame + 1)[x, y]
         else:
-            val = self.labels[self.current_frame][x, y]
+            val = self.correction_data.get_label(self.current_frame)[x, y]
         # click on the same selection (unselect)
         if val == self.selection:
             self.update_selection(None)
@@ -535,52 +530,19 @@ class MultipleViewerWidget(QWidget):
             self.selection = selection
 
         # we update main
-        self.main_select_layer.data = self.get_selection_data(self.current_frame)
+        self.main_select_layer.data = self.correction_data.get_selection(frame_number=self.current_frame,
+                                                                         selection=self.selection,
+                                                                         mark_orphans=self.mark_orphans,
+                                                                         mark_dying=self.mark_dying)
 
         # update side
-        self.side_select_layer.data = self.get_selection_data(self.current_frame + 1)
+        self.side_select_layer.data = self.correction_data.get_selection(frame_number=self.current_frame + 1,
+                                                                         selection=self.selection,
+                                                                         mark_orphans=self.mark_orphans,
+                                                                         mark_dying=self.mark_dying)
 
         # update the info box
         self.info_box.update_info(self.current_frame, self.selection)
-
-    def get_selection_data(self, frame):
-        """
-        Create the selection data for a given frame
-        :param frame: The index of the frame
-        :return: The data that can be used to set the selection layer
-        """
-
-        # get the label
-        label = self.labels[frame]
-
-        # init the new data
-        new_data = np.zeros_like(self.main_select_layer.data)
-
-        # orphan selection
-        if self.mark_orphans and frame != 0:
-            orphan_ids = self.track_df[(self.track_df["first_frame"] == frame) & (self.track_df["frame"] == frame)]["trackID"].values
-            for orphan_id in orphan_ids:
-                new_data = np.where(label == orphan_id, 3, new_data)
-
-        # dying selection
-        if self.mark_dying and frame != self.n_frames - 1:
-            dying_ids = self.track_df[(self.track_df["last_frame"] == frame) & (self.track_df["frame"] == frame)]["trackID"].values
-            for dying_id in dying_ids:
-                new_data = np.where(label == dying_id, 4, new_data)
-
-        # we do this here to overwrite the other data
-        if self.selection is not None:
-            # normal selection
-            new_data = np.where(label == self.selection, 1, new_data)
-
-            # kids selections
-            d1_id = self.track_df.iloc[(self.track_df["trackID"] == self.selection).argmax()]["trackID_d1"]
-            d2_id = self.track_df.iloc[(self.track_df["trackID"] == self.selection).argmax()]["trackID_d2"]
-            if not np.isnan(d1_id) and not np.isnan(d2_id):
-                new_data = np.where(label == d1_id, 2, new_data)
-                new_data = np.where(label == d2_id, 2, new_data)
-
-        return new_data
 
     def update_settings(self, mark_orphans: bool, mark_dying: bool, sync_viewers: bool):
         """
@@ -608,22 +570,19 @@ class MultipleViewerWidget(QWidget):
 def main():
     # read in the data
     path = Path("../../../Tests/tracking_tool/test_data/PH")
-    with h5py.File(path.joinpath("label_stack_delta.h5")) as f:
-        labels = f["label_stack"][:].astype(int)
-    with h5py.File(path.joinpath("raw_inputs_delta.h5")) as f:
-        imgs = f["raw_inputs"][:]
-    table = pd.read_csv(path.joinpath("track_output_delta.csv"))
+    data_file = path.joinpath("tracking_delta.h5")
+    csv_file = path.joinpath("track_output_delta.csv")
+    with CorrectionData(csv_file=csv_file, data_file=data_file) as correction_data:
+        view = napari.Viewer()
+        # create the multi view and make it central
+        multi_view = MultipleViewerWidget(view, correction_data=correction_data)
+        view.window._qt_window.setCentralWidget(multi_view)
 
-    view = napari.Viewer()
-    # create the multi view and make it central
-    multi_view = MultipleViewerWidget(view, images=imgs, labels=labels, track_df=table)
-    view.window._qt_window.setCentralWidget(multi_view)
+        # set the size of the controls
+        view.window._qt_viewer.controls.setMaximumWidth(350)
 
-    # set the size of the controls
-    view.window._qt_viewer.controls.setMaximumWidth(350)
-
-    # run napari
-    napari.run()
+        # run napari
+        napari.run()
 
 if __name__ == "__main__":
     main()
