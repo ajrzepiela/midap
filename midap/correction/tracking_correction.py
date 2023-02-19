@@ -6,6 +6,7 @@ import numpy as np
 from napari.components.viewer_model import ViewerModel
 from napari.layers import Image, Labels, Layer
 from napari.qt import QtViewer
+from napari.utils.notifications import show_info
 from napari.utils.events.event import WarningEmitter
 from packaging.version import parse as parse_version
 from qtpy.QtWidgets import (
@@ -461,6 +462,9 @@ class MultipleViewerWidget(QWidget):
         # info
         self.info_box.update_info(current_frame=self.current_frame, selection=self.selection)
 
+        # set the focus
+        self.main_viewer.window._qt_viewer.setFocus()
+
     def left_arrow_key_bind(self, *args):
 
         """
@@ -497,7 +501,8 @@ class MultipleViewerWidget(QWidget):
             # if we dragged the side viewer, we need to reset the focus manually
             self.main_viewer.window._qt_viewer.setFocus()
             return
-        # An actual click
+
+        # extract the value
         data_coordinates = layer.world_to_data(event.position)
         x, y = np.round(data_coordinates).astype(int)
         # a click into nothing-ness
@@ -505,17 +510,42 @@ class MultipleViewerWidget(QWidget):
             return
         if y < 0 or y >= self.data_height:
             return
-        # get the val if
+        # get the val
         if "Side" in layer.name:
             val = self.correction_data.get_label(self.current_frame + 1)[x, y]
+            clicked_frame = self.current_frame + 1
         else:
             val = self.correction_data.get_label(self.current_frame)[x, y]
-        # click on the same selection (unselect)
-        if val == self.selection:
-            self.update_selection(None)
-        # normal update
+            clicked_frame = self.current_frame
+
+        # we disconnect something
+        if "Control" in event.modifiers:
+            # we only kill selected cells
+            if val != self.selection:
+                show_info("You can only disconnect lineages from selected cells!")
+                return
+
+            # disconnect the lineage
+            self.correction_data.disconnect_lineage(track_id=self.selection, frame_number=clicked_frame)
+
+            # update data
+            self.change_frame(self.current_frame)
+
+        # we join lineages
+        elif "Shift" in event.modifiers:
+            # we can not connect what's already selected
+            if val == self.selection:
+                show_info("You cannot connect cells to themselves!")
+                return
+
+        # An actual click no modifiers
         else:
-            self.update_selection(val)
+            # click on the same selection (unselect)
+            if val == self.selection:
+                self.update_selection(None)
+            # normal update
+            else:
+                self.update_selection(val)
 
     def update_selection(self, selection=None):
         """
@@ -565,6 +595,9 @@ class MultipleViewerWidget(QWidget):
 
         # update the selection to update
         self.update_selection(self.selection)
+
+        # set the focus
+        self.main_viewer.window._qt_viewer.setFocus()
 
 
 def main():

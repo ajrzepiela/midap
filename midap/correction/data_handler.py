@@ -7,6 +7,8 @@ import dask.array as da
 import h5py
 import numpy as np
 import pandas as pd
+from napari.utils.notifications import show_info
+from numba import njit
 
 # Constants
 ###########
@@ -47,6 +49,14 @@ class TrackingData(object):
             self.track_df = pd.read_csv(csv_file)
             # save to corrected file already
             self.track_df.to_csv(self.corrected_file)
+
+        # this is a list of mappings of track IDs old -> new to transform the label images on the fly
+        self.transformation_file = self.corrected_file.parent.joinpath(".transformations.npy")
+        self.track_id_transforms = []
+
+        # counters to keep track of things
+        self.next_lineage_id = self.track_df["lineageID"].max() + 1
+        self.next_track_id = self.track_df["trackID"].max() + 1
 
     def get_number_of_cells(self, frame_number: int):
         """
@@ -169,25 +179,79 @@ class TrackingData(object):
         else:
             return None
 
+    def disconnect_lineage(self, track_id: int, frame_number: int):
+        """
+        Ends the lineage of a cell in a current frame (the lineage in all following cells will be changed)
+        :param track_id: The track ID of the cell to disconnect
+        :param frame_number: The last frame the cell should appear in
+        :return: The new lineage and track IDs of the cell
+        """
+
+        # get and update the next ids
+        new_track_id = self.next_track_id
+        self.next_track_id += 1
+        new_lineage_id = self.next_lineage_id
+        self.next_lineage_id += 1
+
+        # get the lineage ID of the cell
+        old_lineage_id = self.track_df[self.track_df["trackID"] == track_id]["lineageID"].max()
+
+        # update track and lineage id of the data frames
+        self.track_df.loc[(self.track_df["trackID"] == track_id) &
+                          (self.track_df["frame"] > frame_number), "trackID"] = new_track_id
+        self.track_df.loc[(self.track_df["lineageID"] == old_lineage_id) &
+                          (self.track_df["frame"] > frame_number), "lineageID"] = new_lineage_id
+
+        # the new lineage gets a new first frame
+        self.track_df.loc[self.track_df["trackID"] == new_track_id, "first_frame"] = frame_number + 1
+
+        # update the last frame of the old cells (can use track id now)
+        self.track_df.loc[self.track_df["trackID"] == track_id, "last_frame"] = frame_number
+
+        # remove daughter cells from the previous lineage
+        self.track_df.loc[self.track_df["trackID"] == track_id, "trackID_d1"] = np.nan
+        self.track_df.loc[self.track_df["trackID"] == track_id, "trackID_d2"] = np.nan
+
+        # cells that reference the old track ID as mother need to be updated as well
+        self.track_df.loc[self.track_df["trackID_mother"] == track_id, "trackID_mother"] = new_track_id
+
+        # add the transformation [first frame (inclusive9, old_id, new_id]
+        self.track_id_transforms.append([frame_number + 1, track_id, new_track_id])
+
+        # save everything to file
+        self.track_df.to_csv(self.corrected_file, index=False)
+        np.save(self.transformation_file, np.array(self.track_id_transforms))
+
+        return new_lineage_id, new_track_id
+
+
+@njit()
+def update_labels(label_frame: np.ndarray, frame_number: int, transformations: np.ndarray):
+    """
+    Updates the labels in a given frame
+    :param label_frame: The labels (2D array) of ints
+    :param transformations: The transformations 2D array
+    :return: The transformed labels
+    """
+
+    n, m = label_frame.shape
+    n_transform = len(transformations)
+
+    for i in range(n):
+        for j in range(m):
+            for k in range(n_transform):
+                # check if relevant for frame
+                if frame_number >= transformations[k, 0]:
+                    if label_frame[i, j] == transformations[k, 1]:
+                        label_frame[i, j] = transformations[k, 2]
+
+    return label_frame
+
 
 class CorrectionData(object):
     """
     This class handles all the data relevant for the tracking correction tool
     """
-
-    def _undoable(f):
-        """
-        This is a decorator used to wrap undoable functions. Note that it does not contain a "self" argument. The
-        reason for this is, that we only want this to be in the same namespace as the Class object for clarity, it is
-        not supposed to be called after the initialization of a Class instance
-        :return: The same function f, but the function and arguments are added to the action stack of the class
-        """
-
-        def new_f(self, *args, **kwargs):
-            self.action_stack.append(f, args, kwargs)
-            return f(self, *args, **kwargs)
-
-        return new_f()
 
     def __init__(self, data_file: Union[str, bytes, os.PathLike], csv_file: Union[str, bytes, os.PathLike]):
         """
@@ -219,8 +283,9 @@ class CorrectionData(object):
         self.images = da.from_array(self.h5_file["images"])
         self.n_frames = len(self.images)
 
-        # init the action stack
-        self.action_stack = []
+        # init the action stacks
+        self.undo_stack = []
+        self.redo_stack = []
 
     def get_image(self, frame_number: int):
         """
@@ -238,7 +303,14 @@ class CorrectionData(object):
         :return: The label of the frame as numpy array
         """
 
-        return self.labels[frame_number].compute()
+        # if there is nothing to transform
+        if len(self.tracking_data.track_id_transforms) == 0:
+            return self.labels[frame_number].compute()
+        else:
+            # update the labels
+            return update_labels(self.labels[frame_number].compute(),
+                                 frame_number,
+                                 np.asarray(self.tracking_data.track_id_transforms, dtype=np.int32))
 
     def get_selection(self, frame_number: int, selection: Optional[int], mark_orphans: bool, mark_dying: bool):
         """
@@ -280,6 +352,18 @@ class CorrectionData(object):
                 new_data = np.where(label == daughters[1], 2, new_data)
 
         return new_data
+
+    def disconnect_lineage(self, track_id: int, frame_number: int):
+        """
+        Ends the lineage of a cell in a current frame (the lineage in all following cells will be changed)
+        :param track_id: The track ID of the cell to disconnect
+        :param frame_number: The last frame the cell should appear in
+        """
+
+        # we disconnect the linage in the data
+        new_lineage_id, new_track_id = self.tracking_data.disconnect_lineage(track_id=track_id,
+                                                                             frame_number=frame_number)
+        show_info(f"Disconnected lineage of cell {track_id} in frame {frame_number}!")
 
     def __enter__(self):
         """
