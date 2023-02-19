@@ -6,9 +6,13 @@ from qtpy.QtWidgets import (
     QPushButton,
     QCheckBox,
     QLabel,
+    QHBoxLayout,
     QVBoxLayout,
     QWidget,
+    QSlider,
+    QSpinBox,
 )
+from qtpy.QtGui import QFont
 
 from midap.correction.data_handler import CorrectionData
 
@@ -436,3 +440,69 @@ class InfoBox(QWidget):
 
         # set the focus to the viewer in case something else was clicked
         self.viewer.window._qt_viewer.setFocus()
+
+
+class FrameSlider(QWidget):
+    """
+    The slider at the bottom of the page that allows to switch between frames
+    """
+
+    def __init__(self, max_value, frame_change_callback):
+        """
+        Inits the widget
+        :param max_value: The maximum allowed value for the spin box and the slider (min value is 0)
+        :param frame_change_callback: The callback for the frame change action
+        """
+        # proper init
+        super().__init__()
+
+        # the call back
+        self.change_frame_callback = frame_change_callback
+
+        # the slider
+        self.slider = QSlider()
+        self.slider.setOrientation(Qt.Horizontal)
+        self.slider.setMaximum(max_value)
+        self.slider.valueChanged.connect(self.update_spinbox)
+
+        # The spin box
+        self.spin_box = QSpinBox()
+        self.spin_box.setMaximum(max_value)
+        # suffix and font
+        self.spin_box.setSuffix(f"/{max_value + 1}")
+        font = QFont("Arial", 12, QFont.SansSerif)
+        self.spin_box.setFont(font)
+        self.spin_box.valueChanged.connect(self.update_slider)
+
+        # layout
+        layout = QHBoxLayout()
+        layout.addWidget(self.slider)
+        layout.addWidget(self.spin_box)
+        self.setLayout(layout)
+
+    def update_slider(self, value):
+        """
+        Updates the slider to a given value
+        :param value: The new value
+        """
+
+        self.slider.setValue(value)
+        self.change_frame_callback(value)
+
+    def update_spinbox(self, value):
+        """
+        Updates the spinbox to a given value
+        :param value: The new value
+        """
+
+        self.spin_box.setValue(value)
+        self.change_frame_callback(value)
+
+    def set_value(self, value):
+        """
+        Sets the value of the slider and the spinbox
+        :param value: The new value
+        """
+
+        self.slider.setValue(value)
+        self.spin_box.setValue(value)

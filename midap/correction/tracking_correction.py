@@ -15,7 +15,7 @@ from qtpy.QtWidgets import (
 )
 
 from midap.correction.data_handler import CorrectionData
-from midap.correction.side_panel_gui import InfoBox
+from midap.correction.side_panel_gui import InfoBox, FrameSlider
 
 NAPARI_GE_4_16 = parse_version(napari.__version__) > parse_version("0.4.16")
 
@@ -138,6 +138,9 @@ class MultipleViewerWidget(QWidget):
         self.info_box = InfoBox(viewer=viewer, correction_data=correction_data, change_frame_callback=self.change_frame,
                                 update_modifier_callback=self.update_settings)
 
+        # the slider in the bottom
+        self.slider = FrameSlider(max_value=self.n_frames-2, frame_change_callback=self.change_frame)
+
         # The napari qt viewer is already in a layout (box)
         # we add the parent to a temp layout to remove it from the window
         tmp_layout = QGridLayout()
@@ -156,6 +159,8 @@ class MultipleViewerWidget(QWidget):
         # no stretch factor for the status widget
         layout.setColumnStretch(2, 0)
         layout.addWidget(self.info_box, 0, 2)
+        layout.setRowStretch(1, 0)
+        layout.addWidget(self.slider, 1, 0, 1, 2)
         self.setLayout(layout)
 
         # create the image layers
@@ -461,6 +466,9 @@ class MultipleViewerWidget(QWidget):
 
         # info
         self.info_box.update_info(current_frame=self.current_frame, selection=self.selection)
+
+        # the slider
+        self.slider.set_value(self.current_frame)
 
         # set the focus
         self.main_viewer.window._qt_viewer.setFocus()
