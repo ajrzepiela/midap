@@ -527,14 +527,16 @@ class MultipleViewerWidget(QWidget):
             clicked_frame = self.current_frame
 
         # we disconnect something
-        if "Control" in event.modifiers:
+        if len(event.modifiers) == 1 and "Control" in event.modifiers:
             # we only kill selected cells
-            if val != self.selection:
-                show_info("You can only disconnect lineages from selected cells!")
+            if val != self.selection and val not in self.correction_data.tracking_data.get_kids_id(self.selection):
+                show_info("You can only disconnect lineages from selected cells or its kids!")
                 return
 
             # disconnect the lineage
-            self.correction_data.disconnect_lineage(track_id=self.selection, frame_number=clicked_frame)
+            self.correction_data.disconnect_lineage(selection=self.selection,
+                                                    track_id=val,
+                                                    frame_number=clicked_frame)
 
             # update data
             self.change_frame(self.current_frame)
@@ -545,6 +547,11 @@ class MultipleViewerWidget(QWidget):
             if val == self.selection:
                 show_info("You cannot connect cells to themselves!")
                 return
+            # we cannot connect cells to their first occurrences:
+            if self.correction_data.tracking_data.get_first_occurrence(self.selection) == clicked_frame:
+                show_info("You cannot connect a lineage in the first frame of occurrence!")
+                return
+            # we can not connect a cell to its children
 
         # An actual click no modifiers
         else:

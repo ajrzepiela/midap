@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 from shutil import copyfile
-from typing import Union, Optional
+from typing import Union, Optional, Collection
 
 import dask.array as da
 import h5py
@@ -86,7 +86,7 @@ class TrackingData(object):
         for current_track_id, current_lineage_id in zip(current_frame["trackID"].values,
                                                         current_frame["lineageID"].values):
             if current_lineage_id not in previous_lineage_ids:
-                orphans.append(current_track_id)
+                orphans.append(int(current_track_id))
         if return_ids:
             return orphans
         else:
@@ -110,7 +110,7 @@ class TrackingData(object):
         for current_track_id, current_lineage_id in zip(current_frame["trackID"].values,
                                                         current_frame["lineageID"].values):
             if current_lineage_id not in next_lineage_ids:
-                dying.append(current_track_id)
+                dying.append(int(current_track_id))
         if return_ids:
             return dying
         else:
@@ -167,7 +167,7 @@ class TrackingData(object):
         """
         Returns the track ids of the daughter cells of a given track id
         :param track_id: The track ID of the mother cell
-        :return: A tuple of ints containing the kids tracking ID if possible otherwise, None is returned
+        :return: A list of ints containing the kids tracking ID if possible otherwise, emtpy list
         """
 
         # get the kids
@@ -175,17 +175,41 @@ class TrackingData(object):
         d2_id = self.track_df.iloc[(self.track_df["trackID"] == track_id).argmax()]["trackID_d2"]
 
         if not np.isnan(d1_id) and not np.isnan(d2_id):
-            return d1_id, d2_id
+            return [int(d1_id), int(d2_id)]
         else:
-            return None
+            return []
 
-    def disconnect_lineage(self, track_id: int, frame_number: int):
+    def df_assign(self, row_selector: Union[Collection[bool], str], column_selector: Union[Collection[bool], str],
+                  value: Union[int, float, Collection[int], Collection[float]]):
+        """
+        Performs a classic assign operation on the dataframe, but keeps track of the old values and stores them
+        :param row_selector: The row selector for the assign operation
+        :param column_selector: The column selector for the assign operation
+        :param value: The value(s) to assign
+        :return: The undo tuple (row_selector, columns_selector, old_value(s))
+        """
+
+        # get the old values
+        old_vals = self.track_df.loc[row_selector, column_selector]
+
+        # assign new
+        self.track_df.loc[row_selector, column_selector] = value
+
+        # return the undo operations
+        return row_selector, column_selector, old_vals
+
+    def disconnect_lineage(self, selection: int, track_id: int, frame_number: int):
         """
         Ends the lineage of a cell in a current frame (the lineage in all following cells will be changed)
+        :param selection: The current selection
         :param track_id: The track ID of the cell to disconnect
         :param frame_number: The last frame the cell should appear in
         :return: The new lineage and track IDs of the cell
         """
+
+        # lists for the undo ops and added transformations
+        undo_ops = []
+        transformations = []
 
         # get and update the next ids
         new_track_id = self.next_track_id
@@ -193,30 +217,95 @@ class TrackingData(object):
         new_lineage_id = self.next_lineage_id
         self.next_lineage_id += 1
 
-        # get the lineage ID of the cell
-        old_lineage_id = self.track_df[self.track_df["trackID"] == track_id]["lineageID"].max()
+        # check if it's a kid and we split fresh
+        if self.get_splitting_frame(selection) == frame_number - 1 and track_id in (kids := self.get_kids_id(selection)):
+            kids.remove(track_id)
+            brother = kids[0]
+        else:
+            brother = None
 
         # update track and lineage id of the data frames
-        self.track_df.loc[(self.track_df["trackID"] == track_id) &
-                          (self.track_df["frame"] > frame_number), "trackID"] = new_track_id
-        self.track_df.loc[(self.track_df["lineageID"] == old_lineage_id) &
-                          (self.track_df["frame"] > frame_number), "lineageID"] = new_lineage_id
+        undo_ops.append(self.df_assign(
+            row_selector=(self.track_df["trackID"] == track_id) & (self.track_df["frame"] >= frame_number),
+            column_selector="trackID",
+            value=new_track_id))
+        undo_ops.append(self.df_assign(
+            row_selector=(self.track_df["trackID"] == track_id) & (self.track_df["frame"] >= frame_number),
+            column_selector="lineageID",
+            value=new_lineage_id))
 
         # the new lineage gets a new first frame
-        self.track_df.loc[self.track_df["trackID"] == new_track_id, "first_frame"] = frame_number + 1
+        undo_ops.append(self.df_assign(
+            row_selector=self.track_df["trackID"] == new_track_id,
+            column_selector="first_frame",
+            value=frame_number))
+
+
 
         # update the last frame of the old cells (can use track id now)
-        self.track_df.loc[self.track_df["trackID"] == track_id, "last_frame"] = frame_number
+        undo_ops.append(self.df_assign(
+            row_selector=self.track_df["trackID"] == track_id,
+            column_selector="last_frame",
+            value=frame_number - 1))
 
         # remove daughter cells from the previous lineage
-        self.track_df.loc[self.track_df["trackID"] == track_id, "trackID_d1"] = np.nan
-        self.track_df.loc[self.track_df["trackID"] == track_id, "trackID_d2"] = np.nan
+        undo_ops.append(self.df_assign(
+            row_selector=self.track_df["trackID"] == track_id,
+            column_selector="trackID_d1",
+            value=np.nan))
+        undo_ops.append(self.df_assign(
+            row_selector=self.track_df["trackID"] == track_id,
+            column_selector="trackID_d2",
+            value=np.nan))
 
         # cells that reference the old track ID as mother need to be updated as well
-        self.track_df.loc[self.track_df["trackID_mother"] == track_id, "trackID_mother"] = new_track_id
+        undo_ops.append(self.df_assign(
+            row_selector=self.track_df["trackID_mother"] == track_id,
+            column_selector="trackID_mother",
+            value=new_track_id))
 
-        # add the transformation [first frame (inclusive9, old_id, new_id]
-        self.track_id_transforms.append([frame_number + 1, track_id, new_track_id])
+        # add the transformation [first frame (inclusive), old_id, new_id]
+        transformations.append([frame_number, track_id, new_track_id])
+
+        # if there was a brother, we need to join the brother and the parent
+        if brother is not None:
+            # The current selection does not split anymore
+            undo_ops.append(self.df_assign(
+                row_selector=(self.track_df["split"] == 1),
+                column_selector="split",
+                value=0))
+
+            # frame numbers for later
+            first_frame_selection = self.get_first_occurrence(selection)
+            last_frame_brother = self.get_last_occurrence(brother)
+
+            # the brother becomes the cell itself
+            undo_ops.append(self.df_assign(
+                row_selector=(self.track_df["trackID"] == brother) & (self.track_df["frame"] >= frame_number),
+                column_selector="trackID",
+                value=selection))
+
+            # adapt frames
+            undo_ops.append(self.df_assign(
+                row_selector=(self.track_df["trackID"] == selection),
+                column_selector="first_frame",
+                value=first_frame_selection))
+            undo_ops.append(self.df_assign(
+                row_selector=(self.track_df["trackID"] == selection),
+                column_selector="last_frame",
+                value=last_frame_brother))
+
+            # cells that reference the old track ID as mother need to be updated as well
+            undo_ops.append(self.df_assign(
+                row_selector=(self.track_df["trackID_mother"] == brother),
+                column_selector="trackID_mother",
+                value=selection))
+
+            # add the transformation of the brother
+            transformations.append([frame_number, brother, selection])
+
+        # add all the transformations
+        self.track_id_transforms.extend(transformations)
 
         # save everything to file
         self.track_df.to_csv(self.corrected_file, index=False)
@@ -224,12 +313,21 @@ class TrackingData(object):
 
         return new_lineage_id, new_track_id
 
+    def join_lineage(self, selection: int, track_id: int, frame_number: int):
+        """
+        Joins the lineage from the selection to the track ID in a given frame
+        :param selection: The current selection
+        :param track_id: The track ID of the cell that should be connected to the lineage
+        :param frame_number: The frame number in which the connection should happen
+        """
+
 
 @njit()
 def update_labels(label_frame: np.ndarray, frame_number: int, transformations: np.ndarray):
     """
     Updates the labels in a given frame
     :param label_frame: The labels (2D array) of ints
+    :param frame_number: The current frame number
     :param transformations: The transformations 2D array
     :return: The transformed labels
     """
@@ -347,23 +445,35 @@ class CorrectionData(object):
 
             # kids selections
             daughters = self.tracking_data.get_kids_id(track_id=selection)
-            if daughters is not None:
+            if len(daughters) == 2:
                 new_data = np.where(label == daughters[0], 2, new_data)
                 new_data = np.where(label == daughters[1], 2, new_data)
 
         return new_data
 
-    def disconnect_lineage(self, track_id: int, frame_number: int):
+    def disconnect_lineage(self, selection: int, track_id: int, frame_number: int):
         """
         Ends the lineage of a cell in a current frame (the lineage in all following cells will be changed)
+        :param selection: The current selection
         :param track_id: The track ID of the cell to disconnect
         :param frame_number: The last frame the cell should appear in
         """
 
         # we disconnect the linage in the data
-        new_lineage_id, new_track_id = self.tracking_data.disconnect_lineage(track_id=track_id,
+        new_lineage_id, new_track_id = self.tracking_data.disconnect_lineage(selection=selection,
+                                                                             track_id=track_id,
                                                                              frame_number=frame_number)
         show_info(f"Disconnected lineage of cell {track_id} in frame {frame_number}!")
+
+    def join_lineage(self, selection: int, track_id: int, frame_number: int):
+        """
+        Joins the lineage from the selection to the track ID in a given frame
+        :param selection: The current selection
+        :param track_id: The track ID of the cell that should be connected to the lineage
+        :param frame_number: The frame number in which the connection should happen
+        """
+
+
 
     def __enter__(self):
         """
