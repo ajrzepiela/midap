@@ -48,11 +48,11 @@ def run_statics(static_method: Callable, i: tf.Tensor, w: tf.Tensor, l: tf.Tenso
     # random operations inside the static_methods are seeded in this case with a randomly generated seed, so
     # they produce the same output when the dataset it traversed multiple times. For pytest, this means that we should
     # not set a global seed anywhere, because otherwise the tests have a different behaviour depending on the order
-    dset = TFPipe.zip_inputs(i.numpy()[None, ...], w.numpy()[None, ...], l.numpy()[None, ...])
-    dset = dset.map(lambda i, w, l: static_method(i, w, l, stateless_seed=None, **kwargs))
-    for i1, w1, l1 in dset:
+    dset = TFPipe.zip_inputs(i.numpy()[None, ...], w.numpy()[None, ...], l.numpy()[None, ...]).enumerate()
+    dset = dset.map(lambda num, imgs: static_method(num, imgs, stateless_seed=None, **kwargs))
+    for num, (i1, w1, l1) in dset:
         pass
-    for i2, w2, l2 in dset:
+    for num, (i2, w2, l2) in dset:
         pass
 
     assert not np.allclose(i1.numpy(), i2.numpy())
@@ -64,11 +64,11 @@ def run_statics(static_method: Callable, i: tf.Tensor, w: tf.Tensor, l: tf.Tenso
         assert not np.allclose(l1.numpy(), l2.numpy())
 
     # we build it with state, each run through should be identical
-    dset = TFPipe.zip_inputs(i.numpy()[None, ...], w.numpy()[None, ...], l.numpy()[None, ...])
-    dset = dset.map(lambda i, w, l: static_method(i, w, l, stateless_seed=(11, 12), **kwargs))
-    for i1, w1, l1 in dset:
+    dset = TFPipe.zip_inputs(i.numpy()[None, ...], w.numpy()[None, ...], l.numpy()[None, ...]).enumerate()
+    dset = dset.map(lambda num, imgs: static_method(num, imgs, stateless_seed=(11, 12), **kwargs))
+    for num, (i1, w1, l1) in dset:
         pass
-    for i2, w2, l2 in dset:
+    for num, (i2, w2, l2) in dset:
         pass
 
     assert np.allclose(i1.numpy(), i2.numpy())

@@ -1,6 +1,8 @@
 import os
 from configparser import ConfigParser
-from typing import Optional, List, Union
+from pathlib import Path
+from typing import Optional, List, Union, Tuple
+from skimage import io
 
 import numpy as np
 import tensorflow as tf
@@ -86,7 +88,7 @@ class TFPipe(DataProcessor):
 
 
     @staticmethod
-    def _map_crop(i: tf.Tensor, w: tf.Tensor, l: tf.Tensor, target_size: tuple,
+    def _map_crop(num: tf.Tensor, imgs: Tuple[tf.Tensor], target_size: tuple,
                   stateless_seed: Optional[tuple]=None):
         """
         Performs a crop operation on image, weight and label map
@@ -100,17 +102,19 @@ class TFPipe(DataProcessor):
         """
 
         # combine
+        i, w, l = imgs
         stack = tf.stack([i, w, l], axis=-1)
 
         if stateless_seed is None:
             out = tf.image.random_crop(value=stack, size=target_size + (3, ))
         else:
-            out = tf.image.stateless_random_crop(value=stack, size=target_size + (3,), seed=stateless_seed)
+            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(num, dtype=tf.int32)
+            out = tf.image.stateless_random_crop(value=stack, size=target_size + (3,), seed=seed)
 
-        return tuple(out[...,i] for i in range(3))
+        return num, tuple(out[...,i] for i in range(3))
 
     @staticmethod
-    def _map_brightness(i: tf.Tensor, w: tf.Tensor, l: tf.Tensor, max_delta: float,
+    def _map_brightness(num: tf.Tensor, imgs: Tuple[tf.Tensor], max_delta: float,
                         stateless_seed: Optional[tuple]=None):
         """
         Performs a brightness adjust operation on image, leaves weight and label map
@@ -123,15 +127,17 @@ class TFPipe(DataProcessor):
         :return: The tensors of value, cropped
         """
 
+        i, w, l = imgs
         if stateless_seed is None:
             i = tf.image.random_brightness(image=i, max_delta=max_delta)
         else:
-            i = tf.image.stateless_random_brightness(image=i, max_delta=max_delta, seed=stateless_seed)
+            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(num, dtype=tf.int32)
+            i = tf.image.stateless_random_brightness(image=i, max_delta=max_delta, seed=seed)
 
-        return i, w, l
+        return num, (i, w, l)
 
     @staticmethod
-    def _map_contrast(i: tf.Tensor, w: tf.Tensor, l: tf.Tensor, lower: float, upper: float,
+    def _map_contrast(num: tf.Tensor, imgs: Tuple[tf.Tensor], lower: float, upper: float,
                       stateless_seed: Optional[tuple]=None):
         """
         Performs a contrast adjust operation on image, leaves weight and label map
@@ -145,12 +151,14 @@ class TFPipe(DataProcessor):
         :return: The tensors of value, cropped
         """
 
+        i, w, l = imgs
         if stateless_seed is None:
             i = tf.image.random_contrast(image=i, lower=lower, upper=upper)
         else:
-            i = tf.image.stateless_random_contrast(image=i, lower=lower, upper=upper, seed=stateless_seed)
+            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(num, dtype=tf.int32)
+            i = tf.image.stateless_random_contrast(image=i, lower=lower, upper=upper, seed=seed)
 
-        return i, w, l
+        return num, (i, w, l)
 
     @staticmethod
     def zip_inputs(images: np.ndarray, weights: np.ndarray, segmentations: np.ndarray):
@@ -204,42 +212,42 @@ class TFPipe(DataProcessor):
                                                                       self.data_dict["y_val"])]
 
         # now we repeat each dataset, such that we can have multple different crops etc.
-        self.dsets_train = [d.repeat(n_repeats) for d in self.dsets_train]
-        self.dsets_test = [d.repeat(n_repeats) for d in self.dsets_test]
-        self.dsets_val = [d.repeat(n_repeats) for d in self.dsets_val]
+        self.dsets_train = [d.repeat(n_repeats).enumerate() for d in self.dsets_train]
+        self.dsets_test = [d.repeat(n_repeats).enumerate() for d in self.dsets_test]
+        self.dsets_val = [d.repeat(n_repeats).enumerate() for d in self.dsets_val]
 
         # crop
         self.dsets_train = [
-            d.map(lambda i, w, l: self._map_crop(i, w, l, target_size=image_size, stateless_seed=train_seed))
+            d.map(lambda num, imgs: self._map_crop(num, imgs, target_size=image_size, stateless_seed=train_seed))
             for d in self.dsets_train]
         self.dsets_test = [
-            d.map(lambda i, w, l: self._map_crop(i, w, l, target_size=image_size, stateless_seed=test_seed))
+            d.map(lambda num, imgs: self._map_crop(num, imgs, target_size=image_size, stateless_seed=test_seed))
             for d in self.dsets_test]
         self.dsets_val = [
-            d.map(lambda i, w, l: self._map_crop(i, w, l, target_size=image_size, stateless_seed=val_seed))
+            d.map(lambda num, imgs: self._map_crop(num, imgs, target_size=image_size, stateless_seed=val_seed))
             for d in self.dsets_val]
         # perform the augmentations
         if delta_brightness is not None:
             self.dsets_train = [d.map(
-                lambda i, w, l: self._map_brightness(i, w, l, max_delta=delta_brightness, stateless_seed=train_seed))
+                lambda num, imgs: self._map_brightness(num, imgs, max_delta=delta_brightness, stateless_seed=train_seed))
                 for d in self.dsets_train]
             self.dsets_test = [d.map(
-                lambda i, w, l: self._map_brightness(i, w, l, max_delta=delta_brightness, stateless_seed=test_seed))
+                lambda num, imgs: self._map_brightness(num, imgs, max_delta=delta_brightness, stateless_seed=test_seed))
                 for d in self.dsets_test]
             self.dsets_val = [d.map(
-                lambda i, w, l: self._map_brightness(i, w, l, max_delta=delta_brightness, stateless_seed=val_seed))
+                lambda num, imgs: self._map_brightness(num, imgs, max_delta=delta_brightness, stateless_seed=val_seed))
                 for d in self.dsets_val]
         if lower_contrast is not None and upper_contrast is not None:
             self.dsets_train = [
-                d.map(lambda i, w, l: self._map_contrast(i, w, l, lower=lower_contrast, upper=upper_contrast,
+                d.map(lambda num, imgs: self._map_contrast(num, imgs, lower=lower_contrast, upper=upper_contrast,
                                                          stateless_seed=train_seed))
                 for d in self.dsets_train]
             self.dsets_test = [
-                d.map(lambda i, w, l: self._map_contrast(i, w, l, lower=lower_contrast, upper=upper_contrast,
+                d.map(lambda num, imgs: self._map_contrast(num, imgs, lower=lower_contrast, upper=upper_contrast,
                                                          stateless_seed=test_seed))
                 for d in self.dsets_test]
             self.dsets_val = [
-                d.map(lambda i, w, l: self._map_contrast(i, w, l, lower=lower_contrast, upper=upper_contrast,
+                d.map(lambda num, imgs: self._map_contrast(num, imgs, lower=lower_contrast, upper=upper_contrast,
                                                          stateless_seed=val_seed))
                 for d in self.dsets_val]
 
@@ -256,6 +264,6 @@ class TFPipe(DataProcessor):
             self.dset_val.concatenate(d)
 
         # batch remap all the datasets such that they are compatible with the fit function
-        self.dset_train = self.dset_train.batch(batch_size).map(lambda i, w, l: ((i, w, l), l))
-        self.dset_test = self.dset_test.batch(batch_size).map(lambda i, w, l: ((i, w, l), l))
-        self.dset_val = self.dset_val.batch(batch_size).map(lambda i, w, l: ((i, w, l), l))
+        self.dset_train = self.dset_train.batch(batch_size).map(lambda num, imgs: (imgs, imgs[2]))
+        self.dset_test = self.dset_test.batch(batch_size).map(lambda num, imgs: (imgs, imgs[2]))
+        self.dset_val = self.dset_val.batch(batch_size).map(lambda num, imgs: (imgs, imgs[2]))
