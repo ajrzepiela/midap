@@ -19,6 +19,21 @@ CORRECTION_SUFFIX = ".midap"
 # Classes
 #########
 
+class LineageOPException(Exception):
+    """
+    A simple exception that is raised when a lineage operation, e.g. join or disconnect fails
+    """
+
+    def __init__(self, message="Already done this..."):
+        """
+        Inits the exception
+        :param message: The message
+        """
+
+        # proper init
+        super().__init__(message)
+
+
 class TrackingData(object):
     """
     This class is designed to transform the MIDAP CSV into Napari compatible tracking data and back.
@@ -163,6 +178,18 @@ class TrackingData(object):
         else:
             return None
 
+    def get_lineage_id(self, track_id: int):
+        """
+        Returns the lineage ID of a cell given its tracking ID
+        :param track_id: The tracking ID of the cell
+        :return: The lineage ID, if it does not exist, None
+        """
+
+        if track_id in self.track_df["trackID"].values:
+            return int(self.track_df.iloc[(self.track_df["trackID"] == track_id).argmax()]["lineageID"])
+        else:
+            return None
+
     def get_kids_id(self, track_id: int):
         """
         Returns the track ids of the daughter cells of a given track id
@@ -202,10 +229,15 @@ class TrackingData(object):
         """
         Ends the lineage of a cell in a current frame (the lineage in all following cells will be changed)
         :param selection: The current selection
-        :param track_id: The track ID of the cell to disconnect
+        :param track_id: The track ID of the cell to disconnect (can be selection or its kids)
         :param frame_number: The last frame the cell should appear in
         :return: The new lineage and track IDs of the cell
         """
+
+        # we only kill selected cells
+        kids = self.get_kids_id(selection)
+        if track_id != selection and track_id not in kids:
+            raise LineageOPException("You can only disconnect lineages from selected cells or its kids!")
 
         # lists for the undo ops and added transformations
         undo_ops = []
@@ -218,7 +250,7 @@ class TrackingData(object):
         self.next_lineage_id += 1
 
         # check if it's a kid and we split fresh
-        if self.get_splitting_frame(selection) == frame_number - 1 and track_id in (kids := self.get_kids_id(selection)):
+        if self.get_splitting_frame(selection) == frame_number - 1 and track_id in kids:
             kids.remove(track_id)
             brother = kids[0]
         else:
@@ -239,8 +271,6 @@ class TrackingData(object):
             row_selector=self.track_df["trackID"] == new_track_id,
             column_selector="first_frame",
             value=frame_number))
-
-
 
         # update the last frame of the old cells (can use track id now)
         undo_ops.append(self.df_assign(
@@ -320,6 +350,88 @@ class TrackingData(object):
         :param track_id: The track ID of the cell that should be connected to the lineage
         :param frame_number: The frame number in which the connection should happen
         """
+
+        # get selection props
+        selection_first_frame = self.get_first_occurrence(selection)
+        selection_last_frame = self.get_last_occurrence(selection)
+        selection_split_frame = self.get_splitting_frame(selection)
+        selection_lineage_id = self.get_lineage_id(selection)
+
+        # if there is no selection we cannot connect stuff
+        if selection is None or selection == 0:
+            raise LineageOPException("You need to select a cell to join lineages!")
+        # we can not connect what's already selected
+        if track_id == selection:
+            raise LineageOPException("You cannot connect cells to themselves!")
+        # we cannot connect cells to their first occurrences:
+        if selection_first_frame == frame_number:
+            raise LineageOPException("You cannot connect a lineage in the first frame of occurrence!")
+        if selection_split_frame == frame_number - 1:
+            raise LineageOPException("The current selection already splits in this frame!")
+
+        # lists for the undo ops and added transformations
+        undo_ops = []
+        transformations = []
+
+        # join cell properties
+        join_lineage_id = self.get_lineage_id(track_id)
+        join_last_frame = self.get_last_occurrence(track_id)
+        join_kids = self.get_kids_id(track_id)
+
+        # if there is no selection in the current frame, simple join
+        if selection_last_frame == frame_number - 1:
+            # update track and lineage id of the data frames
+            undo_ops.append(self.df_assign(
+                row_selector=(self.track_df["trackID"] == track_id) & (self.track_df["frame"] >= frame_number),
+                column_selector="trackID",
+                value=selection))
+            undo_ops.append(self.df_assign(
+                row_selector=(self.track_df["lineageID"] == join_lineage_id) & (self.track_df["frame"] >= frame_number),
+                column_selector="lineageID",
+                value=selection_lineage_id))
+
+            # the new lineage gets a new first frame
+            undo_ops.append(self.df_assign(
+                row_selector=self.track_df["trackID"] == selection,
+                column_selector="first_frame",
+                value=selection_first_frame))
+
+            # update the last frame of the old cells (can use track id now)
+            undo_ops.append(self.df_assign(
+                row_selector=self.track_df["trackID"] == selection,
+                column_selector="last_frame",
+                value=join_last_frame))
+
+            # remove daughter cells from the previous lineage
+            if len(join_kids) == 2:
+                undo_ops.append(self.df_assign(
+                    row_selector=self.track_df["trackID"] == selection,
+                    column_selector="trackID_d1",
+                    value=join_kids[0]))
+                undo_ops.append(self.df_assign(
+                    row_selector=self.track_df["trackID"] == selection,
+                    column_selector="trackID_d2",
+                    value=join_kids[1]))
+
+            # cells that reference the old track ID as mother need to be updated as well
+            undo_ops.append(self.df_assign(
+                row_selector=self.track_df["trackID_mother"] == track_id,
+                column_selector="trackID_mother",
+                value=selection))
+
+            # add the transformation [first frame (inclusive), old_id, new_id]
+            transformations.append([frame_number, track_id, selection])
+        # we have a selection in the frame
+        else:
+            pass
+
+        # add all the transformations
+        self.track_id_transforms.extend(transformations)
+
+        # save everything to file
+        self.track_df.to_csv(self.corrected_file, index=False)
+        np.save(self.transformation_file, np.array(self.track_id_transforms))
+
 
 
 @njit()
@@ -473,6 +585,9 @@ class CorrectionData(object):
         :param frame_number: The frame number in which the connection should happen
         """
 
+        self.tracking_data.join_lineage(selection=selection,
+                                        track_id=track_id,
+                                        frame_number=frame_number)
 
 
     def __enter__(self):

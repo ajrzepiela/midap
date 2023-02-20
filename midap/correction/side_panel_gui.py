@@ -447,17 +447,19 @@ class FrameSlider(QWidget):
     The slider at the bottom of the page that allows to switch between frames
     """
 
-    def __init__(self, max_value, frame_change_callback):
+    def __init__(self, max_value, frame_change_callback, **kwargs):
         """
         Inits the widget
         :param max_value: The maximum allowed value for the spin box and the slider (min value is 0)
         :param frame_change_callback: The callback for the frame change action
+        :param kwargs: Additional keyword arguments that are forwarded to the frame_change_callback
         """
         # proper init
         super().__init__()
 
         # the call back
         self.change_frame_callback = frame_change_callback
+        self.callback_kwargs = kwargs
 
         # the slider
         self.slider = QSlider()
@@ -487,7 +489,7 @@ class FrameSlider(QWidget):
         """
 
         self.slider.setValue(value)
-        self.change_frame_callback(value)
+        self.change_frame_callback(value, **self.callback_kwargs)
 
     def update_spinbox(self, value):
         """
@@ -496,7 +498,7 @@ class FrameSlider(QWidget):
         """
 
         self.spin_box.setValue(value)
-        self.change_frame_callback(value)
+        self.change_frame_callback(value, **self.callback_kwargs)
 
     def set_value(self, value):
         """

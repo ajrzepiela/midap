@@ -6,21 +6,22 @@ import numpy as np
 from napari.components.viewer_model import ViewerModel
 from napari.layers import Image, Labels, Layer
 from napari.qt import QtViewer
-from napari.utils.notifications import show_info
 from napari.utils.events.event import WarningEmitter
+from napari.utils.notifications import show_info
 from packaging.version import parse as parse_version
 from qtpy.QtWidgets import (
     QGridLayout,
     QWidget,
 )
 
-from midap.correction.data_handler import CorrectionData
+from midap.correction.data_handler import CorrectionData, LineageOPException
 from midap.correction.side_panel_gui import InfoBox, FrameSlider
+
+# TODO: remove timers
+from time import perf_counter
 
 NAPARI_GE_4_16 = parse_version(napari.__version__) > parse_version("0.4.16")
 
-# TODO: Only the change_frame funciton should access the labels directly the rest should get the data from the viewers
-# TODO: Think about the action list and undo/redo
 
 def copy_layer_le_4_16(layer: Layer, name: str = ""):
     res_layer = deepcopy(layer)
@@ -139,7 +140,9 @@ class MultipleViewerWidget(QWidget):
                                 update_modifier_callback=self.update_settings)
 
         # the slider in the bottom
-        self.slider = FrameSlider(max_value=self.n_frames-2, frame_change_callback=self.change_frame)
+        self.slider = FrameSlider(max_value=self.n_frames-2,
+                                  frame_change_callback=self.change_frame,
+                                  update_on_same=False)
 
         # The napari qt viewer is already in a layout (box)
         # we add the parent to a temp layout to remove it from the window
@@ -442,33 +445,53 @@ class MultipleViewerWidget(QWidget):
             self.main_viewer.camera.angles = event.source.angles
             self.side_viewer.camera.angles = event.source.angles
 
-    def change_frame(self, frame: int):
+    def change_frame(self, frame: int, update_on_same=True):
         """
         Changes the current frame to frame
         :param frame: The int of the new frame of the main viewer
+        :param update_on_same: Update the frame data even though the number did not change
         """
+
+        # if the frame did not change and we don't want to update -> return
+        if not update_on_same and frame == self.current_frame:
+            return
 
         # catch our of bounds
         if frame >= self.n_frames - 1:
             frame = self.n_frames - 2
 
         # update
+        t0 = perf_counter()
         self.main_img_layer.data = self.correction_data.get_image(frame_number=frame)
         self.main_label_layer.data = self.correction_data.get_label(frame_number=frame)
+        t1 = perf_counter()
+        print(f"Main update: {t1 - t0}")
 
+        t0 = perf_counter()
         self.side_img_layer.data = self.correction_data.get_image(frame_number=frame + 1)
         self.side_label_layer.data = self.correction_data.get_label(frame_number=frame + 1)
+        t1 = perf_counter()
+        print(f"Side update: {t1 - t0}")
 
         self.current_frame = frame
 
         # selection
+        t0 = perf_counter()
         self.update_selection(selection=self.selection)
+        t1 = perf_counter()
+        print(f"Selection update: {t1 - t0}")
 
         # info
+        t0 = perf_counter()
         self.info_box.update_info(current_frame=self.current_frame, selection=self.selection)
+        t1 = perf_counter()
+        print(f"Info update: {t1 - t0}")
 
         # the slider
+        t0 = perf_counter()
         self.slider.set_value(self.current_frame)
+        t1 = perf_counter()
+        print(f"Slider update: {t1 - t0}")
 
         # set the focus
         self.main_viewer.window._qt_viewer.setFocus()
@@ -528,30 +551,31 @@ class MultipleViewerWidget(QWidget):
 
         # we disconnect something
         if len(event.modifiers) == 1 and "Control" in event.modifiers:
-            # we only kill selected cells
-            if val != self.selection and val not in self.correction_data.tracking_data.get_kids_id(self.selection):
-                show_info("You can only disconnect lineages from selected cells or its kids!")
-                return
-
             # disconnect the lineage
-            self.correction_data.disconnect_lineage(selection=self.selection,
-                                                    track_id=val,
-                                                    frame_number=clicked_frame)
+            try:
+                self.correction_data.disconnect_lineage(selection=self.selection,
+                                                        track_id=val,
+                                                        frame_number=clicked_frame)
+            except LineageOPException as e:
+                show_info(f"{e}")
+                return
 
             # update data
             self.change_frame(self.current_frame)
 
         # we join lineages
-        elif "Shift" in event.modifiers:
-            # we can not connect what's already selected
-            if val == self.selection:
-                show_info("You cannot connect cells to themselves!")
+        elif len(event.modifiers) == 1 and "Shift" in event.modifiers:
+            # join lineage
+            try:
+                self.correction_data.join_lineage(selection=self.selection,
+                                                  track_id=val,
+                                                  frame_number=clicked_frame)
+            except LineageOPException as e:
+                show_info(f"{e}")
                 return
-            # we cannot connect cells to their first occurrences:
-            if self.correction_data.tracking_data.get_first_occurrence(self.selection) == clicked_frame:
-                show_info("You cannot connect a lineage in the first frame of occurrence!")
-                return
-            # we can not connect a cell to its children
+
+            # update data
+            self.change_frame(self.current_frame)
 
         # An actual click no modifiers
         else:
