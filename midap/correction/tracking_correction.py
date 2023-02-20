@@ -247,6 +247,8 @@ class MultipleViewerWidget(QWidget):
         # key binds
         self.main_viewer.bind_key('Left', self.left_arrow_key_bind)
         self.main_viewer.bind_key('Right', self.right_arrow_key_bind)
+        self.main_viewer.bind_key('Ctrl-u', self.undo_ops)
+        self.main_viewer.bind_key('Ctrl-r', self.redo_ops)
 
         # mouse clicks
         self.main_select_layer.mouse_drag_callbacks.append(self.track_clicked)
@@ -637,6 +639,22 @@ class MultipleViewerWidget(QWidget):
 
         # set the focus
         self.main_viewer.window._qt_viewer.setFocus()
+
+    def undo_ops(self, *args):
+        """
+        Performs the undo action of the data correction
+        """
+
+        self.correction_data.undo()
+        self.change_frame(self.current_frame)
+
+    def redo_ops(self, *args):
+        """
+        Performs the redo action of the data correction
+        """
+
+        self.correction_data.redo()
+        self.change_frame(self.current_frame)
 
 
 def main():
