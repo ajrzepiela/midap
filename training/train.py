@@ -107,9 +107,9 @@ def get_files(ctx: click.Context, param: click.Argument, filename: tuple):
               help='Name of the class of the custom model to train, this class has to be implemented in '
                    'custom_model.py and has to accept input_size, dropout and metrics as keyword arguments in the '
                    'constructor method.')
-@click.option('--restore_path', type=str, default=None,
+@click.option('--restore_path', type=click.Path(), default=None,
               help='Path to restore the model from, note that it will use the model.save_weights routine')
-@click.option('--tfboard_logdir', type=str, default=None,
+@click.option('--tfboard_logdir', type=click.Path(), default=None,
               help='Logdir used for the Tensorboard callback, defaults to None -> no callback.')
 @click.option("--save_path", type=click.Path(exists=True, file_okay=False), default=".",
               help="The path in which the results should be saved, this directory should exists.")
