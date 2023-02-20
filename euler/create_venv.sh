@@ -7,8 +7,8 @@
 # actiavte the right modules
 # gcc 8.2 stack
 module load gcc/8.2.0
-# python 3.8.5 and the proxy
-module load python_gpu/3.8.5 eth_proxy
+# python 3.10.4 and the proxy
+module load python_gpu/3.10.4 eth_proxy
 
 # create the env
 python -m venv midap
@@ -24,19 +24,19 @@ pip install -r requirements.txt
 # we do this because the cluster installation has been optimized
 # but we don't want all (--system-site-package) because we also
 # want to overwrite stuff with our requirements
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/tensorboard ./midap/lib/python3.8/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/tensorflow* ./midap/lib/python3.8/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/absl ./midap/lib/python3.8/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/google* ./midap/lib/python3.8/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/tf_estimator_nightly* ./midap/lib/python3.8/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/opt_einsum* ./midap/lib/python3.8/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/gast* ./midap/lib/python3.8/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/astunparse* ./midap/lib/python3.8/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/termcolor* ./midap/lib/python3.8/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/flatbuffers* ./midap/lib/python3.8/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/grpc* ./midap/lib/python3.8/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/keras* ./midap/lib/python3.8/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.8.5/x86_64/lib64/python3.8/site-packages/libclang* ./midap/lib/python3.8/site-packages/
+ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/tensorboard ./midap/lib/python3.10/site-packages/
+ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/tensorflow* ./midap/lib/python3.10/site-packages/
+ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/absl ./midap/lib/python3.10/site-packages/
+ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/google* ./midap/lib/python3.10/site-packages/
+ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/tf_estimator_nightly* ./midap/lib/python3.10/site-packages/
+ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/opt_einsum* ./midap/lib/python3.10/site-packages/
+ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/gast* ./midap/lib/python3.10/site-packages/
+ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/astunparse* ./midap/lib/python3.10/site-packages/
+ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/termcolor* ./midap/lib/python3.10/site-packages/
+ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/flatbuffers* ./midap/lib/python3.10/site-packages/
+ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/grpc* ./midap/lib/python3.10/site-packages/
+ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/keras* ./midap/lib/python3.10/site-packages/
+ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/libclang* ./midap/lib/python3.10/site-packages/
 
 # install the package
 pip install -e ..
