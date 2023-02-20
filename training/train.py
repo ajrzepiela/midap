@@ -194,10 +194,10 @@ def main(**kwargs):
     # save the results
     if kwargs["save_model"]:
         logger.info(f'Saving model to: {kwargs["save_path"]}')
-        model.save(kwargs["save_path"])
+        model.save(Path(kwargs["save_path"]).joinpath("model.h5"))
     else:
         logger.info(f'Saving weights to: {kwargs["save_path"]}')
-        model.save_weights(kwargs["save_path"])
+        model.save_weights(Path(kwargs["save_path"]).joinpath("weights.h5"), save_format="h5")
 
 
 if __name__ == '__main__':
