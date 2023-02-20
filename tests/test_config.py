@@ -73,6 +73,7 @@ def test_Config(tmp_dir):
     # and the model weights
     try:
         # if omni pose is supported we test it
+        import omnipose
         from cellpose import models
         config.set("pos1", "SegmentationClass", "OmniSegmentation")
         config.set("pos1", "ModelWeights_None", "bact_phase_omni")

@@ -38,6 +38,11 @@ ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-pac
 ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/keras* ./midap/lib/python3.10/site-packages/
 ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/libclang* ./midap/lib/python3.10/site-packages/
 
+# this has to be installed in this order (so not in requirements)
+pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
+pip install opencv-python-headless==4.6.0.66
+pip install cellpose
+
 # install the package
 pip install -e ..
 
