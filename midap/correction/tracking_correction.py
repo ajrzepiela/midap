@@ -579,6 +579,20 @@ class MultipleViewerWidget(QWidget):
             # update data
             self.change_frame(self.current_frame)
 
+        # we reconnect lineages
+        elif len(event.modifiers) == 2 and "Shift" in event.modifiers and "Control" in event.modifiers:
+            # join lineage
+            try:
+                self.correction_data.reconnect_lineage(selection=self.selection,
+                                                       track_id=val,
+                                                       frame_number=clicked_frame)
+            except LineageOPException as e:
+                show_info(f"{e}")
+                return
+
+            # update data
+            self.change_frame(self.current_frame)
+
         # An actual click no modifiers
         else:
             # click on the same selection (unselect)

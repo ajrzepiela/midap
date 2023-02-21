@@ -472,7 +472,7 @@ class FrameSlider(QWidget):
         self.spin_box.setMaximum(max_value)
         # suffix and font
         self.spin_box.setSuffix(f"/{max_value + 1}")
-        font = QFont("Arial", 12, QFont.SansSerif)
+        font = QFont("Arial", 12)
         self.spin_box.setFont(font)
         self.spin_box.valueChanged.connect(self.update_slider)
 

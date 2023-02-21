@@ -407,6 +407,61 @@ class TrackingData(object):
 
         return transformations, old_df
 
+    def reconnect_lineage(self, selection: int, track_id: int, frame_number: int):
+        """
+        Reconnects the lineage of the selection to track id
+        :param selection: The current selection
+        :param track_id: The track ID of the cell that should be connected to the lineage
+        :param frame_number: The frame number in which the connection should happen
+        """
+
+        # get selection props
+        selection_first_frame = self.get_first_occurrence(selection)
+        selection_last_frame = self.get_last_occurrence(selection)
+        selection_split_frame = self.get_splitting_frame(selection)
+        selection_kids_id = self.get_kids_id(selection)
+
+        # if there is no selection we cannot connect stuff
+        if selection is None or selection == 0:
+            raise LineageOPException("You need to select a cell to reconnect lineages!")
+        # we can not connect what's already selected
+        if track_id == selection:
+            raise LineageOPException("You cannot reconnect cells to themselves!")
+        # we cannot connect cells to their first occurrences:
+        if selection_first_frame == frame_number:
+            raise LineageOPException("You cannot reconnect a lineage in the first frame of occurrence!")
+        if selection_last_frame < frame_number - 1:
+            raise LineageOPException("The selection does not appear in the previous frame!")
+
+        # lists for the undo ops and added transformations
+        old_df = self.track_df.copy()
+        transformations = []
+
+        # if the cell split in the last frame we need to disconnect the kids
+        if selection_split_frame == frame_number - 1:
+            # we just remove one kid, the other becomes the selection
+            *_, trans, _ = self.disconnect_lineage(selection=selection,
+                                                   track_id=selection_kids_id[0],
+                                                   frame_number=frame_number)
+            transformations.extend(trans)
+        # we disconnect the cell itself
+        *_, trans, _ = self.disconnect_lineage(selection=selection,
+                                               track_id=selection,
+                                               frame_number=frame_number)
+        transformations.extend(trans)
+
+        # we rejoin the cell
+        trans, _ = self.join_lineage(selection=selection,
+                                     track_id=track_id,
+                                     frame_number=frame_number)
+        transformations.extend(trans)
+
+        # save everything to file
+        self.track_df.to_csv(self.corrected_file, index=False)
+        np.save(self.transformation_file, np.array(self.track_id_transforms))
+
+        return transformations, old_df
+
     def undo(self, old_df: pd.DataFrame, transformations: List):
         """
         Undoes an operation by replacing the data frame with the old_df and removing the transformations from the
@@ -423,14 +478,14 @@ class TrackingData(object):
         no_match = False
         if len(self.track_id_transforms) >= len(transformations):
             for i, trans in enumerate(reversed(transformations)):
-                if trans != self.track_id_transforms[-i]:
+                if trans != self.track_id_transforms[-(i+1)]:
                     no_match = True
                     break
 
         # no we remove
         if no_match:
             # we add the reverse transformation
-            for trans in transformations:
+            for trans in reversed(transformations):
                 new_trans = [trans[0], trans[2], trans[1]]
                 self.track_id_transforms.append(new_trans)
         else:
@@ -617,6 +672,26 @@ class CorrectionData(object):
         # add to action stack
         self.undo_stack.append(["Undo of join!", transformations, old_df])
 
+    def reconnect_lineage(self, selection: int, track_id: int, frame_number: int):
+        """
+        Reconnect the lineage from the selection to the track ID in a given frame. This is a disconnect and join
+        operation.
+        :param selection: The current selection
+        :param track_id: The track ID of the cell that should be connected to the lineage
+        :param frame_number: The frame number in which the connection should happen
+        """
+
+        transformations, old_df = self.tracking_data.reconnect_lineage(selection=selection,
+                                                                       track_id=track_id,
+                                                                       frame_number=frame_number)
+        show_info(f"Reconnected lineage of cell {selection} with {track_id} in frame {frame_number}!")
+
+        # clear the redo stack
+        self.redo_stack = []
+
+        # add to action stack
+        self.undo_stack.append(["Undo of reconnect!", transformations, old_df])
+
     def undo(self):
         """
         Undoes the action that was most recently added to the action stack
@@ -647,7 +722,7 @@ class CorrectionData(object):
 
         # remove the action
         message, transformations, new_df = self.redo_stack.pop(-1)
-        self.undo.append([message.replace("Redo", "Undo"), transformations, self.tracking_data.track_df.copy()])
+        self.undo_stack.append([message.replace("Redo", "Undo"), transformations, self.tracking_data.track_df.copy()])
 
         # undo the data ops
         self.tracking_data.redo(new_df=new_df, transformations=transformations)
