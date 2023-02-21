@@ -95,9 +95,8 @@ class TFPipe(DataProcessor):
                   stateless_seed: Optional[tuple]=None):
         """
         Performs a crop operation on image, weight and label map
-        :param i: The image tensor
-        :param w: The weights tensor
-        :paran l: The label tensor
+        :param num: A Tensor with the number of the sample used to increase the stateless seed (if provided)
+        :param imgs: A suple of the image, weight and label map
         :param target_size: The target size (with channel dim)
         :param stateless_seed: If provided, used as input for the stateless crop operation, otherwise and unseeded
                                stateful crop is used
@@ -121,9 +120,8 @@ class TFPipe(DataProcessor):
                         stateless_seed: Optional[tuple]=None):
         """
         Performs a brightness adjust operation on image, leaves weight and label map
-        :param i: The image tensor
-        :param w: The weights tensor
-        :paran l: The label tensor
+        :param num: A Tensor with the number of the sample used to increase the stateless seed (if provided)
+        :param imgs: A suple of the image, weight and label map
         :param max_delta: The maximum delta to adjust the brightness
         :param stateless_seed: If provided, used as input for the stateless crop operation, otherwise and unseeded
                                stateful crop is used
@@ -144,9 +142,8 @@ class TFPipe(DataProcessor):
                       stateless_seed: Optional[tuple]=None):
         """
         Performs a contrast adjust operation on image, leaves weight and label map
-        :param i: The image tensor
-        :param w: The weights tensor
-        :paran l: The label tensor
+        :param num: A Tensor with the number of the sample used to increase the stateless seed (if provided)
+        :param imgs: A suple of the image, weight and label map
         :param lower: The lower bound for the contrast adjust
         :param upper: The upper bound for the contrast adjust
         :param stateless_seed: If provided, used as input for the stateless crop operation, otherwise and unseeded
@@ -162,6 +159,52 @@ class TFPipe(DataProcessor):
             i = tf.image.stateless_random_contrast(image=i, lower=lower, upper=upper, seed=seed)
 
         return num, (i, w, l)
+
+    @staticmethod
+    def _map_ud_flip(num: tf.Tensor, imgs: Tuple[tf.Tensor], stateless_seed: Optional[tuple] = None):
+        """
+        Performs a random flip along the first dimension (up down)
+        :param num: A Tensor with the number of the sample used to increase the stateless seed (if provided)
+        :param imgs: A suple of the image, weight and label map
+        :param stateless_seed: If provided, used as input for the stateless crop operation, otherwise and unseeded
+                               stateful crop is used
+        :return: The tensors of value, cropped
+        """
+
+        # combine
+        i, w, l = imgs
+        stack = tf.stack([i, w, l], axis=0)
+
+        if stateless_seed is None:
+            out = tf.image.random_flip_up_down(image=stack)
+        else:
+            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(num, dtype=tf.int32)
+            out = tf.image.stateless_random_flip_up_down(image=stack, seed=seed)
+
+        return num, tuple(out[i, ...] for i in range(3))
+
+    @staticmethod
+    def _map_lr_flip(num: tf.Tensor, imgs: Tuple[tf.Tensor], stateless_seed: Optional[tuple] = None):
+        """
+        Performs a random flip along the second dimension (left right)
+        :param num: A Tensor with the number of the sample used to increase the stateless seed (if provided)
+        :param imgs: A suple of the image, weight and label map
+        :param stateless_seed: If provided, used as input for the stateless crop operation, otherwise and unseeded
+                               stateful crop is used
+        :return: The tensors of value, cropped
+        """
+
+        # combine
+        i, w, l = imgs
+        stack = tf.stack([i, w, l], axis=0)
+
+        if stateless_seed is None:
+            out = tf.image.random_flip_left_right(image=stack)
+        else:
+            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(num, dtype=tf.int32)
+            out = tf.image.stateless_random_flip_left_right(image=stack, seed=seed)
+
+        return num, tuple(out[i, ...] for i in range(3))
 
     @staticmethod
     def zip_inputs(images: np.ndarray, weights: np.ndarray, segmentations: np.ndarray):
@@ -228,6 +271,25 @@ class TFPipe(DataProcessor):
             for d in self.dsets_test]
         self.dsets_val = [
             d.map(lambda num, imgs: self._map_crop(num, imgs, target_size=image_size, stateless_seed=val_seed))
+            for d in self.dsets_val]
+        # up and lr flips
+        self.dsets_train = [
+            d.map(lambda num, imgs: self._map_ud_flip(num, imgs, stateless_seed=train_seed))
+            for d in self.dsets_train]
+        self.dsets_test = [
+            d.map(lambda num, imgs: self._map_ud_flip(num, imgs, stateless_seed=test_seed))
+            for d in self.dsets_test]
+        self.dsets_val = [
+            d.map(lambda num, imgs: self._map_ud_flip(num, imgs, stateless_seed=val_seed))
+            for d in self.dsets_val]
+        self.dsets_train = [
+            d.map(lambda num, imgs: self._map_lr_flip(num, imgs, stateless_seed=train_seed))
+            for d in self.dsets_train]
+        self.dsets_test = [
+            d.map(lambda num, imgs: self._map_lr_flip(num, imgs, stateless_seed=test_seed))
+            for d in self.dsets_test]
+        self.dsets_val = [
+            d.map(lambda num, imgs: self._map_lr_flip(num, imgs, stateless_seed=val_seed))
             for d in self.dsets_val]
         # perform the augmentations
         if delta_brightness is not None:
