@@ -37,7 +37,8 @@ class DataProcessor(object):
     logger = get_logger(__file__)
 
     def __init__(self, paths: Union[str, bytes, os.PathLike, List[Union[str, bytes, os.PathLike]]],
-                 n_grid=4, test_size=0.15, val_size=0.2, sigma=2.0, w_0=2.0, w_c0=1.0, w_c1=1.1, loglevel=7):
+                 n_grid=4, test_size=0.15, val_size=0.2, sigma=2.0, w_0=2.0, w_c0=1.0, w_c1=1.1, loglevel=7,
+                 np_random_seed: Optional[int]=None):
         """
         Initializes the DataProcessor instance. Note that a lot parameters are used to implement the weight map
         generation according to [1] (https://arxiv.org/abs/1505.04597)
@@ -52,10 +53,18 @@ class DataProcessor(object):
         :param w_c0: basic class weight for non-cell pixel parameter used for the weight map calculation [1]
         :param w_c1: basic class weight for cell pixel parameter used for the weight map calculation [1]
         :param loglevel: The loglevel of the logger instance, 0 -> no output, 7 (default) -> max output
+        :param np_random_seed: A random seed for the numpy random seed generator, defaults to None, which will lead
+                               to non-reproducible behaviour. Note that the state will be set at initialisation and
+                               not reset by any of the methods.
         """
 
         # set the log level
         set_logger_level(self.logger, loglevel)
+
+        # set the random seed
+        if np_random_seed is not None:
+            self.logger.info(f"Setting numpy random seed to: {np_random_seed}")
+            np.random.seed(np_random_seed)
 
         # parameters for the computation of the weight maps
         self.sigma = sigma

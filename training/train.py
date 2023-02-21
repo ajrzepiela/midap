@@ -77,6 +77,7 @@ def get_files(ctx: click.Context, param: click.Argument, filename: tuple):
               help='basic class weight for cell pixel parameter used for the weight map calculation [1]')
 @click.option('--loglevel', type=int, default=7,
               help='The loglevel of the logger instance, 0 -> no output, 7 (default) -> max output')
+@click.option('--np_random_seed', type=int, default=11, help="The numpy random seed that should be set.")
 @click.option('--batch_size', type=int, default=32, help='The batch size of the data sets for training.')
 @click.option('--shuffle_buffer', type=int, default=128, help='The shuffle buffer used for the training set')
 @click.option('--image_size', type=(int, int, int), default=(128, 128, 1),
@@ -153,11 +154,12 @@ def main(**kwargs):
     logger.info("Initializing the data pipelines...")
     tf_pipe = TFPipe(paths=kwargs["train_files"], n_grid=kwargs["n_grid"], test_size=kwargs["test_size"],
                      val_size=kwargs["val_size"], sigma=kwargs["sigma"], w_0=kwargs["w_0"], w_c0=kwargs["w_c0"],
-                     w_c1=kwargs["w_c1"], loglevel=kwargs["loglevel"], batch_size=kwargs["batch_size"],
-                     shuffle_buffer=kwargs["shuffle_buffer"], image_size=kwargs["image_size"],
-                     delta_brightness=kwargs["delta_brightness"], lower_contrast=kwargs["lower_contrast"],
-                     upper_contrast=kwargs["upper_contrast"], n_repeats=kwargs["n_repeats"],
-                     train_seed=kwargs["train_seed"], val_seed=kwargs["val_seed"], test_seed=kwargs["val_seed"])
+                     w_c1=kwargs["w_c1"], loglevel=kwargs["loglevel"], np_random_seed=kwargs["np_random_seed"],
+                     batch_size=kwargs["batch_size"], shuffle_buffer=kwargs["shuffle_buffer"],
+                     image_size=kwargs["image_size"], delta_brightness=kwargs["delta_brightness"],
+                     lower_contrast=kwargs["lower_contrast"], upper_contrast=kwargs["upper_contrast"],
+                     n_repeats=kwargs["n_repeats"], train_seed=kwargs["train_seed"], val_seed=kwargs["val_seed"],
+                     test_seed=kwargs["val_seed"])
 
     # import the right model
     if kwargs["custom_model"] is None:

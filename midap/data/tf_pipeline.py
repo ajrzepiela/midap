@@ -17,10 +17,10 @@ class TFPipe(DataProcessor):
 
     def __init__(self, paths: Union[str, bytes, os.PathLike, List[Union[str, bytes, os.PathLike]]],
                  n_grid=4, test_size=0.15, val_size=0.2, sigma=2.0, w_0=2.0, w_c0=1.0, w_c1=1.1, loglevel=7,
-                 batch_size=32, shuffle_buffer=128, image_size=(128, 128, 1), delta_brightness: Optional[float] = 0.4,
-                 lower_contrast: Optional[float] = 0.2, upper_contrast: Optional[float] = 0.5,
-                 n_repeats: Optional[int] = 50, train_seed: Optional[tuple] = None, val_seed=(11, 12),
-                 test_seed=(13, 14)):
+                 np_random_seed: Optional[int] = None, batch_size=32, shuffle_buffer=128, image_size=(128, 128, 1),
+                 delta_brightness: Optional[float] = 0.4, lower_contrast: Optional[float] = 0.2,
+                 upper_contrast: Optional[float] = 0.5, n_repeats: Optional[int] = 50,
+                 train_seed: Optional[tuple] = None, val_seed=(11, 12), test_seed=(13, 14)):
         """
         Initializes the TFPipe instance. Note that a lot parameters are used to implement the weight map
         generation according to [1] (https://arxiv.org/abs/1505.04597)
@@ -35,6 +35,9 @@ class TFPipe(DataProcessor):
         :param w_c0: basic class weight for non-cell pixel parameter used for the weight map calculation [1]
         :param w_c1: basic class weight for cell pixel parameter used for the weight map calculation [1]
         :param loglevel: The loglevel of the logger instance, 0 -> no output, 7 (default) -> max output
+        :param np_random_seed: A random seed for the numpy random seed generator, defaults to None, which will lead
+                               to non-reproducible behaviour. Note that the state will be set at initialisation and
+                               not reset by any of the methods.
         :param batch_size: The batch size of the data sets
         :param shuffle_buffer: The shuffle buffer used for the training set
         :param image_size: The target image size including channel dimension
@@ -58,7 +61,7 @@ class TFPipe(DataProcessor):
 
         # init the base class
         super().__init__(paths=paths, n_grid=n_grid, test_size=test_size, val_size=val_size, sigma=sigma,
-                         w_0=w_0, w_c0=w_c0, w_c1=w_c1, loglevel=loglevel)
+                         w_0=w_0, w_c0=w_c0, w_c1=w_c1, loglevel=loglevel, np_random_seed=np_random_seed)
         
         # get the datasets
         self.data_dict = self.get_dset()
