@@ -146,7 +146,7 @@ class MultipleViewerWidget(QWidget):
                                   update_on_same=False)
 
         # save button
-        # TODO: Format and add function
+        # TODO: Format and add function, create a subclass for this as info box to get the style
         self.save_btn = QPushButton("Save")
 
         # The napari qt viewer is already in a layout (box)
