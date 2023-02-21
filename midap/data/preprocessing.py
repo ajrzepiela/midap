@@ -103,7 +103,9 @@ class DataProcessor(object):
             seg = self.scale_pixel_vals(io.imread(seg_path)).astype(int)
 
             # 2) Generate weight map
-            if (w_path := img_path.parent.joinpath(img_path.name.replace("raw.tif", "weights.tif"))).exists():
+            w_string = f"w_0={self.w_0}_w_c0={self.w_c0}_w_c1={self.w_c1}_sigma={self.sigma}"
+            w_path = img_path.parent.joinpath(img_path.name.replace("raw.tif", f"{w_string}_weights.tif"))
+            if w_path.exists():
                 weights = io.imread(w_path)
             else:
                 self.logger.info("Generating weight map...")
