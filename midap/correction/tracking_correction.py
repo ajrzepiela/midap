@@ -12,6 +12,7 @@ from packaging.version import parse as parse_version
 from qtpy.QtWidgets import (
     QGridLayout,
     QWidget,
+    QPushButton,
 )
 
 from midap.correction.data_handler import CorrectionData, LineageOPException
@@ -144,6 +145,10 @@ class MultipleViewerWidget(QWidget):
                                   frame_change_callback=self.change_frame,
                                   update_on_same=False)
 
+        # save button
+        # TODO: Format and add function
+        self.save_btn = QPushButton("Save")
+
         # The napari qt viewer is already in a layout (box)
         # we add the parent to a temp layout to remove it from the window
         tmp_layout = QGridLayout()
@@ -164,6 +169,7 @@ class MultipleViewerWidget(QWidget):
         layout.addWidget(self.info_box, 0, 2)
         layout.setRowStretch(1, 0)
         layout.addWidget(self.slider, 1, 0, 1, 2)
+        layout.addWidget(self.save_btn, 1, 2)
         self.setLayout(layout)
 
         # create the image layers

@@ -318,8 +318,8 @@ class TrackingData(object):
         if track_id == selection:
             raise LineageOPException("You cannot connect cells to themselves!")
         # we cannot connect cells to their first occurrences:
-        if selection_first_frame == frame_number:
-            raise LineageOPException("You cannot connect a lineage in the first frame of occurrence!")
+        if selection_first_frame >= frame_number:
+            raise LineageOPException("You cannot connect a lineage in the before or in the first frame of occurrence!")
         if selection_split_frame == frame_number - 1:
             raise LineageOPException("The current selection already splits in this frame!")
 

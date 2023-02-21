@@ -361,8 +361,20 @@ class HelpBox(GenericBox):
         <table class="tg">
         <tbody>
           <tr>
-            <td class="tg-syad">Click: </td>
+            <td class="tg-syad">Click:</td>
             <td class="tg-tibk">Select cell</td>
+          </tr>
+          <tr>
+            <td class="tg-syad">Ctrl+Click:</td>
+            <td class="tg-tibk">Disconnect</td>
+          </tr>
+          <tr>
+            <td class="tg-syad">&uarr;+Click:</td>
+            <td class="tg-tibk">Join</td>
+          </tr>
+          <tr>
+            <td class="tg-syad">&uarr;+Ctrl+Click:</td>
+            <td class="tg-tibk">Reconnect</td>
           </tr>
           <tr>
             <td class="tg-syad">Arrow keys:</td>
@@ -401,7 +413,7 @@ class InfoBox(QWidget):
         layout = QVBoxLayout()
 
         # define some constants
-        width = 200
+        width = 220
 
         # frame stuff
         self.frame_info = FrameInfo(correction_data=correction_data)
