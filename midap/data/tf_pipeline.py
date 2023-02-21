@@ -173,7 +173,8 @@ class TFPipe(DataProcessor):
 
         # combine
         i, w, l = imgs
-        stack = tf.stack([i, w, l], axis=0)
+        # the flip operations need HWC -> concat
+        stack = tf.concat([i, w, l], axis=-1)
 
         if stateless_seed is None:
             out = tf.image.random_flip_up_down(image=stack)
@@ -181,7 +182,7 @@ class TFPipe(DataProcessor):
             seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(num, dtype=tf.int32)
             out = tf.image.stateless_random_flip_up_down(image=stack, seed=seed)
 
-        return num, tuple(out[i, ...] for i in range(3))
+        return num, tuple(out[..., i:i+1] for i in range(3))
 
     @staticmethod
     def _map_lr_flip(num: tf.Tensor, imgs: Tuple[tf.Tensor], stateless_seed: Optional[tuple] = None):
@@ -196,7 +197,8 @@ class TFPipe(DataProcessor):
 
         # combine
         i, w, l = imgs
-        stack = tf.stack([i, w, l], axis=0)
+        # the flip operations need HWC -> concat
+        stack = tf.concat([i, w, l], axis=-1)
 
         if stateless_seed is None:
             out = tf.image.random_flip_left_right(image=stack)
@@ -204,7 +206,7 @@ class TFPipe(DataProcessor):
             seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(num, dtype=tf.int32)
             out = tf.image.stateless_random_flip_left_right(image=stack, seed=seed)
 
-        return num, tuple(out[i, ...] for i in range(3))
+        return num, tuple(out[..., i:i+1] for i in range(3))
 
     @staticmethod
     def zip_inputs(images: np.ndarray, weights: np.ndarray, segmentations: np.ndarray):
