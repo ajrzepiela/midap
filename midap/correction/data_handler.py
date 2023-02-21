@@ -359,6 +359,9 @@ class TrackingData(object):
 
             # add the transformation [first frame (inclusive), old_id, new_id]
             transformations.append([frame_number, track_id, selection])
+
+            # add all the transformations
+            self.track_id_transforms.extend(transformations)
         # we have a selection in the frame
         else:
             # if the join cell appears already in previous frames, we need to disconnect it
@@ -366,7 +369,7 @@ class TrackingData(object):
                 new_join_lineage_id, new_join_track_id, trans, _ = self.disconnect_lineage(selection=track_id,
                                                                                            track_id=track_id,
                                                                                            frame_number=frame_number)
-                # append stuff
+                # append stuff, these transformation are already added to the class from the previous function call
                 transformations.extend(trans)
             else:
                 new_join_lineage_id = join_lineage_id
@@ -376,7 +379,7 @@ class TrackingData(object):
             new_kid_lineage_id, new_kid_track_id, trans, _ = self.disconnect_lineage(selection=selection,
                                                                                      track_id=selection,
                                                                                      frame_number=frame_number)
-            # append stuff
+            # append stuff, these transformation are already added to the class from the previous function call
             transformations.extend(trans)
 
             # both kids get a new lineage ID
@@ -397,9 +400,6 @@ class TrackingData(object):
             row_selector = self.track_df["trackID"] == selection
             self.track_df.loc[row_selector, "trackID_d1"] = new_join_track_id
             self.track_df.loc[row_selector, "trackID_d2"] = new_kid_track_id
-
-        # add all the transformations
-        self.track_id_transforms.extend(transformations)
 
         # save everything to file
         self.track_df.to_csv(self.corrected_file, index=False)
