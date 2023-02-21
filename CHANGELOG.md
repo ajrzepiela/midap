@@ -19,6 +19,12 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.5]
+
+TBD
+
+Fix:
+- Venv on euler updated to python 3.10, to avoid install failure of new python > 3.8 requirement
 
 ## [0.3.4]
 
