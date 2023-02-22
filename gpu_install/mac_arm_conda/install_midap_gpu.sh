@@ -1,7 +1,7 @@
 #!/bin/zsh
 
 # check if we have miniconda
-if [[ ! -d ~/miniconda ]]; then
+if [ ! -d ~/miniconda ] && [ ! -d ~/miniconda3 ]; then
   while true; do
     read -q "yn?Miniconda seems missing, do you want to install it? Y/N "
     case $yn in
