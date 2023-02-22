@@ -19,6 +19,13 @@ Efficiency:
 Fix:
 - ...
 
+## [TBD]
+
+TBD
+
+Fix:
+- Change image format in the selector to make it compatible with Euler
+
 
 ## [0.3.4]
 
