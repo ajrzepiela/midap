@@ -19,13 +19,12 @@ Efficiency:
 Fix:
 - ...
 
-## [TBD]
 
-TBD
+## [0.3.5]
 
 Fix:
 - Change image format in the selector to make it compatible with Euler
-
+- Venv on euler updated to python 3.10, to avoid install failure of new python > 3.8 requirement
 
 ## [0.3.4]
 
