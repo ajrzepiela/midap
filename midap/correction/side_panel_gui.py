@@ -324,10 +324,14 @@ class GeneralBox(GenericBox):
         self.sync_viewer.setChecked(True)
         self.sync_viewer.toggled.connect(self.box_clicked)
         layout.addWidget(self.sync_viewer)
+        self.rotate_view = QCheckBox("Rotate view")
+        self.rotate_view.setChecked(False)
+        self.rotate_view.toggled.connect(self.box_clicked)
+        layout.addWidget(self.rotate_view)
 
         # finalize
         self.setLayout(layout)
-        self.setFixedHeight(130)
+        self.setFixedHeight(150)
 
     def box_clicked(self):
         """
@@ -335,7 +339,7 @@ class GeneralBox(GenericBox):
         """
 
         self.update_modifier_callback(mark_orphans=self.mark_orphans.isChecked(), mark_dying=self.mark_dying.isChecked(),
-                                      sync_viewers=self.sync_viewer.isChecked())
+                                      sync_viewers=self.sync_viewer.isChecked(), rotate_view=self.rotate_view.isChecked())
 
 
 class HelpBox(GenericBox):

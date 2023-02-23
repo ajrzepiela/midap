@@ -217,6 +217,7 @@ class MultipleViewerWidget(QWidget):
         self.mark_orphans = False
         self.mark_dying = False
         self.sync_viewers = True
+        self.rotate_view = False
 
         # info box update
         self.info_box.update_info(current_frame=self.current_frame, selection=self.selection)
@@ -634,18 +635,32 @@ class MultipleViewerWidget(QWidget):
         # update the info box
         self.info_box.update_info(self.current_frame, self.selection)
 
-    def update_settings(self, mark_orphans: bool, mark_dying: bool, sync_viewers: bool):
+    def update_settings(self, mark_orphans: bool, mark_dying: bool, sync_viewers: bool, rotate_view: bool):
         """
         Updates the general settings of the multiviewer
         :param mark_orphans: Whether orphans should be selected in the selection layer
         :param mark_dying: Whether dying cells should be selected in the selection layer
         :param sync_viewers: Whether to sync the viewers or not
+        :param rotate_view: Whter to rot the viewer or not
         """
 
         # update the params
         self.mark_orphans = mark_orphans
         self.mark_dying = mark_dying
         self.sync_viewers = sync_viewers
+        self.rotate_view = rotate_view
+
+        # rotate the view if necessary
+        if rotate_view:
+            rotation = 90.0
+        else:
+            rotation = 0.0
+        self.main_img_layer.rotate = rotation
+        self.main_label_layer.rotate = rotation
+        self.main_select_layer.rotate = rotation
+        self.side_img_layer.rotate = rotation
+        self.side_label_layer.rotate = rotation
+        self.side_select_layer.rotate = rotation
 
         # if viewers are synced we need to do it manually here
         if self.sync_viewers:
