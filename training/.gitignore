@@ -1,5 +1,6 @@
 # the training data 
 training_data/
+midap_training/
 # saved models
 saved_models/
 logs/

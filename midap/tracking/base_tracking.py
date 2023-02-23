@@ -1,15 +1,15 @@
-import os
-from abc import ABC, abstractmethod
-from typing import Collection, Optional, Iterable, Union
-
 import datetime
+import os
+import time
+from abc import ABC, abstractmethod
+from typing import List, Union, Tuple, Optional
+
 import numpy as np
 import psutil
 import skimage.io as io
+from scipy.spatial import distance_matrix
 from skimage.measure import label, regionprops
-from skimage.morphology import remove_small_objects
 from skimage.transform import resize
-import time
 from tqdm import tqdm
 
 from .delta_lineage import DeltaTypeLineages
@@ -33,32 +33,34 @@ class Tracking(ABC):
     # this logger will be shared by all instances and subclasses
     logger = logger
 
-    def __init__(self, imgs: Collection[str],
-                 segs: Collection[str],
-                 model_weights: Union[str, bytes, os.PathLike, None],
-                 input_size: tuple,
-                 target_size: tuple,
-                 crop_size: tuple,
+    def __init__(self,
+                 imgs: List[Union[str, bytes, os.PathLike]],
+                 segs: List[Union[str, bytes, os.PathLike]],
+                 model_weights: Optional[Union[str, bytes, os.PathLike]],
+                 input_size: Optional[Tuple[int, int, int]] = None,
+                 target_size: Optional[Tuple[int, int]] = None,
                  connectivity=1):
         """
         Initializes the class instance
         :param imgs: List of files containing the cut out images ordered chronological in time
         :param segs: List of files containing the segmentation ordered in the same way as imgs
         :param model_weights: Path to the tracking model weights
-        :param input_size: A tuple of ints indicating the shape of the input
-        :param target_size: A tuple of ints indicating the shape of the target size
-        :param crop_size: A tuple of ints indicating the shape of the crop size
+        :param input_size: A tuple of ints indicating the shape of the input for the networks,
+                           this will be increased if necessary
+        :param target_size: A tuple of ints indicating the shape of the target size of the input images, if None
+                            the images will not be resized after reading
         """
 
         # set the variables
         self.imgs = imgs
         self.segs = segs
         self.num_time_steps = len(self.segs)
-
         self.model_weights = model_weights
-        self.input_size = input_size
+        if input_size is None:
+            self.input_size = (32, 32, 4)
+        else:
+            self.input_size = input_size
         self.target_size = target_size
-        self.crop_size = crop_size
         self.connectivity = connectivity
 
     def load_data(self, cur_frame: int):
@@ -69,10 +71,16 @@ class Tracking(ABC):
                 the previous segmentation
         """
 
-        img_cur_frame = resize(io.imread(self.imgs[cur_frame]), self.target_size, order=1)
-        img_prev_frame = resize(io.imread(self.imgs[cur_frame - 1]), self.target_size, order=1)
-        seg_cur_frame = (resize(io.imread(self.segs[cur_frame]) > 0, self.target_size, order=0))#.astype(int)
-        seg_prev_frame = (resize(io.imread(self.segs[cur_frame - 1]) > 0, self.target_size, order=0))#.astype(int)
+        if self.target_size is None:
+            img_cur_frame = io.imread(self.imgs[cur_frame])
+            img_prev_frame = io.imread(self.imgs[cur_frame - 1])
+            seg_cur_frame = (io.imread(self.segs[cur_frame]) > 0).astype(int)
+            seg_prev_frame = (io.imread(self.segs[cur_frame - 1]) > 0).astype(int)
+        else:
+            img_cur_frame = resize(io.imread(self.imgs[cur_frame]), self.target_size, order=1)
+            img_prev_frame = resize(io.imread(self.imgs[cur_frame - 1]), self.target_size, order=1)
+            seg_cur_frame = (resize(io.imread(self.segs[cur_frame]) > 0, self.target_size, order=0))
+            seg_prev_frame = (resize(io.imread(self.segs[cur_frame - 1]) > 0, self.target_size, order=0))
 
         return img_cur_frame, img_prev_frame, seg_cur_frame, seg_prev_frame
 
@@ -131,41 +139,58 @@ class DeltaTypeTracking(Tracking):
         label_prev_frame, num_cells = label(seg_prev_frame, return_num=True, connectivity=self.connectivity)
         label_cur_frame = label(seg_cur_frame, connectivity=self.connectivity)
 
-        props = regionprops(label_prev_frame)
+        # get the props and create an area dict for the current frame
+        props_prev = regionprops(label_prev_frame)
+        props_curr = regionprops(label_cur_frame)
+        areas = {r.label: r.area for r in props_curr}
+
+        # get the distance matrix of the centroids
+        centers_prev = np.array([p.centroid for p in props_prev])
+        centers_curr = np.array([p.centroid for p in props_curr])
+        dist_mat = distance_matrix(centers_prev, centers_curr)
+
+        # if min distance between to cells in the frames is smaller than our input, we adjust to the next higher
+        min_dist = int(np.max(np.min(dist_mat, axis=1)))
+        # the square crop region should be large enough to fit the biggest cell
+        min_dist = np.maximum(min_dist, np.max([r.axis_major_length for r in props_curr]).astype(int))
+        if min_dist >= self.input_size[0]:
+            self.logger.info(f"Current max dist between cells: {min_dist}, increasing input size of model...")
+            self.input_size = (min_dist // 32 + 1) * 32, (min_dist // 32 + 1) * 32, 4
+            self.load_model()
 
         # create the input
         input_whole_frame = np.stack([img_prev_frame, label_prev_frame, img_cur_frame, seg_cur_frame], axis=-1)
 
         # Crop images/segmentations per cell and combine all images/segmentations for input
-        input_cur_frame = np.zeros((num_cells, self.crop_size[0], self.crop_size[1], 4))
-        crop_box = {}
-        for cell_ix, p in enumerate(props):
+        input_cur_frame = np.zeros((num_cells, self.input_size[0], self.input_size[1], 4))
+        crop_box = np.zeros((num_cells, 4), dtype=int)
+        for cell_ix, p in enumerate(props_prev):
             # get the center
             row, col = p.centroid
 
             # create the cropbox
-            radius_row = self.crop_size[0] / 2
-            radius_col = self.crop_size[1] / 2
+            radius_row = self.input_size[0] / 2
+            radius_col = self.input_size[1] / 2
 
             # take care of going out of the image
             min_row = np.maximum(0, int(row - radius_row))
             min_col = np.maximum(0, int(col - radius_col))
-            max_row = min_row + self.crop_size[0]
-            max_col = min_col + self.crop_size[1]
+            max_row = min_row + self.input_size[0]
+            max_col = min_col + self.input_size[1]
 
             # take care of overshooting
             if max_row > img_cur_frame.shape[0]:
                 max_row = img_cur_frame.shape[0]
-                min_row = max_row - self.crop_size[0]
+                min_row = max_row - self.input_size[0]
             if max_col > img_cur_frame.shape[1]:
                 max_col = img_cur_frame.shape[1]
-                min_col = max_col - self.crop_size[1]
+                min_col = max_col - self.input_size[1]
 
             # get the image with just the current label
             seed = (label_prev_frame[min_row:max_row, min_col:max_col] == p.label).astype(int)
             label_cur_frame_crop = label_cur_frame[min_row:max_row, min_col:max_col]
             # remove cells that were split during the crop
-            seg_clean = self.clean_crop(label_cur_frame, label_cur_frame_crop)
+            seg_clean = self.clean_crop(areas, label_cur_frame_crop)
             
             cell_ix = p.label - 1
             input_cur_frame[cell_ix, :, :, 0] = img_prev_frame[min_row:max_row, min_col:max_col]
@@ -173,23 +198,25 @@ class DeltaTypeTracking(Tracking):
             input_cur_frame[cell_ix, :, :, 2] = img_cur_frame[min_row:max_row, min_col:max_col]
             input_cur_frame[cell_ix, :, :, 3] = seg_clean
 
-            crop_box[cell_ix] = (min_row, min_col, max_row, max_col)
+            crop_box[cell_ix] = min_row, min_col, max_row, max_col
 
         return input_cur_frame, input_whole_frame, crop_box
 
-    def clean_crop(self, seg: np.ndarray, seg_crop: np.ndarray):
+    def clean_crop(self, areas: dict, seg_crop: np.ndarray):
         """
         Cleans the cropped segmentation by removing all cells which have been cut during the cropping.
-        :param seg: Segmentation of full image.
+        :param areas: A dict of label -> area of the full segmentation frame
         :param seg_crop: Segmentation of cropped image.
         :return: The cleaned up segmentation
         """
 
+        # FIXME: This function is still fairly inefficient, the best way would be to check the intersection of the
+        # FIXME: bounding boxes with the crop, but since this is still much faster than the network pass I am
+        # FIXME: currently too lazy to implement it
+
         # Generate dictionary with cell indices as keys and area as values for the full and cropped segmentation.
-        regs = regionprops(seg)
         regs_crop = regionprops(seg_crop)
 
-        areas = {r.label: r.area for r in regs}
         areas_crop = {r.label: r.area for r in regs_crop}
 
         # Compare area of cell in full and cropped segmentation and remove cells which are smaller than original cell.
@@ -245,8 +272,8 @@ class DeltaTypeTracking(Tracking):
         self.load_model()
 
         # Loop over all time frames
-        inputs_all = np.empty((self.num_time_steps-1,) + self.target_size + (4,))
-        results_all = np.empty((self.num_time_steps-1,) + self.target_size + (2,))
+        inputs_all = []
+        results_all = []
 
         ram_usg = process.memory_info().rss * 1e-9
         for cur_frame in (pbar := tqdm(range(1, self.num_time_steps), postfix={"RAM": f"{ram_usg:.1f} GB"})):
@@ -254,81 +281,53 @@ class DeltaTypeTracking(Tracking):
 
             # check if there is a segmentation
             if inputs_cur_frame.size > 0:
-                results_cur_frame_crop = self.model.predict(inputs_cur_frame, verbose=0)
+                results_cur_frame_crop = self.model.predict(inputs_cur_frame.astype(np.float32),
+                                                            verbose=0,
+                                                            batch_size=128)
             else:
                 results_cur_frame_crop = np.empty_like(inputs_cur_frame)
 
             # Combine cropped results in one image
-            results_cur_frame = np.zeros((results_cur_frame_crop.shape[0], self.target_size[0],
-                                          self.target_size[1], 1))
+            results_cur_frame = self.transfer_results(full_shape=input_whole_frame.shape[:2] + (2,),
+                                                      inp=inputs_cur_frame,
+                                                      res=results_cur_frame_crop,
+                                                      crop_boxes=crop_box)
 
-            for i in range(len(crop_box)):
-                row_min, col_min, row_max, col_max = crop_box[i]
-                results_cur_frame[i, row_min:row_max, col_min:col_max,:] = results_cur_frame_crop[i]
-
-            # Clean results and add to array
-            results_cur_frame_clean = self.clean_cur_frame(input_whole_frame[:, :, 3], results_cur_frame)
-            results_cur_frame_red = self.reduce_results(results_cur_frame_clean)
-
-            if results_cur_frame_red is not None:
-                results_all[cur_frame-1] = results_cur_frame_red
-
-            inputs_all[cur_frame-1] = input_whole_frame
+            # add to results
+            results_all.append(results_cur_frame)
+            inputs_all.append(input_whole_frame)
 
             ram_usg = process.memory_info().rss * 1e-9
             pbar.set_postfix({"RAM": f"{ram_usg:.1f} GB"})
 
-        return inputs_all, results_all
+        return np.array(inputs_all), np.array(results_all)
 
-    def clean_cur_frame(self, inp: np.ndarray, res: np.ndarray):
-        """
-        Clean result from cropped image by comparing the segmentation with the result from the tracking.
-        :param inp: Segmentation of full image.
-        :param res: Result of the tracking.
-        :return: The cleaned up tracking result
-        """
+    def transfer_results(self, full_shape: Tuple[int, int, int], inp: np.ndarray, res: np.ndarray,
+                         crop_boxes: np.ndarray):
+        target = np.zeros(full_shape)
 
-        # Labeling of the segmentation.
-        inp_label = label(inp, connectivity=self.connectivity)
+        for cell_id, (i, r, c) in enumerate(zip(inp, res, crop_boxes)):
+            # extract the crop boxes
+            row_min, col_min, row_max, col_max = c
 
-        # Compare cell from tracking with cell from segmentation and
-        # find cells which are overlapping most.
-        res_clean = np.zeros(res.shape[:-1] + (2,))
-        for ri, r in enumerate(res):
+            # we get the view of the target that is relevant
+            crop_target = target[row_min:row_max, col_min:col_max, :]
 
-            r_label = label(r[:, :, 0] > 0.9, connectivity=self.connectivity)
+            # the relevant images
+            i_candidates = i[..., 3]
 
-            overl = inp_label[np.multiply(inp, r_label) > 0]
-            cell_labels = np.unique(overl)
-            overl_areas = [np.count_nonzero(overl == l) for l in cell_labels]
-            ix_max_overl = np.argsort(overl_areas)[-2:]
-            label_max_overl = cell_labels[ix_max_overl]
+            # label the candiates
+            inp_label = label(i_candidates, connectivity=self.connectivity)
+            # get the count of the max overlay
+            bin_count = np.bincount(inp_label[r[:, :, 0] > 0.9])
+            # this gets the indexes of the two largest count (not including the 0 bin) the largest count is first
+            label_max_overl = np.argsort(bin_count[1:])[-1:-3:-1] + 1
 
-            for i, c in enumerate(label_max_overl):
-                res_clean[ri, :, :, i][inp_label == c] = 1
+            for num, (color, count) in enumerate(zip(label_max_overl, bin_count[label_max_overl])):
+                if count > 0:
+                    crop_target[..., num][inp_label == color] = cell_id + 1
 
-        res_clean = np.array(res_clean)
-        return res_clean
-
-
-    def reduce_results(self, results: np.ndarray):
-        """
-        Reduces the amount of output from the delta model from individual images per cell to full images
-        :param output_folder: Where to save the output
-        :param results: The results
-        :return: The reduced data or None if no cells were tracked
-        """
-
-        results_red = np.zeros((1,) + self.target_size + (2,))
-        
-        if len(results) > 0:
-            for ix, cell_id in enumerate(results):
-                if cell_id[:, :, 0].sum() > 0:
-                    results_red[0, cell_id[:, :, 0] > 0, 0] = ix + 1
-                if cell_id[:, :, 1].sum() > 0:
-                    results_red[0, cell_id[:, :, 1] > 0, 1] = ix + 1
-
-            return results_red
+        return target
 
     def store_data(self, output_folder: Union[str, bytes, os.PathLike], input: np.ndarray, result: np.ndarray):
         """ 

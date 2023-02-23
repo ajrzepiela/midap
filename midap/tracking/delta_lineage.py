@@ -77,12 +77,12 @@ class DeltaTypeLineages:
         track_id = 1
 
         # this goes through all labeled input the last
-        for frame_num, label_inp in tqdm(enumerate(self.inputs[...,1])):
+        for frame_num, label_inp in tqdm(enumerate(self.inputs[...,1]), total=self.n_frames):
             # we get all cells in the frame, first element is background
             current_local_ids = np.unique(label_inp)[1:]
 
             # cycle through all local ids
-            for local_id in tqdm(current_local_ids):
+            for local_id in current_local_ids:
                 # track the cell if it's not already part of a lineage
                 if local_id not in self.track_output.loc[self.track_output["frame"] == frame_num, "labelID"].values:
                     global_id, track_id = self._track_cell(frame_index=frame_num, cell_label=local_id,
@@ -233,12 +233,10 @@ class DeltaTypeLineages:
         self.track_output.to_csv(output_folder.joinpath('track_output_delta.csv'), index=True)
 
         raw_inputs = self.inputs[:, :, :, 0]
-        with h5py.File(output_folder.joinpath('raw_inputs_delta.h5'), 'w') as hf:
-            hf.create_dataset('raw_inputs', data=raw_inputs)
+        with h5py.File(output_folder.joinpath('tracking_delta.h5'), 'w') as hf:
+            hf.create_dataset('images', data=raw_inputs.astype(float), dtype=float)
+            hf.create_dataset('labels', data=self.label_stack.astype(int), dtype=int)
 
         segs = self.inputs[0, :, :, 3]
         with h5py.File(output_folder.joinpath('segmentations_delta.h5'), 'w') as hf:
             hf.create_dataset('segmentations', data=segs)
-
-        with h5py.File(output_folder.joinpath('label_stack_delta.h5'), 'w') as hf:
-            hf.create_dataset('label_stack', data=self.label_stack)

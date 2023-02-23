@@ -1,12 +1,7 @@
-import argparse
-import numpy as np
 import os
+import argparse
 from pathlib import Path
 from typing import Union
-
-from skimage import io
-from skimage.measure import label
-from skimage.transform import resize
 
 # to get all subclasses
 from midap.tracking import *
@@ -50,30 +45,13 @@ def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel=7):
     seg_names_sort = sorted(segmentation_folder.glob('*frame*.tif'))
 
     # Parameters:
-    crop_size = (128, 128)
     connectivity = 1
-
-    # Check if image resizing merges cells and adjust image size accordingly
-    seg = io.imread(seg_names_sort[0])
-    num_cells_orig = np.max(seg)
-    num_cells_resize = np.max(label(resize(seg > 0, (512, 512)), connectivity=connectivity))
-
-    if num_cells_resize == num_cells_orig:
-        target_size = (512,512)
-    else:
-        img = io.imread(img_names_sort[0])
-        row = int(img.shape[0]/8)*8
-        col = int(img.shape[1]/8)*8
-        target_size = (row, col)
-
-    # If images are too small, always increase to crop size
-    if target_size[0] < crop_size[0] or target_size[1] < crop_size[1]:
-        target_size = crop_size
-
-    input_size = crop_size + (4,)
+    target_size = None
+    input_size = None
 
     # Process
-    tr = class_instance(img_names_sort, seg_names_sort, model_file, input_size, target_size, crop_size, connectivity)
+    tr = class_instance(imgs=img_names_sort, segs=seg_names_sort, model_weights=model_file, input_size=input_size,
+                        target_size=target_size, connectivity=connectivity)
     tr.track_all_frames(output_folder)
 
 

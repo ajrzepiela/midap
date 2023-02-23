@@ -1,10 +1,11 @@
-import skimage.io as io
-import pandas as pd
+from pathlib import Path
+
 import numpy as np
+import skimage.io as io
+from pytest import fixture
 
 from midap.tracking.bayesian_tracking import BayesianCellTracking
-from pytest import fixture
-from pathlib import Path
+
 
 # Fixtures
 ##########
@@ -85,24 +86,15 @@ def tracking_instance(monkeypatch, img1, img2, img3):
 
     # the model weights (this is a dummy for v1 tracking but we set it corret anyway)
     weight_path = Path(__file__).absolute().parent.parent.parent
-    weight_path = weight_path.joinpath(
-        "model_weights", "model_weights_tracking", "unet_moma_track_multisets.hdf5"
-    )
+    weight_path = weight_path.joinpath("model_weights", "model_weights_tracking", "unet_moma_track_multisets.hdf5")
 
     # sizes
-    crop_size = (128, 128)
-    target_size = (512, 512)
-    input_size = crop_size + (4,)
+    target_size = None
+    input_size = None
 
     # get the instance
-    bayes = BayesianCellTracking(
-        imgs=imgs,
-        segs=segs,
-        model_weights=weight_path,
-        input_size=input_size,
-        target_size=target_size,
-        crop_size=crop_size,
-    )
+    bayes = BayesianCellTracking(imgs=imgs, segs=segs, model_weights=weight_path, input_size=input_size,
+                                 target_size=target_size)
 
     return bayes
 
@@ -124,7 +116,7 @@ def test_run_model_crop(tracking_instance):
 
     track_output_correct = tracking_instance.track_output_correct
 
-    # The first cell splits into cells with IDs 2 ansd 3
+    # The first cell splits into cells with IDs 2 and 3
     track_output_red = track_output_correct[track_output_correct["trackID"] == 1]
     assert track_output_red["trackID_d1"][0] == 3
     assert track_output_red["trackID_d2"][0] == 2
