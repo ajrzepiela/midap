@@ -29,6 +29,11 @@ Feature:
 Fix:
 - Track ID of delta lineage started with 0, leading to a lost cell
 
+Efficiency:
+- Delta tracking now avoids resize of input
+- Delta tracking data prep and cleanup much more efficient
+- Delta tracking lower memory footprint 
+
 ## [0.3.4]
 
 2023-02-10
