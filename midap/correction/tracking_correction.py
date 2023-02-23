@@ -12,11 +12,10 @@ from packaging.version import parse as parse_version
 from qtpy.QtWidgets import (
     QGridLayout,
     QWidget,
-    QPushButton,
 )
 
 from midap.correction.data_handler import CorrectionData, LineageOPException
-from midap.correction.side_panel_gui import InfoBox, FrameSlider
+from midap.correction.side_panel_gui import InfoBox, FrameSlider, SaveButton
 
 # TODO: remove timers
 from time import perf_counter
@@ -147,7 +146,7 @@ class MultipleViewerWidget(QWidget):
 
         # save button
         # TODO: Format and add function, create a subclass for this as info box to get the style
-        self.save_btn = QPushButton("Save")
+        self.save_btn = SaveButton()
 
         # The napari qt viewer is already in a layout (box)
         # we add the parent to a temp layout to remove it from the window
@@ -680,6 +679,7 @@ class MultipleViewerWidget(QWidget):
 def main():
     # read in the data
     path = Path("../../../Tests/tracking_tool/test_data/many_cells/pos1/GFP/track_output")
+    #path = Path("../../../Tests/tracking_tool/test_data/PH")
     data_file = path.joinpath("tracking_delta.h5")
     csv_file = path.joinpath("track_output_delta.csv")
     with CorrectionData(csv_file=csv_file, data_file=data_file) as correction_data:

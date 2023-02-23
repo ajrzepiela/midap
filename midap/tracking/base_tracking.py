@@ -162,6 +162,7 @@ class DeltaTypeTracking(Tracking):
 
         # Crop images/segmentations per cell and combine all images/segmentations for input
         input_cur_frame = np.zeros((num_cells, self.input_size[0], self.input_size[1], 4))
+        labeled_input_cur_frame = np.zeros((num_cells, self.input_size[0], self.input_size[1]), dtype=int)
         crop_box = np.zeros((num_cells, 4), dtype=int)
         for cell_ix, p in enumerate(props_prev):
             # get the center
@@ -189,17 +190,18 @@ class DeltaTypeTracking(Tracking):
             seed = (label_prev_frame[min_row:max_row, min_col:max_col] == p.label).astype(int)
             label_cur_frame_crop = label_cur_frame[min_row:max_row, min_col:max_col]
             # remove cells that were split during the crop
-            seg_clean = self.clean_crop(areas, label_cur_frame_crop)
+            seg_clean, seg_clean_bin = self.clean_crop(areas, label_cur_frame_crop)
             
             cell_ix = p.label - 1
             input_cur_frame[cell_ix, :, :, 0] = img_prev_frame[min_row:max_row, min_col:max_col]
             input_cur_frame[cell_ix, :, :, 1] = seed
             input_cur_frame[cell_ix, :, :, 2] = img_cur_frame[min_row:max_row, min_col:max_col]
-            input_cur_frame[cell_ix, :, :, 3] = seg_clean
+            input_cur_frame[cell_ix, :, :, 3] = seg_clean_bin
+            labeled_input_cur_frame[cell_ix] = seg_clean
 
             crop_box[cell_ix] = min_row, min_col, max_row, max_col
 
-        return input_cur_frame, input_whole_frame, crop_box
+        return input_cur_frame, labeled_input_cur_frame, input_whole_frame, crop_box
 
     def clean_crop(self, areas: dict, seg_crop: np.ndarray):
         """
@@ -226,7 +228,7 @@ class DeltaTypeTracking(Tracking):
 
         seg_clean_bin = (seg_clean > 0).astype(int)
 
-        return seg_clean_bin
+        return seg_clean, seg_clean_bin
 
     def check_process_time(self):
         """
@@ -237,7 +239,7 @@ class DeltaTypeTracking(Tracking):
         
         start = time.time()
         self.load_model()
-        inputs_cur_frame, input_whole_frame, crop_box = self.gen_input_crop(1)
+        inputs_cur_frame, *_ = self.gen_input_crop(1)
         _ = self.model.predict(inputs_cur_frame, verbose=0)
         end = time.time()
         
@@ -276,7 +278,7 @@ class DeltaTypeTracking(Tracking):
 
         ram_usg = process.memory_info().rss * 1e-9
         for cur_frame in (pbar := tqdm(range(1, self.num_time_steps), postfix={"RAM": f"{ram_usg:.1f} GB"})):
-            inputs_cur_frame, input_whole_frame, crop_box = self.gen_input_crop(cur_frame)
+            inputs_cur_frame, label_cur_frame, input_whole_frame, crop_box = self.gen_input_crop(cur_frame)
 
             # check if there is a segmentation
             if inputs_cur_frame.size > 0:
@@ -288,7 +290,7 @@ class DeltaTypeTracking(Tracking):
 
             # Combine cropped results in one image
             results_cur_frame = self.transfer_results(full_shape=input_whole_frame.shape[:2] + (2,),
-                                                      inp=inputs_cur_frame,
+                                                      labels=label_cur_frame,
                                                       res=results_cur_frame_crop,
                                                       crop_boxes=crop_box)
 
@@ -301,30 +303,36 @@ class DeltaTypeTracking(Tracking):
 
         return np.array(inputs_all), np.array(results_all)
 
-    def transfer_results(self, full_shape: Tuple[int, int, int], inp: np.ndarray, res: np.ndarray,
+    def transfer_results(self, full_shape: Tuple[int, int, int], labels: np.ndarray, res: np.ndarray,
                          crop_boxes: np.ndarray):
+        """
+        Transfers the results to a single frame
+        :param full_shape: The full shape of the final image
+        :param labels: A stack of cropped images (BWH) that contain the correct labels of the final cells
+        :param res: The output of the network
+        :param crop_boxes: The crop boxes for each input
+        :return: An array that is delta v1 like, i.e. WH2 where the first channels dim and second channel dim contain
+                 the daughter cells
+        """
+
+        #
         target = np.zeros(full_shape)
 
-        for cell_id, (i, r, c) in enumerate(zip(inp, res, crop_boxes)):
+        for cell_id, (i, r, c) in enumerate(zip(labels, res, crop_boxes)):
             # extract the crop boxes
             row_min, col_min, row_max, col_max = c
 
             # we get the view of the target that is relevant
             crop_target = target[row_min:row_max, col_min:col_max, :]
 
-            # the relevant images
-            i_candidates = i[..., 3]
-
-            # label the candiates
-            inp_label = label(i_candidates, connectivity=self.connectivity)
             # get the count of the max overlay
-            bin_count = np.bincount(inp_label[r[:, :, 0] > 0.9])
+            bin_count = np.bincount(i[r[:, :, 0] > 0.9])
             # this gets the indexes of the two largest count (not including the 0 bin) the largest count is first
             label_max_overl = np.argsort(bin_count[1:])[-1:-3:-1] + 1
 
             for num, (color, count) in enumerate(zip(label_max_overl, bin_count[label_max_overl])):
                 if count > 0:
-                    crop_target[..., num][inp_label == color] = cell_id + 1
+                    crop_target[..., num][i == color] = cell_id + 1
 
         return target
 

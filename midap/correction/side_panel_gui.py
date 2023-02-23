@@ -454,6 +454,34 @@ class InfoBox(QWidget):
         self.viewer.window._qt_viewer.setFocus()
 
 
+class SaveButton(GenericBox):
+    """
+    A save button that write the data to dist
+    """
+
+    def __init__(self, save_function_callback=None):
+        """
+        Inits the widget
+        :param save_function_callback: The function that should be triggered when the button is saved
+        """
+        # proper init
+        super().__init__()
+
+        # attributes
+        self.save_function_callback = save_function_callback
+
+        # the button
+        self.save_btn = QPushButton("Save label stack")
+        self.save_btn.setStyleSheet("text-align:center;");
+
+        # layout
+        layout = QHBoxLayout()
+        layout.addWidget(self.save_btn)
+
+        # Finalize
+        self.setLayout(layout)
+
+
 class FrameSlider(QWidget):
     """
     The slider at the bottom of the page that allows to switch between frames
