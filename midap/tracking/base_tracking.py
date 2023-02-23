@@ -71,16 +71,15 @@ class Tracking(ABC):
                 the previous segmentation
         """
 
+        img = io.imread(self.imgs[cur_frame])
         if self.target_size is None:
-            img_cur_frame = io.imread(self.imgs[cur_frame])
-            img_prev_frame = io.imread(self.imgs[cur_frame - 1])
-            seg_cur_frame = (io.imread(self.segs[cur_frame]) > 0).astype(int)
-            seg_prev_frame = (io.imread(self.segs[cur_frame - 1]) > 0).astype(int)
+            target_size = img.shape
         else:
-            img_cur_frame = resize(io.imread(self.imgs[cur_frame]), self.target_size, order=1)
-            img_prev_frame = resize(io.imread(self.imgs[cur_frame - 1]), self.target_size, order=1)
-            seg_cur_frame = (resize(io.imread(self.segs[cur_frame]) > 0, self.target_size, order=0))
-            seg_prev_frame = (resize(io.imread(self.segs[cur_frame - 1]) > 0, self.target_size, order=0))
+            target_size = self.target_size
+        img_cur_frame = resize(img, target_size, order=1)
+        img_prev_frame = resize(io.imread(self.imgs[cur_frame - 1]), target_size, order=1)
+        seg_cur_frame = (resize(io.imread(self.segs[cur_frame]) > 0, target_size, order=0))
+        seg_prev_frame = (resize(io.imread(self.segs[cur_frame - 1]) > 0, target_size, order=0))
 
         return img_cur_frame, img_prev_frame, seg_cur_frame, seg_prev_frame
 

@@ -89,7 +89,7 @@ class SegmentationPredictor(ABC):
 
             # save individual image
             label_fname = re.sub("(_cut.tif|_cut.png|.tif)", "_seg.tif", p)
-            io.imsave(os.path.join(path_seg, label_fname), seg_label.astype(np.int64), check_contrast=False)
+            io.imsave(os.path.join(path_seg, label_fname), seg_label.astype(np.uint16), check_contrast=False)
             seg_fname = re.sub("(_cut.tif|_cut.png|.tif)", "_seg_bin.png", p)
             io.imsave(os.path.join(path_seg_bin, seg_fname), (255*seg).astype(np.uint8), check_contrast=False)
 

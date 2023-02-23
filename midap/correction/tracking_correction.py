@@ -679,7 +679,7 @@ class MultipleViewerWidget(QWidget):
 
 def main():
     # read in the data
-    path = Path("../../../Tests/tracking_tool/test_data/PH")
+    path = Path("../../../Tests/tracking_tool/test_data/many_cells/pos1/GFP/track_output")
     data_file = path.joinpath("tracking_delta.h5")
     csv_file = path.joinpath("track_output_delta.csv")
     with CorrectionData(csv_file=csv_file, data_file=data_file) as correction_data:

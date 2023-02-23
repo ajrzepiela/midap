@@ -25,6 +25,7 @@ TBD
 
 Feature:
 - Tracking tool
+- Label images now uint16
 
 Fix:
 - Track ID of delta lineage started with 0, leading to a lost cell
