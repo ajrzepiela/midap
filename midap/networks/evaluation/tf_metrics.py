@@ -1,7 +1,7 @@
 from typing import List, Optional
 
 import tensorflow as tf
-from cellpose import metrics
+from . import metrics
 from skimage.measure import label
 
 

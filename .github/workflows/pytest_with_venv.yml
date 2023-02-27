@@ -74,10 +74,6 @@ jobs:
         pip install -r ./euler/requirements.txt
         # tensorflow is usually taken from euler, minor flake for linting
         pip install tensorflow flake8
-        # this has to be installed in this order (so not in requirements)
-        pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
-        pip install opencv-python-headless==4.6.0.66
-        pip install cellpose
         # the package
         pip install -e .
 
