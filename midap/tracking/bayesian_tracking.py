@@ -93,6 +93,12 @@ class BayesianCellTracking(Tracking):
             tracks = tracker.tracks
 
         self.logger.info("Creating label stack...")
+        # init the dataframe
+        columns = ['frame', 'labelID', 'trackID', 'lineageID', 'trackID_d1', 'trackID_d2', 'split',
+                   'trackID_mother', 'first_frame', 'last_frame']
+        df = pd.DataFrame(columns=columns)
+
+        # list to transform the labels later
         label_transforms = []
         global_id = 1
         for track in tracks:

@@ -504,7 +504,7 @@ class TrackingData(object):
         self.track_id_transforms.extend(transformations)
 
 
-@njit()
+@njit(cache=True)
 def update_labels(label_frame: np.ndarray, frame_number: int, transformations: np.ndarray):
     """
     Updates the labels in a given frame
@@ -528,7 +528,7 @@ def update_labels(label_frame: np.ndarray, frame_number: int, transformations: n
     return label_frame
 
 
-@njit()
+@njit(cache=True)
 def mark_selection(selection: np.ndarray, label: np.ndarray, ids: np.ndarray, colors: np.ndarray):
     """
     Updates the selection array, all pixels where the label has an id in ids will get the color
