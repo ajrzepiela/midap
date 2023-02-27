@@ -8,7 +8,7 @@ import h5py
 import numpy as np
 import pandas as pd
 from napari.utils.notifications import show_info
-from numba import njit
+from numba import njit, types, typed
 
 # Constants
 ###########
@@ -528,6 +528,27 @@ def update_labels(label_frame: np.ndarray, frame_number: int, transformations: n
     return label_frame
 
 
+@njit()
+def mark_selection(selection: np.ndarray, label: np.ndarray, ids: types.DictType, color: int):
+    """
+    Updates the selection array, all pixels where the label has an id in ids will get the color
+    :param selection: The current selection array (2D)
+    :param label: The corresponding label array (2D)
+    :param ids: A 1D array of labels
+    :param color: The color that should be used for the updates
+    :return: The updated selection array
+    """
+
+    n, m = label.shape
+
+    for i in range(n):
+        for j in range(m):
+            if label[i, j] in ids:
+                selection[i, j] = color
+
+    return selection
+
+
 class CorrectionData(object):
     """
     This class handles all the data relevant for the tracking correction tool
@@ -611,25 +632,26 @@ class CorrectionData(object):
         # orphan selection
         if mark_orphans and frame_number != 0:
             orphan_ids = self.tracking_data.get_number_of_orphans(frame_number=frame_number, return_ids=True)
-            for orphan_id in orphan_ids:
-                new_data = np.where(label == orphan_id, 3, new_data)
+            new_data = mark_selection(selection=new_data, label=label, color=3,
+                                      ids=np.asarray(orphan_ids, dtype=np.int32))
 
         # dying selection
         if mark_dying and frame_number != self.n_frames - 1:
             dying_ids = self.tracking_data.get_number_of_dying(frame_number=frame_number, return_ids=True)
-            for dying_id in dying_ids:
-                new_data = np.where(label == dying_id, 4, new_data)
+            new_data = mark_selection(selection=new_data, label=label, color=4,
+                                      ids=np.asarray(dying_ids, dtype=np.int32))
 
         # we do this here to overwrite the other data
         if selection is not None:
             # normal selection
-            new_data = np.where(label == selection, 1, new_data)
+            new_data = mark_selection(selection=new_data, label=label, color=1,
+                                      ids=np.array([selection], dtype=np.int32))
 
             # kids selections
             daughters = self.tracking_data.get_kids_id(track_id=selection)
             if len(daughters) == 2:
-                new_data = np.where(label == daughters[0], 2, new_data)
-                new_data = np.where(label == daughters[1], 2, new_data)
+                new_data = mark_selection(selection=new_data, label=label, color=2,
+                                          ids=np.asarray(daughters, dtype=np.int32))
 
         return new_data
 
