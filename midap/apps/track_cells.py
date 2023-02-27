@@ -5,7 +5,7 @@ from typing import Union
 
 # to get all subclasses
 from midap.tracking import *
-from midap.tracking import base_tracking
+from midap.tracking import base_tracking, cell_props
 from midap.utils import get_logger, get_inheritors
 
 
@@ -52,7 +52,12 @@ def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel=7):
     # Process
     tr = class_instance(imgs=img_names_sort, segs=seg_names_sort, model_weights=model_file, input_size=input_size,
                         target_size=target_size, connectivity=connectivity)
-    tr.track_all_frames(output_folder)
+    data_file, csv_file = tr.track_all_frames(output_folder)
+
+    # add the region props
+    if data_file is not None and csv_file is not None:
+        props = cell_props.CellProps(data_file=data_file, csv_file=csv_file)
+        props.add_cell_probs(csv_file)
 
 
 if __name__ == "__main__":

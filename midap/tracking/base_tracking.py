@@ -120,9 +120,12 @@ class DeltaTypeTracking(Tracking):
 
         if results is not None:
             lin = DeltaTypeLineages(inputs=np.array(inputs), results=results)
-            lin.store_lineages(output_folder=output_folder)
+            data_file, csv_file = lin.store_lineages(output_folder=output_folder)
         else:
             logger.warning("Tracking did not generate any output!")
+            data_file, csv_file = None, None
+
+        return data_file, csv_file
 
     def gen_input_crop(self, cur_frame: int):
         """
