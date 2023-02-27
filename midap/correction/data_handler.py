@@ -529,22 +529,27 @@ def update_labels(label_frame: np.ndarray, frame_number: int, transformations: n
 
 
 @njit()
-def mark_selection(selection: np.ndarray, label: np.ndarray, ids: types.DictType, color: int):
+def mark_selection(selection: np.ndarray, label: np.ndarray, ids: np.ndarray, colors: np.ndarray):
     """
     Updates the selection array, all pixels where the label has an id in ids will get the color
     :param selection: The current selection array (2D)
     :param label: The corresponding label array (2D)
-    :param ids: A 1D array of labels
-    :param color: The color that should be used for the updates
+    :param ids: An 1D array of IDs to transform, for double entries the last entry is taken
+    :param colors: A 1D array of the corresponding color
     :return: The updated selection array
     """
 
-    n, m = label.shape
+    # create the dict
+    id_dict = typed.Dict.empty(key_type=types.int32, value_type=types.int32)
+    for i, c in zip(ids, colors):
+        id_dict[i] = c
 
+    # assign
+    n, m = label.shape
     for i in range(n):
         for j in range(m):
-            if label[i, j] in ids:
-                selection[i, j] = color
+            if label[i, j] in id_dict:
+                selection[i, j] = id_dict[label[i, j]]
 
     return selection
 
@@ -626,32 +631,41 @@ class CorrectionData(object):
         # get the label
         label = self.get_label(frame_number=frame_number)
 
-        # init the new data
+        # init the new data, note we make list of things because doing a numba array here with int32s will lead to
+        # many annoying warnings
         new_data = np.zeros_like(label)
+        ids = []
+        colors = []
 
         # orphan selection
         if mark_orphans and frame_number != 0:
             orphan_ids = self.tracking_data.get_number_of_orphans(frame_number=frame_number, return_ids=True)
-            new_data = mark_selection(selection=new_data, label=label, color=3,
-                                      ids=np.asarray(orphan_ids, dtype=np.int32))
+            for orphan_id in orphan_ids:
+                ids.append(orphan_id)
+                colors.append(3)
 
         # dying selection
         if mark_dying and frame_number != self.n_frames - 1:
             dying_ids = self.tracking_data.get_number_of_dying(frame_number=frame_number, return_ids=True)
-            new_data = mark_selection(selection=new_data, label=label, color=4,
-                                      ids=np.asarray(dying_ids, dtype=np.int32))
+            for dying_id in dying_ids:
+                ids.append(dying_id)
+                colors.append(4)
 
         # we do this here to overwrite the other data
         if selection is not None:
             # normal selection
-            new_data = mark_selection(selection=new_data, label=label, color=1,
-                                      ids=np.array([selection], dtype=np.int32))
+            ids.append(selection)
+            colors.append(1)
 
             # kids selections
             daughters = self.tracking_data.get_kids_id(track_id=selection)
-            if len(daughters) == 2:
-                new_data = mark_selection(selection=new_data, label=label, color=2,
-                                          ids=np.asarray(daughters, dtype=np.int32))
+            for daughter in daughters:
+                ids.append(daughter)
+                colors.append(2)
+
+        # mark everything
+        new_data = mark_selection(selection=new_data, label=label, ids=np.array(ids, dtype=np.int32),
+                                  colors=np.array(colors, dtype=np.int32))
 
         return new_data
 
