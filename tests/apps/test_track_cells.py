@@ -74,7 +74,7 @@ def test_main(prep_dirs):
     # check number of frames and number of cells
     res_df = pd.read_csv(delta_track_file)
     assert np.unique(res_df["frame"]).size == 2
-    assert len(res_df) == 58
+    assert len(res_df) == 57
 
     # bayes tracking
     main(path=prep_dirs, tracking_class="BayesianCellTracking")

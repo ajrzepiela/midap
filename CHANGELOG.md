@@ -29,6 +29,7 @@ Feature:
 
 Fix:
 - Track ID of delta lineage started with 0, leading to a lost cell
+- Fixed double assignment bug in delta tracking, where the same cell can be overwritten, i.e. be the successor for two cells
 
 Efficiency:
 - Delta tracking now avoids resize of input
