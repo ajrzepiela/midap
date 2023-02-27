@@ -110,7 +110,8 @@ class SegmentationPredictor(ABC):
         min_size = np.mean(areas)*0.01
         mask_sizes = (sizes > min_size)
         mask_sizes[0] = 0
-        img_filt = (mask_sizes[label_objects] > 0).astype(int)
+        # we multiply the labels to get a labelled image back
+        img_filt = (mask_sizes[label_objects] > 0).astype(int)*label_objects
 
         return img_filt
 

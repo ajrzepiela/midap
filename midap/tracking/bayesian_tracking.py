@@ -54,7 +54,8 @@ class BayesianCellTracking(Tracking):
         """
 
         # gen the inputs
-        objects = btrack.utils.segmentation_to_objects(segmentation=self.seg_imgs, intensity_image=self.raw_imgs)
+        objects = btrack.utils.segmentation_to_objects(segmentation=self.seg_imgs, intensity_image=self.raw_imgs,
+                                                       assign_class_ID=True)
         config_file = datasets.cell_config()
 
         # choose update method depending on number of cells
@@ -90,6 +91,15 @@ class BayesianCellTracking(Tracking):
 
             # get the tracks as a python list
             tracks = tracker.tracks
+
+        self.logger.info("Creating label stack...")
+        label_transforms = []
+        global_id = 1
+        for track in tracks:
+
+            global_id += 1
+
+
 
         return tracks
 

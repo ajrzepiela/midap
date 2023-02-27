@@ -119,7 +119,7 @@ class DeltaTypeTracking(Tracking):
         self.store_data(output_folder, inputs, results)
 
         if results is not None:
-            lin = DeltaTypeLineages(inputs=np.array(inputs), results=results)
+            lin = DeltaTypeLineages(inputs=np.array(inputs), results=results, connectivity=self.connectivity)
             data_file, csv_file = lin.store_lineages(output_folder=output_folder)
         else:
             logger.warning("Tracking did not generate any output!")

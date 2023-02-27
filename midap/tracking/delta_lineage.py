@@ -26,11 +26,12 @@ class DeltaTypeLineages:
     # this logger will be shared by all instances and subclasses
     logger = logger
 
-    def __init__(self, inputs: np.ndarray, results: np.ndarray, generate_lineage=True):
+    def __init__(self, inputs: np.ndarray, results: np.ndarray, connectivity: int, generate_lineage=True):
         """
         Initializes the class
         :param inputs: input array for tracking network
         :param results: output array of tracking network
+        :param connectivity: The connectivity that should be used to label
         :param generate_lineage: Generate the lineages immediately, defaults to True
         """
 
@@ -39,7 +40,7 @@ class DeltaTypeLineages:
         # we append a input for the last frame
         last_frame = np.zeros_like(inputs[:1])
         last_frame[0,...,0] = inputs[-1,...,2]
-        last_frame[0,...,1] = label(inputs[-1,...,3])
+        last_frame[0,...,1] = label(inputs[-1,...,3], connectivity=connectivity)
 
         self.inputs = np.concatenate([inputs, last_frame], axis=0)
         self.n_frames = len(self.inputs)
