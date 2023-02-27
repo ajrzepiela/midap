@@ -1,10 +1,11 @@
 import os
 from pathlib import Path
 from typing import Optional, Union
-from skimage.measure import label
+
 import h5py
 import numpy as np
 import pandas as pd
+from skimage.measure import label
 from tqdm import tqdm
 
 from ..utils import get_logger
