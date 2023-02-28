@@ -434,6 +434,8 @@ class MultipleViewerWidget(QWidget):
         if self.sync_viewers:
             self.main_viewer.camera.zoom = event.source.zoom
             self.side_viewer.camera.zoom = event.source.zoom
+        # reset focus
+        self.main_viewer.window._qt_viewer.setFocus()
 
     def _viewer_center(self, event):
         """
@@ -443,6 +445,8 @@ class MultipleViewerWidget(QWidget):
         if self.sync_viewers:
             self.main_viewer.camera.center = event.source.center
             self.side_viewer.camera.center = event.source.center
+        # reset focus
+        self.main_viewer.window._qt_viewer.setFocus()
 
     def _viewer_angles(self, event):
         """
@@ -452,6 +456,8 @@ class MultipleViewerWidget(QWidget):
         if self.sync_viewers:
             self.main_viewer.camera.angles = event.source.angles
             self.side_viewer.camera.angles = event.source.angles
+        # reset focus
+        self.main_viewer.window._qt_viewer.setFocus()
 
     def change_frame(self, frame: int, update_on_same=True):
         """
@@ -703,8 +709,8 @@ class MultipleViewerWidget(QWidget):
 
 def main():
     # read in the data
-    #path = Path("../../../Tests/tracking_tool/test_data/many_cells/pos1/GFP/track_output")
-    path = Path("../../example_data/Pos57/PH/track_output")
+    path = Path("../../../Tests/tracking_tool/test_data/many_cells/pos1/GFP/track_output")
+    #path = Path("../../example_data/Pos57/PH/track_output")
     #data_file = path.joinpath("tracking_delta.h5")
     #csv_file = path.joinpath("track_output_delta.csv")
     #data_file = path.joinpath("tracking_bayesian.h5")
