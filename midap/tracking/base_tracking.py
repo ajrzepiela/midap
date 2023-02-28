@@ -140,7 +140,7 @@ class DeltaTypeTracking(Tracking):
         """
 
         # Load data
-        img_cur_frame, img_prev_frame, seg_cur_frame, seg_prev_frame = self.load_data(cur_frame)
+        img_cur_frame, img_prev_frame, seg_cur_frame, seg_prev_frame = self.load_data(cur_frame, label=False)
 
         # Label of the segmentation of the previous frame
         label_prev_frame, num_cells = label(seg_prev_frame, return_num=True, connectivity=self.connectivity)

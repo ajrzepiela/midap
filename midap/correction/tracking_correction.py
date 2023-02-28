@@ -707,8 +707,10 @@ def main():
     path = Path("../../example_data/Pos57/PH/track_output")
     #data_file = path.joinpath("tracking_delta.h5")
     #csv_file = path.joinpath("track_output_delta.csv")
-    data_file = path.joinpath("tracking_bayesian.h5")
-    csv_file = path.joinpath("track_output_bayesian.csv")
+    #data_file = path.joinpath("tracking_bayesian.h5")
+    #csv_file = path.joinpath("track_output_bayesian.csv")
+    data_file = path.joinpath("tracking_delta.h5")
+    csv_file = path.joinpath("track_output_delta.csv")
     with CorrectionData(csv_file=csv_file, data_file=data_file) as correction_data:
         view = napari.Viewer()
         # create the multi view and make it central

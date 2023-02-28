@@ -26,6 +26,7 @@ TBD
 Feature:
 - Tracking tool
 - Label images now uint16
+- Bayes tracking now same output as delta 
 
 Fix:
 - Track ID of delta lineage started with 0, leading to a lost cell
@@ -36,6 +37,7 @@ Efficiency:
 - Delta tracking now avoids resize of input
 - Delta tracking data prep and cleanup much more efficient
 - Delta tracking lower memory footprint
+- Bayes tracking data transformation more efficient
 
 ## [0.3.4]
 
