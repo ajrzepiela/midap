@@ -9,7 +9,7 @@ import pandas as pd
 from btrack import datasets
 from btrack.constants import BayesianUpdates
 from numba import njit, typed, types
-from skimage.measure import label
+from tqdm import tqdm
 
 from .base_tracking import Tracking
 
@@ -141,7 +141,7 @@ class BayesianCellTracking(Tracking):
         label_transforms = []
         global_id = 1
         lineage_id = 1
-        for track in tracks:
+        for track in tqdm(tracks):
             # set the parent id
             parent_id = None
 

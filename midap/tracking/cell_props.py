@@ -69,6 +69,8 @@ class CellProps:
                     assert np.sum(row_selector) == 1
 
                     # set all attributes
+                    df.loc[row_selector, 'x'] = prop.centroid[0]
+                    df.loc[row_selector, 'y'] = prop.centroid[1]
                     df.loc[row_selector, 'edges_min_row'] = prop.bbox[0]
                     df.loc[row_selector, 'area'] = prop.area
                     df.loc[row_selector, 'edges_min_col'] = prop.bbox[1]
