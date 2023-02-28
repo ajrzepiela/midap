@@ -63,10 +63,11 @@ class Tracking(ABC):
         self.target_size = target_size
         self.connectivity = connectivity
 
-    def load_data(self, cur_frame: int):
+    def load_data(self, cur_frame: int, label=False):
         """
         Loads and resizes raw images and segmentation images of the previous and current time frame.
         :param cur_frame: Number of the current frame.
+        :param label: If True, the labelled image is returned, note the binary segmentation
         :return: The loaded and resized images of the current frame, the previous frame, the current segmentation and
                 the previous segmentation
         """
@@ -78,8 +79,12 @@ class Tracking(ABC):
             target_size = self.target_size
         img_cur_frame = resize(img, target_size, order=1)
         img_prev_frame = resize(io.imread(self.imgs[cur_frame - 1]), target_size, order=1)
-        seg_cur_frame = (resize(io.imread(self.segs[cur_frame]) > 0, target_size, order=0))
-        seg_prev_frame = (resize(io.imread(self.segs[cur_frame - 1]) > 0, target_size, order=0))
+        if label:
+            seg_cur_frame = (resize(io.imread(self.segs[cur_frame]), target_size, order=0))
+            seg_prev_frame = (resize(io.imread(self.segs[cur_frame - 1]), target_size, order=0))
+        else:
+            seg_cur_frame = (resize(io.imread(self.segs[cur_frame]) > 0, target_size, order=0))
+            seg_prev_frame = (resize(io.imread(self.segs[cur_frame - 1]) > 0, target_size, order=0))
 
         return img_cur_frame, img_prev_frame, seg_cur_frame, seg_prev_frame
 

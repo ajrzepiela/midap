@@ -218,7 +218,7 @@ class DeltaTypeLineages:
 
         # save everything
         csv_file = output_folder.joinpath('track_output_delta.csv')
-        self.track_output.to_csv(csv_file, index=True)
+        self.track_output.to_csv(csv_file, index=True, index_label="globalID")
 
         raw_inputs = self.inputs[:, :, :, 0]
         data_file = output_folder.joinpath('tracking_delta.h5')
