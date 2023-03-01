@@ -87,6 +87,7 @@ def test_main(prep_dirs):
 
     # Tests for Omni if supported
     try:
+        import omnipose
         from cellpose import models
         segmentation_class = "OmniSegmentation"
         network_name = "bact_fluor_omni"

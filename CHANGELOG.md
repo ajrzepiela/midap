@@ -19,9 +19,10 @@ Efficiency:
 Fix:
 - ...
 
-## [TBD]
 
-TBD
+## [0.3.7]
+
+2023-03-01
 
 Feature:
 - Tracking tool
@@ -39,6 +40,30 @@ Efficiency:
 - Delta tracking data prep and cleanup much more efficient
 - Delta tracking lower memory footprint
 - Bayes tracking data transformation more efficient
+
+## [0.3.6]
+
+2023-02-21
+
+Feature:
+- Refactor preprocessing to use the tf.data API
+- Added custom metrics and evaluations
+- Added a Tensorboard callback to the model training
+- Sorted all the training data and added it to polybox
+- Training script can take config file or arguments
+- Updated example notebooks
+
+Efficiency:
+- Improved weight calculation efficiency
+
+Fix:
+- Venv on euler updated to python 3.10, to avoid install failure of new python > 3.8 requirement
+
+## [0.3.5]
+
+Fix:
+- Change image format in the selector to make it compatible with Euler
+- Venv on euler updated to python 3.10, to avoid install failure of new python > 3.8 requirement
 
 ## [0.3.4]
 

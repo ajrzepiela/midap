@@ -20,16 +20,16 @@ fi
 echo "Downloading data..."
 echo "==================="
 echo
-wget -O training_data${FILE_EXT} https://polybox.ethz.ch/index.php/s/WqHSFa17n0aUZK6/download
+wget -O midap_training${FILE_EXT} https://polybox.ethz.ch/index.php/s/CQkDDXIKHh68hSf/download
 
 echo
 echo "Extracting archive..."
 echo "====================="
 echo
-${EXTRACT} training_data${FILE_EXT}
+${EXTRACT} midap_training${FILE_EXT}
 
 echo
 echo "Removing archive..."
 echo "==================="
 echo
-rm -vf training_data${FILE_EXT}
+rm -vf midap_training${FILE_EXT}
