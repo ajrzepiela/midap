@@ -1,11 +1,13 @@
+import os
+import tempfile
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-import tempfile
-import os
+from pytest import fixture, mark
 
 from midap.tracking.delta_lineage import DeltaTypeLineages
-from pytest import fixture, mark
-from pathlib import Path
+
 
 # Fixtures
 ##########
@@ -26,10 +28,9 @@ def fake_data_output(tracking_instance):
 
     # run the tracking
     inputs, results_all = tracking_instance.run_model_crop()
-    #results_all_red = tracking_instance.reduce_data(output_folder=tmp_dir.name, inputs=inputs, results=results_all)
 
     # create the instance
-    lin = DeltaTypeLineages(np.array(inputs), results_all)
+    lin = DeltaTypeLineages(np.array(inputs), results_all, connectivity=2)
 
     # save to file
     out_file = os.path.join(tmp_dir.name, 'track_output_delta.csv')
@@ -58,7 +59,7 @@ def example_data_output():
     inputs_all = data_inp['inputs_all']
 
     # create the instance
-    lin = DeltaTypeLineages(inputs_all, results_all_red)
+    lin = DeltaTypeLineages(inputs_all, results_all_red, connectivity=2)
 
     # creat lineages
     lin.generate_lineages()
@@ -86,18 +87,18 @@ def test_ID_assigmment(example_data_output):
 
     track_output = pd.read_csv(example_data_output, index_col='Unnamed: 0')
 
-    ix_split = np.where(track_output.split == 1)[0][0]
+    ix_split = track_output.index[track_output.split == 1][0]
     trackID = track_output.loc[ix_split].trackID
     frame = track_output.loc[ix_split].frame
     trackID_d1 = track_output.loc[ix_split].trackID_d1
     trackID_d2 = track_output.loc[ix_split].trackID_d2
 
-    filter_d1 = np.where((track_output.frame == frame + 1) & (track_output.trackID == trackID_d1))[0][0]
+    filter_d1 = track_output.index[(track_output.frame == frame + 1) & (track_output.trackID == trackID_d1)][0]
     trackID_mother_d1 = track_output.loc[filter_d1].trackID_mother
 
     assert trackID == trackID_mother_d1
 
-    filter_d2 = np.where((track_output.frame == frame + 1) & (track_output.trackID == trackID_d2))[0][0]
+    filter_d2 = track_output.index[(track_output.frame == frame + 1) & (track_output.trackID == trackID_d2)][0]
     trackID_mother_d2 = track_output.loc[filter_d2].trackID_mother
 
     assert trackID == trackID_mother_d2
@@ -112,8 +113,8 @@ def test_fake_lineage(fake_data_output):
 
     # check if everything checks out
     assert np.all(df["frame"] == np.array([0, 1, 2, 2]))
-    assert np.all(df["trackID"] == np.array([0, 0, 1, 2]))
-    assert np.all(df["lineageID"] == np.array([0, 0, 0, 0]))
-    assert np.all(df["trackID_d1"][:2] == np.array([1, 1]))
-    assert np.all(df["trackID_d2"][:2] == np.array([2, 2]))
-    assert np.all(df["trackID_mother"][2:] == np.array([0, 0]))
+    assert np.all(df["trackID"] == np.array([1, 1, 2, 3]))
+    assert np.all(df["lineageID"] == np.array([1, 1, 1, 1]))
+    assert np.all(df["trackID_d1"][:2] == np.array([2, 2]))
+    assert np.all(df["trackID_d2"][:2] == np.array([3, 3]))
+    assert np.all(df["trackID_mother"][2:] == np.array([1, 1]))

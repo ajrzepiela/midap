@@ -70,13 +70,12 @@ def tracking_instance(monkeypatch, img1, img2):
     weight_path = weight_path.joinpath("model_weights", "model_weights_tracking", "unet_moma_track_multisets.hdf5")
 
     # sizes
-    crop_size = (128, 128)
-    target_size = (512, 512)
-    input_size = crop_size + (4,)
+    target_size = None
+    input_size = None
 
     # get the instance
     deltav1 = DeltaV1Tracking(imgs=imgs, segs=segs, model_weights=weight_path, input_size=input_size,
-                              target_size=target_size, crop_size=crop_size, connectivity=1)
+                              target_size=target_size, connectivity=1)
 
     return deltav1
 

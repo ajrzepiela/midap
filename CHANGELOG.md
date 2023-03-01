@@ -27,6 +27,45 @@ Feature:
 Fix:
 - Remove `checkpoints.log` after collecting parameters to avoid issues during restart of pipeline with generated config file.
 
+## [0.3.7]
+
+2023-03-01
+
+Feature:
+- Tracking tool
+- Label images now uint16
+- Bayes tracking now same output as delta 
+- Bayes tracking no mergers reduced skip rate of object to 1 frame
+
+Fix:
+- Track ID of delta lineage started with 0, leading to a lost cell
+- Fixed double assignment bug in delta tracking, where the same cell can be overwritten, i.e. be the successor for two cells
+- Delta tracking added connectivity to lineage
+
+Efficiency:
+- Delta tracking now avoids resize of input
+- Delta tracking data prep and cleanup much more efficient
+- Delta tracking lower memory footprint
+- Bayes tracking data transformation more efficient
+
+## [0.3.6]
+
+2023-02-21
+
+Feature:
+- Refactor preprocessing to use the tf.data API
+- Added custom metrics and evaluations
+- Added a Tensorboard callback to the model training
+- Sorted all the training data and added it to polybox
+- Training script can take config file or arguments
+- Updated example notebooks
+
+Efficiency:
+- Improved weight calculation efficiency
+
+Fix:
+- Venv on euler updated to python 3.10, to avoid install failure of new python > 3.8 requirement
+
 ## [0.3.5]
 
 Fix:

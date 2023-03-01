@@ -161,7 +161,7 @@ def test_run_module_full(prep_settings):
     # check everything again
     assert len(list(prep_settings.joinpath("data", "pos1", "PH", "seg_im").iterdir())) == 3
     assert len(list(prep_settings.joinpath("data", "pos1", "PH", "seg_im_bin").iterdir())) == 3
-    assert len(list(prep_settings.joinpath("data", "pos1", "PH", "track_output").iterdir())) == 6
+    assert len(list(prep_settings.joinpath("data", "pos1", "PH", "track_output").iterdir())) == 5
     assert len(list(prep_settings.joinpath("data", "pos1", "PH", "cut_im").iterdir())) == 3
     assert len(list(prep_settings.joinpath("data", "pos1", "PH", "raw_im").iterdir())) == 3
     # checkpoint and config

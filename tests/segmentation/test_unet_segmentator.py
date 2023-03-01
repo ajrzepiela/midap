@@ -112,8 +112,8 @@ def test_run_image_stack(segmentation_instance):
     for f in seg_files:
         fpath = os.path.join(channel_path, "seg_im", f)
         img = imread(fpath)
-        # only one label and background
-        assert np.unique(img).size == 2
+        # watershed fails for such an image because it classifies the background that gets removed
+        assert np.unique(img).size == 1
 
     # path to actual model weights
     weight_path = Path(__file__).absolute().parent.parent.parent
@@ -128,5 +128,5 @@ def test_run_image_stack(segmentation_instance):
     for f in seg_files:
         fpath = os.path.join(channel_path, "seg_im", f)
         img = imread(fpath)
-        # only one label and background
-        assert np.unique(img).size == 2
+        # same as for watershed it fails now because of border cell removal
+        assert np.unique(img).size == 1

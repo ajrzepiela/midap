@@ -83,5 +83,5 @@ def test_main(prep_dirs):
     bayes_track_file = track_output.joinpath("track_output_bayesian.csv")
     res_df = pd.read_csv(bayes_track_file)
     assert np.unique(res_df["frame"]).size == 2
-    assert len(res_df) == 55
+    assert len(res_df) == 58
 

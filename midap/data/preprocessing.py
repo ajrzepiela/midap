@@ -1,22 +1,17 @@
-import numpy as np
 import os
-import skimage.io as io
+from collections import defaultdict
+from pathlib import Path
+from typing import Optional, List, Union
 
-from skimage import exposure
-from skimage.segmentation import find_boundaries
+import numpy as np
+import skimage.io as io
+from numba import njit
 from skimage.measure import label
+from skimage.segmentation import find_boundaries
 from sklearn.model_selection import train_test_split
-from scipy.spatial import distance_matrix
-from typing import Optional, Iterable
 from tqdm import tqdm
 
 from ..utils import get_logger, set_logger_level
-
-
-# ToDO:
-# 1) Currently the generation of weight maps for mother machine datasets
-#    is not working. The UNet for those datasets is trained without
-#    a weight map for the distance to close cells.
 
 
 class DataProcessor(object):
@@ -41,19 +36,18 @@ class DataProcessor(object):
     # This logger can be accessed by classmethods etc
     logger = get_logger(__file__)
 
-    def __init__(self, n_grid=4, test_size=0.15, val_size=0.2, patch_size=128, num_split_r=10, num_split_c=10,
-                 augment_patches=True, sigma=2.0, w_0=2.0, w_c0=1.0, w_c1=1.1, loglevel=7,
+    def __init__(self, paths: Union[str, bytes, os.PathLike, List[Union[str, bytes, os.PathLike]]],
+                 n_grid=4, test_size=0.15, val_size=0.2, sigma=2.0, w_0=2.0, w_c0=1.0, w_c1=1.1, loglevel=7,
                  np_random_seed: Optional[int]=None):
         """
         Initializes the DataProcessor instance. Note that a lot parameters are used to implement the weight map
         generation according to [1] (https://arxiv.org/abs/1505.04597)
+        :param paths: A single path or a list of paths to files that can be used for training. Only the raw images
+                      have to be listed. However, it is expected that the raw images end with "*raw.tif" and a
+                      corresponding segmentations mask "*seg.tif" exists.
         :param n_grid: The grid used to split the original image into distinct patches for train, test and val dsets
         :param test_size: Ratio for the test set
         :param val_size: Ratio for the validation set
-        :param patch_size: The size of the patches of the final images
-        :param num_split_r: number of patches along row dimension for the patch generation
-        :param num_split_c: number of patches along column dimension for the patch generation
-        :param augment_patches: Perform data augmentation of the patches
         :param sigma: sigma parameter used for the weight map calculation [1]
         :param w_0: w_0 parameter used for the weight map calculation [1]
         :param w_c0: basic class weight for non-cell pixel parameter used for the weight map calculation [1]
@@ -78,179 +72,79 @@ class DataProcessor(object):
         self.w_c0 = w_c0
         self.w_c1 = w_c1
 
-        # parameters for the patch generation
-        self.patch_size = patch_size
-        self.num_split_r = num_split_r
-        self.num_split_c = num_split_c
-        self.augment_patches = augment_patches
-
         # sizes for test and validation set
         self.n_grid = n_grid
         self.test_size = test_size
         self.val_size = val_size
 
-    def run(self, path_img: str, path_mask: str, path_mask_splitting_cells: Optional[str]=None):
+        # training data
+        if isinstance(paths, list):
+            self.img_paths = [Path(p) for p in paths]
+        else:
+            self.img_paths = [Path(paths)]
+        self.seg_paths = [p.parent.joinpath(p.name.replace("raw.tif", "seg.tif")) for p in self.img_paths]
+
+        # check for existence
+        for raw, seg in zip(self.img_paths, self.seg_paths):
+            if not raw.name.endswith("raw.tif"):
+                raise ValueError(f"Raw image name does not match format: {raw} (needs to end with raw.tif)")
+            if not raw.exists():
+                raise FileNotFoundError(f"File for training does not exist: {raw}")
+            if not seg.exists():
+                raise FileNotFoundError(f"File for training does not exist: {seg}")
+
+    def get_dset(self):
         """
         Run the preprocessing for family machine and well plates:
             1) Load data
             2) Generate weight map
-            3) Split image, masks and weight map into 4x4-grid
-            4) Split patches into train and validation set
-            5) Split larger patches from 4x4-grid into
-                smaller ones
-            6) Extract binary weight for splitting events from mask
-               (1 - no splitting event, 2 - more than one)
-            7) Data augmentation (if demanded)
-            8) Generate binary label for coverage of colored pixels
-               (1 - < 0.75, 2 - > 0.75)
-            9) Return values
-        :param path_img: Path to the original image used for the training
-        :param path_mask: Path to the segmentation mask image (labels) corresponding to the image
-        :param path_mask_splitting_cells: A mask indicating if cells are splitting, can be None
+            3) Split images, masks and weight map into a grid
+            4) Split into training and validation dataset
         :return: A dictionary containing the training, test and validation datasets including weight maps etc.
         """
 
-        # 1) Load data
-        self.logger.info("Loading data...")
-        img = self.scale_pixel_vals(io.imread(path_img, as_gray=True))
-        mask = self.scale_pixel_vals(io.imread(path_mask)).astype(int)
+        # a default dict for the full data
+        full_data = defaultdict(list)
+        for img_path, seg_path in zip(self.img_paths, self.seg_paths):
+            # 1) Load data
+            self.logger.info(f"Loading file {img_path}")
+            img = self.scale_pixel_vals(io.imread(img_path, as_gray=True))
+            seg = self.scale_pixel_vals(io.imread(seg_path)).astype(int)
 
-        # read the splitting mask
-        if path_mask_splitting_cells is not None:
-            mask_splitting_cells = io.imread(path_mask_splitting_cells).astype(int)
-        else:
-            mask_splitting_cells = None
+            # 2) Generate weight map
+            w_string = f"w_0={self.w_0}_w_c0={self.w_c0}_w_c1={self.w_c1}_sigma={self.sigma}"
+            w_path = img_path.parent.joinpath(img_path.name.replace("raw.tif", f"{w_string}_weights.tif"))
+            if w_path.exists():
+                weights = io.imread(w_path)
+            else:
+                self.logger.info("Generating weight map...")
+                weights = self.generate_weight_map(seg)
+                io.imsave(w_path, weights)
 
-        # 2) Generate weight map
-        self.logger.info("Generating weight map...")
-        weight_map = self.generate_weight_map(mask)
+            # 3) Split image, masks and weight map into a grid
+            self.logger.info(f"Splitting into {self.n_grid}x{self.n_grid} grid...")
+            imgs, masks, weight_maps = self.generate_patches(img, seg, weights, ensure_channel=True)
 
-        # 3) Split image, masks and weight map into a grid
-        self.logger.info(f"Splitting into {self.n_grid}x{self.n_grid} grid...")
-        imgs, masks, weight_maps, masks_splitting_cells = self.generate_patches(
-            img, mask, weight_map, mask_splitting_event=mask_splitting_cells, ensure_channel=True)
+            # 4) Split patches into train and validation set
+            # compute ratio of cell pixels in masks
+            self.logger.info("Splitting into train and test...")
+            ratio = self.compute_pixel_ratio(masks)
 
-        # 4) Split patches into train and validation set
-        # compute ratio of cell pixels in masks
-        self.logger.info("Splitting into train and test...")
-        ratio = self.compute_pixel_ratio(masks)
+            # split data according to pixel coverage (ratio)
+            data = self.split_data(imgs, masks, weight_maps, ratio)
 
-        # split data according to pixel coverage (ratio)
-        data = self.split_data(imgs, masks, weight_maps, ratio, masks_splitting_cells)
+            # update the full data
+            for key, val in data.items():
+                full_data[key].append(val)
 
-        # 5) Split larger patches from 4x4-grid into smaller ones
-        # split training patches
-        self.logger.info("Generating patches...")
-        # cycle through the dictionary keys and cut the patches
-        for key in list(data.keys()):
-            patches = []
-            for img in data[key]:
-                patches.append(self.cut_patches(img=img, n_row=self.num_split_r, n_col=self.num_split_c,
-                                                size=self.patch_size))
-            data[key] = np.concatenate(patches)
-
-        # 6) Extract binary weight for splitting events from mask
-        #    (1 - no splitting event, 2 - more than one)
-        if path_mask_splitting_cells is not None:
-            self.logger.info("Extract binary weight...")
-            # cycle through all three instances
-            keys = ["label_splitting_cells_train", "label_splitting_cells_test", "label_splitting_cells_val"]
-            for key in keys:
-                # get the data
-                split_cells = data[key]
-                split_flag = np.ones(len(split_cells))
-                # flag all events
-                for i, ms in enumerate(split_cells):
-                    if len(np.where(ms == 127)[0]) > 0:
-                        split_flag[i] = 2
-                # remove old key and create new entry for the flags
-                del data[key]
-                new_key = key.replace("label_", "")
-                data[new_key] = split_flag
-
-        # 7) Data augmentation
-        if self.augment_patches:
-            self.logger.info('Data augmentation...')
-            # cycle throgh train, test and val sets
-            for label in ["train", "test", "val"]:
-                # generate the input
-                inp_data = (data[f"X_{label}"], data[f"y_{label}"], data[f"weight_maps_{label}"])
-                if path_mask_splitting_cells is not None:
-                    inp_data += (data[f"splitting_cells_{label}"])
-
-                # get the output and update
-                out_data = self.data_augmentation(*inp_data)
-                data[f"X_{label}"], data[f"y_{label}"], data[f"weight_maps_{label}"] = out_data[:3]
-                if path_mask_splitting_cells is not None:
-                    data[f"splitting_cells_{label}"] = out_data[3]
-
-        # 8) Generate binary label for coverage of colored pixels
-        #    (1 - < 0.75, 2 - > 0.75)
-        self.logger.info('Generating label for cell coverage')
-        for label in ["train", "test", "val"]:
-            # get the mean cell coverage of all patches
-            ratio_cell_pixels = data[f"y_{label}"].mean(axis=(1, 2, 3))
-            # normalize by the max
-            ratio_cell_pixels /= ratio_cell_pixels.max()
-            # get the binary flag
-            data[f"ratio_cell_{label}"] = np.where(ratio_cell_pixels > 0.75, 2.0, 1.0)
-
-        # 9) Return values
-        return data
-
-    def run_mother_machine(self, path_img: str, path_mask: str):
-        """
-        Run the preprocessing for mother machine:
-            1) Load data
-            2) Pad images and masks to adjust height and width
-            3) Split images and masks into train and validation set
-            4) Split each image and mask into overlapping horizontal patches
-            5) Data augmentation
-        :param path_img: Path to the directory containing the original images used for the training
-        :param path_mask: Path to the directory containing the segmentation mask images (labels)
-                          corresponding to the images
-        :return: The training and validation datasets
-        """
-
-        # 1) Load data
-        list_imgs = np.sort(os.listdir(path_img))
-        imgs_unpad = [self.scale_pixel_vals(io.imread(os.path.join(path_img, i), as_gray=True)) for i in list_imgs]
-        list_masks = np.sort(os.listdir(path_mask))
-        masks_unpad = [self.scale_pixel_vals(io.imread(os.path.join(path_mask, m)).astype(int)) for m in list_masks]
-
-        # 2) Pad images and masks to adjust height and width
-        height_max, width_max = self.get_max_shape(imgs_unpad)
-        imgs = np.array([np.pad(i, [[0, height_max - i.shape[0]], [0, width_max - i.shape[1]]], mode="reflect")
-                         for i in imgs_unpad])
-        masks = np.array([np.pad(m, [[0, height_max - m.shape[0]], [0, width_max - m.shape[1]]], mode="reflect")
-                          for m in masks_unpad])
-
-        # 3) Split images and masks into train and validation set
-        X_train, X_val, y_train, y_val = train_test_split(imgs, masks, test_size=self.test_size)
-
-        # 4) Split each image and mask into horizontal patches
-        height_cutoff, split_start = self.define_horizontal_splits(height=height_max)
-        X_train = np.concatenate([self.horizontal_split(xtrain, height_cutoff, split_start) for xtrain in X_train])
-        X_val = np.concatenate([self.horizontal_split(xval, height_cutoff, split_start) for xval in X_val])
-        y_train = np.concatenate([self.horizontal_split(ytrain, height_cutoff, split_start) for ytrain in y_train])
-        y_val = np.concatenate([self.horizontal_split(yval, height_cutoff, split_start) for yval in y_val])
-
-        # 5) Data augmentation
-        # currently the generation of weight maps for this dataset type
-        # (mother machine) is not working. For this reason y_train_patch
-        # and y_val_patch are handed to the method for the data augmentation
-        # as a dummy instead of the weight maps.
-        if self.augment_patches:
-            X_train, y_train, _ = self.data_augmentation(X_train, y_train, y_train)
-            X_val, y_val, _ = self.data_augmentation(X_val, y_val, y_val)
-
-        return X_train, y_train, X_val, y_val
+        # 5) Return values
+        return full_data
 
     @classmethod
     def tile_img(cls, img: np.ndarray, n_grid=4, divisor=1):
         """
         Tiles an image into a gird of n_grid x n_grid non-overlapping patches
-        :param img: The image totile must be at least two-dimensional
+        :param img: The image, must be at least two-dimensional
         :param n_grid: The grid dimension for the tiling
         :param divisor: Ensure that all the dimensions of the tiles are divisible by divisor, e.g. divisor=2 to have
                         even dimensions. Note that this may cause a large portion of the original image to be
@@ -277,14 +171,12 @@ class DataProcessor(object):
         # transform to array and return
         return np.array(tiles)
 
-    def generate_patches(self, img: np.ndarray, mask: np.ndarray, weight_map: np.ndarray,
-                         mask_splitting_event: Optional[np.ndarray]=None, ensure_channel=True):
+    def generate_patches(self, img: np.ndarray, mask: np.ndarray, weight_map: np.ndarray, ensure_channel=True):
         """
-        Splits the inputs into a 4x4 grid of distinct patches
+        Splits the inputs into a grid of distinct patches
         :param img: The original input image
         :param mask: The mask for the input image
         :param weight_map: The weight map for the images
-        :param mask_splitting_event: Mask for splitting events, may be None
         :param ensure_channel: Ensure that all inputs have a channel dimension
         :return: The inputs in the same order but split into patches along the first dimension
         """
@@ -294,42 +186,13 @@ class DataProcessor(object):
             img = np.atleast_3d(img)
             mask = np.atleast_3d(mask)
             weight_map = np.atleast_3d(weight_map)
-            if mask_splitting_event is not None:
-                mask_splitting_event = np.atleast_3d(mask_splitting_event)
 
         # tile everything
         img = self.tile_img(img=img, n_grid=self.n_grid)
         mask = self.tile_img(img=mask, n_grid=self.n_grid)
         weight_map = self.tile_img(img=weight_map, n_grid=self.n_grid)
-        if mask_splitting_event is not None:
-            mask_splitting_event = self.tile_img(img=mask_splitting_event, n_grid=self.n_grid)
 
-        return img, mask, weight_map, mask_splitting_event
-
-    @classmethod
-    def cut_patches(cls, img: np.ndarray, n_row: int, n_col: int, size=128):
-        """
-        Cuts out overlapping patches from an image and returns the stack. Note that this is not a random procedure,
-        it will always return the same pataches as lont as all dimensions are equal
-        :param img: The image (at least two-dimensional) to cut the patches out
-        :param n_row: Number of cuts along the row dimenson
-        :param n_col: Number of cuts along the column dimension
-        :param size: The final size of the patches (always square)
-        :return: The stack of patches with dim (n_row*n_col, size, size) + img.shape[2:]
-        """
-
-        assert size < img.shape[0] and size < img.shape[1], "The size of the patches has to be smaller than the image!"
-
-        # get the indices to cut
-        row_indices = np.linspace(0, img.shape[0] - size, n_row).astype(int)
-        col_indices = np.linspace(0, img.shape[1] - size, n_col).astype(int)
-
-        # cycle and cut
-        patches = []
-        for i in row_indices:
-            for j in col_indices:
-                patches.append(img[i:i+size, j:j+size])
-        return np.array(patches)
+        return img, mask, weight_map
 
     @classmethod
     def scale_pixel_vals(cls, img: np.ndarray):
@@ -342,12 +205,62 @@ class DataProcessor(object):
         img = np.array(img)
         return ((img - img.min()) / (img.max() - img.min()))
 
-    def generate_weight_map(self, mask: np.ndarray):
+    @staticmethod
+    @njit("void(i8[:,:],f8[:,:,:],i4)")
+    def update_dist_array(bound_indices: np.ndarray, dist_array: np.ndarray, cut_off: int):
+        """
+        This is a numba optimized static method to update the distance array to calculate the weights of a map
+        It works by defining a window around the current cell (with width cut_off) and then calculating the minimum
+        distance of each pixel inside this window to the cell bounds. Afterwards the distance array is updated with
+        this new minimal distance if necessary
+        :param bound_indices: The indices of the cell bounds 2D (N, 2) array with int dtype
+        :param dist_array: The full array of distances with shape (n, m, 2) where (n, m) is the shape of the original
+                           image containing all the cells. [i,j,0] contains the smallest distance from that pixel
+                           to the next cell boundary, and [i,j,1] the next smallest distance to another cell
+        :param cut_off: The size of the cutoff window
+        :return:
+        """
+
+        # get the shape of the original image
+        n, m, _ = dist_array.shape
+
+        # define the window around the current cell
+        min_x = max(min(bound_indices[:,0]) - cut_off, 0)
+        max_x = min(max(bound_indices[:,0]) + cut_off, n)
+        min_y = max(min(bound_indices[:,1]) - cut_off, 0)
+        max_y = min(max(bound_indices[:,1]) + cut_off, m)
+
+        # cycle through all pixels in the window
+        for id_x in range(min_x, max_x):
+            for id_y in range(min_y, max_y):
+                # the current smallest distance
+                tmp_min = np.inf
+                # cycle through all bounds
+                for bound in bound_indices:
+                    bound_x = bound[0]
+                    bound_y = bound[1]
+                    # calculate distance and update temp min if necessary
+                    d = np.sqrt((id_x - bound_x)**2 + (id_y - bound_y)**2)
+                    if d < tmp_min:
+                        tmp_min = d
+                # update the dist array if necessary
+                if tmp_min < dist_array[id_x, id_y, 0]:
+                    # second smallest update
+                    dist_array[id_x, id_y, 1] = dist_array[id_x, id_y, 0]
+                    # smallest update
+                    dist_array[id_x, id_y, 0] = tmp_min
+                elif tmp_min < dist_array[id_x, id_y, 1]:
+                    # second smallest update
+                    dist_array[id_x, id_y, 1] = tmp_min
+
+    def generate_weight_map(self, mask: np.ndarray, cut_off=10):
         """
         Generate the weight map based on the distance to nearest and second-nearest neighbor as described in
         https://arxiv.org/abs/1505.04597
         :param mask: The mask used to generate the weights map
-        :return: The generated weights map with an additional channel dimension of 1
+        :param cut_off: Only consider a region of cut_off*self.sigma around each border pixel weight, the weight. Since
+                        the weight is porportional to exp(-d**2/sigma**2) -> 10 sigma will be a weight of ~0
+        :return: The generated weights map
         """
         # label cells and generate separate masks
         mask_label = label(mask)
@@ -355,11 +268,10 @@ class DataProcessor(object):
 
         # for the weight map we need to calculate the distances from any pixel that is not part of the closest pixel
         # of any cell, where the distance is measured as Eucledean distance in pixel space
-        # we start by getting the pixel ids of any pixel that is not part of any cell
-        no_cell_indices = np.argwhere(mask == 0)
+        # we start by initializeing the distance array (default large -> weight ~0)
+        dist_array = np.full(shape=mask.shape + (2, ), fill_value=10000.0)
 
         # now we cycle though all cells and keep the closest distances for all cells
-        dists = []
         self.logger.info("Calculating pixel distances...")
         for cell_id in tqdm(cell_num):
             # isolate the cell
@@ -368,27 +280,23 @@ class DataProcessor(object):
             bounds = find_boundaries(cell_mask, mode='inner')
             # get the indices of the boundary
             indices = np.argwhere(bounds)
-            # calculate all the distances, keep only the smallest
-            dist = np.min(distance_matrix(no_cell_indices, indices), axis=1)
-            # append
-            dists.append(dist)
+            # update the dist array
+            self.update_dist_array(bound_indices=indices, dist_array=dist_array, cut_off=int(cut_off*self.sigma))
 
         # get distance to nearest and second-nearest cell
         self.logger.info("Calculating weights...")
-        min_dist_sort = np.sort(dists, axis=0)
-        d1_val = min_dist_sort[0, :]
-        d2_val = min_dist_sort[1, :]
+        d1_val = dist_array[...,0]
+        d2_val = dist_array[...,1]
 
         # calculate the weights
         weights = self.w_c0 + self.w_0 * \
             np.exp((-1 * (d1_val + d2_val) ** 2) / (2 * (self.sigma ** 2)))
-        # create the map with channel dim, use default weight c1
-        w = np.full(mask.shape + (1, ), fill_value=self.w_c1)
-        # assign the rest
-        w[no_cell_indices[:,0], no_cell_indices[:,1], 0] = weights
+        # where there is a cell, we want to have c1
+        weights[mask != 0] = self.w_c1
 
-        return w
+        return weights
 
+    @classmethod
     def compute_pixel_ratio(self, masks: np.ndarray):
         """
         Compute the ratio of colored pixels in a mask.
@@ -423,15 +331,13 @@ class DataProcessor(object):
 
         return stratification
 
-    def split_data(self, imgs: np.ndarray, masks: np.ndarray, weight_maps: np.ndarray, ratio: np.ndarray,
-                   label_splitting_cells: Optional[np.ndarray]=None):
+    def split_data(self, imgs: np.ndarray, masks: np.ndarray, weight_maps: np.ndarray, ratio: np.ndarray):
         """
         Split data depending on the ratio of colored pixels in all images (patches).
         :param imgs: The original images split into patches (training data)
         :param masks: The masks corresponding to the images (labels)
         :param weight_maps: The weight maps used for the loss (weights)
         :param ratio: A 1D array containing the ratios pixels containing cells used for the stratification (balancing)
-        :param label_splitting_cells: Optional array containing the labels of splitting cells
         :return: A dictionary containing the train, test, val splits of the input arrays
         """
 
@@ -442,8 +348,6 @@ class DataProcessor(object):
 
         # input to split into sets
         arrays = (ratio, imgs, masks, weight_maps)
-        if label_splitting_cells is not None:
-            arrays += (label_splitting_cells, )
 
         # split
         ratio_train, ratio_test, *splits = train_test_split(*arrays, test_size=self.test_size, stratify=stratification)
@@ -452,9 +356,6 @@ class DataProcessor(object):
         res = {"X_train": splits[0], "X_test": splits[1],
                "y_train": splits[2], "y_test": splits[3],
                "weight_maps_train": splits[4], "weight_maps_test": splits[5]}
-        if label_splitting_cells is not None:
-            res["label_splitting_cells_train"] = splits[6]
-            res["label_splitting_cells_test"] = splits[7]
 
         # we split the training set into training and validation
         n_val = int(self.val_size*len(ratio_train)) + 1
@@ -463,8 +364,6 @@ class DataProcessor(object):
 
         # input to split into sets
         arrays = (res["X_train"], res["y_train"], res["weight_maps_train"])
-        if label_splitting_cells is not None:
-            arrays += (res["label_splitting_cells_train"], )
 
         # split
         splits = train_test_split(*arrays, test_size=self.val_size, stratify=stratification)
@@ -473,125 +372,5 @@ class DataProcessor(object):
         res.update({"X_train": splits[0], "X_val": splits[1],
                     "y_train": splits[2], "y_val": splits[3],
                     "weight_maps_train": splits[4], "weight_maps_val": splits[5]})
-        if label_splitting_cells is not None:
-            res["label_splitting_cells_train"] = splits[6]
-            res["label_splitting_cells_val"] = splits[7]
 
         return res
-
-    def define_horizontal_splits(self, height: int, num_splits=150):
-        """
-        Define the starting heights of the horizontal splits. The height of the resulting horizontal patch is quarter
-        the height of the original image. The width of the horizontal patch is the width of the original image.
-        :param height: The height of the images that should be split
-        :param num_splits: The number of splits to perform
-        :return: The height cutoff (quarter of the input height) and the starting points of the splits
-        """
-
-        # define the minimum height (split_start) of random splits
-        # random patch should have the quarter height of the original image
-        height_cutoff = height // 4
-        split_start = np.linspace(0, height, num_splits, dtype=int)
-
-        return height_cutoff, split_start
-
-    def horizontal_split(self, img: np.ndarray, height_cutoff: int, split_start: Iterable[float]):
-        """
-        Split an image into random horizontal patches according to previously defined starting heights of the
-        horizontal splits. The image is horizontally mirrored before the split to to use the full height of the image.
-        :param img: The image to cut
-        :param height_cutoff: The height of the cuts
-        :param split_start: An iterable containing the starting indices of the cuts
-        :return: An array containing the cuts, the first dimension will have the length of split_start
-        """
-
-        # check if the image is wide enough
-        if img.shape[0] < np.max(split_start) + height_cutoff:
-            img = np.pad(img, pad_width=[[0, np.max(split_start) + height_cutoff - img.shape[0]],
-                                        [0, 0]], mode="reflect")
-
-        # split image according to where split starts
-        hor_splits = []
-        for start in split_start:
-            hor_splits.append(img[start:(start + height_cutoff), :])
-
-        return np.array(hor_splits)
-
-    def get_max_shape(self, imgs: Iterable[np.ndarray], divisor=16):
-        """
-        Get the maximal height and width across all images in a dataset. The maximal height and width are also set to
-        the next higher multiple of divisor to allow an even split of feature maps in the unet.
-        :param imgs: A list or iterable of 2D arrays
-        :param divisor: The divisor for the largest shape
-        :return: The largest possible shape that is divisible by divisor and smaller or equal than the
-                 largest shape in imgs
-        """
-
-        imgs_shape = [i.shape for i in imgs]
-        height_max = np.ceil(np.max([s[0] for s in imgs_shape]) / divisor).astype(int) * divisor
-        width_max = np.ceil(np.max([s[1] for s in imgs_shape]) / divisor).astype(int) * divisor
-
-        return height_max, width_max
-
-    def data_augmentation(self, imgs: np.ndarray, masks: np.ndarray, weight_maps: np.ndarray,
-                          splitting_cells: Optional[np.ndarray]=None, shuffle=True):
-        """
-        Augments list of imgs, masks and weights maps by vertical and horizontal flips and increase and decrease
-        of brightness.
-        :param imgs: Array of images
-        :param masks: Array of masks (labels) corresponding to the images
-        :param weight_maps: Array of weight maps (for loss) corresponding to the images
-        :param splitting_cells: 1D array with the same length as the images indicating if a split event happens
-        :param shuffle: If True (default) shuffle the output before returning
-        :return: The original inputs with all augmentations
-        """
-
-        # init emtpy list to collect the augmented images
-        aug_imgs = []
-        aug_masks = []
-        aug_weight_maps = []
-        if splitting_cells is not None:
-            aug_splitting_cells = []
-
-        for i, (img, mask, weight_map) in enumerate(zip(imgs, masks, weight_maps)):
-            # the original image
-            aug_imgs.append(img)
-            aug_masks.append(mask)
-            aug_weight_maps.append(weight_map)
-            if splitting_cells is not None:
-                aug_splitting_cells.append(splitting_cells[i])
-
-            # vertical flip
-            aug_imgs.append(np.flipud(img))
-            aug_masks.append(np.flipud(mask))
-            aug_weight_maps.append(np.flipud(weight_map))
-            if splitting_cells is not None:
-                aug_splitting_cells.append(splitting_cells[i])
-
-            # horizontal flip
-            aug_imgs.append(np.fliplr(img))
-            aug_masks.append(np.fliplr(mask))
-            aug_weight_maps.append(np.fliplr(weight_map))
-            if splitting_cells is not None:
-                aug_splitting_cells.append(splitting_cells[i])
-
-            # decrease brightness
-            for gamma in [0.4, 0.6, 0.8, 1.2, 1.4, 1.6]:
-                aug_imgs.append(exposure.adjust_gamma(img, gamma=gamma, gain=1))
-                aug_masks.append(mask)
-                aug_weight_maps.append(weight_map)
-                if splitting_cells is not None:
-                    aug_splitting_cells.append(splitting_cells[i])
-
-        # create a shuffle index if necessary
-        if shuffle:
-            perm = np.random.permutation(len(aug_imgs))
-        else:
-            perm = Ellipsis
-
-        # create the output
-        out = (np.array(aug_imgs)[perm], np.array(aug_masks)[perm], np.array(aug_weight_maps)[perm])
-        if splitting_cells is not None:
-            out += (np.array(aug_splitting_cells)[perm], )
-
-        return out
