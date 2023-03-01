@@ -321,7 +321,7 @@ def run_module(args=None):
 
                 # exit if this is only run to prepare config
                 if args.prepare_config_cluster:
-                    sys.exit('Error message')
+                    sys.exit('Preparation of config file is finished. Please follow instructions on https://github.com/Microbial-Systems-Ecology/midap/wiki/MIDAP-On-Euler to submit your job on the cluster.')
 
                 # check to skip
                 checker.check()
