@@ -6,6 +6,7 @@ from typing import Union
 import numpy as np
 import skimage.io as io
 from skimage.measure import label, regionprops
+from skimage.segmentation import clear_border
 from tqdm import tqdm
 
 from ..utils import get_logger
@@ -84,7 +85,10 @@ class SegmentationPredictor(ABC):
             if self.postprocessing:
                 seg = self.postprocess_seg(seg)
 
-            # label in case no post processing
+            # remove borders from the segmentation
+            seg = clear_border(seg)
+
+            # label in case no post processing or border removal
             seg = label(seg, connectivity=self.connectivity)
 
             # save individual image
