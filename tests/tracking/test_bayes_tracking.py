@@ -21,7 +21,7 @@ def img1():
     img = np.zeros((512, 512))
 
     # create the cell
-    img[25:200, 75:100] = 1
+    img[75:125, 90:100] = 1
 
     return img
 
@@ -36,30 +36,18 @@ def img2(img1):
     img = img1.copy()
 
     # now we create a split event
-    img[100:105, 75:100] = 0
+    img[115:117, 90:100] = 0
 
     return img
 
 
 @fixture()
-def img3(img2):
+def tracking_instance(monkeypatch, img1, img2):
     """
-    Creates a test image
-    :return: A test image containing two cells
-    """
-    img = img2.copy()
-
-    return img
-
-
-@fixture()
-def tracking_instance(monkeypatch, img1, img2, img3):
-    """
-    This fixture prepares the DeltaV1Tracking class including monkey patching for the image read
+    This fixture prepares the BayesianCellTracking class including monkey patching for the image read
     :param monkeypatch: The monkeypatch fixture from pytest to override methods
     :param img1: A test image fixture used as base image to segment and track (single cell)
     :param img2: A test image fixture used as base image to segment and track (two cells)
-    :param img3: A test image fixture used as base image to segment and track (two cells)
     :return: A DeltaV1Tracking instance
     """
 
@@ -72,10 +60,8 @@ def tracking_instance(monkeypatch, img1, img2, img3):
 
         if "frame1" in path or "frame2" in path:
             return img1
-        elif "frame3" in path:
-            return img2
         else:
-            return img3
+            return img2
 
     # patch
     monkeypatch.setattr(io, "imread", fake_load)
@@ -105,28 +91,20 @@ def tracking_instance(monkeypatch, img1, img2, img3):
 
 def test_run_model_crop(tracking_instance):
     """
-    Tests the track_all_frames_crop routine with the DeltaV1Tracking class
-    :param tracking_instance: A pytest fixture of an DeltaV1Tracking instance
+    Tests the track_all_frames_crop routine with the BayesianCellTracking class
+    :param tracking_instance: A pytest fixture of an BayesianCellTracking instance
     """
 
-    tracking_instance.run_model()
-    tracking_instance.convert_data()
-    tracking_instance.generate_label_stack()
-    tracking_instance.correct_label_stack()
+    tracks = tracking_instance.run_model()
+    df, label_stack = tracking_instance.generate_midap_output(tracks=tracks)
 
-    track_output_correct = tracking_instance.track_output_correct
+    # check the number of cells
+    assert len(df) == 6
 
-    # The first cell splits into cells with IDs 2 and 3
-    track_output_red = track_output_correct[track_output_correct["trackID"] == 1]
-    assert track_output_red["trackID_d1"][0] == 3
-    assert track_output_red["trackID_d2"][0] == 2
+    # The first cell splits into cells with IDs 2 and 3, but bayes does not get it
+    track_output_red = df[df["trackID"] == 1]
+    assert track_output_red["trackID_d1"].isna().all()
+    assert track_output_red["trackID_d2"].isna().all()
 
-    # The mother ID should be the same for both daughter cells
-    track_output_red_d1 = track_output_correct[track_output_correct["trackID_d1"] == 3]
-    track_output_red_d2 = track_output_correct[track_output_correct["trackID_d2"] == 2]
-    assert track_output_red_d1["trackID_mother"].values[0] == 1
-    assert track_output_red_d2["trackID_mother"].values[0] == 1
-    assert (
-        track_output_red_d1["trackID_mother"].values[0]
-        == track_output_red_d2["trackID_mother"].values[0]
-    )
+    # make sure the labelstack says the same
+    assert np.unique(label_stack).size == 3

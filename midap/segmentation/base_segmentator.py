@@ -84,14 +84,14 @@ class SegmentationPredictor(ABC):
             if self.postprocessing:
                 seg = self.postprocess_seg(seg)
 
-            # label
-            seg_label = label(seg, connectivity=self.connectivity)
+            # label in case no post processing
+            seg = label(seg, connectivity=self.connectivity)
 
             # save individual image
             label_fname = re.sub("(_cut.tif|_cut.png|.tif)", "_seg.tif", p)
-            io.imsave(os.path.join(path_seg, label_fname), seg_label.astype(np.uint16), check_contrast=False)
+            io.imsave(os.path.join(path_seg, label_fname), seg.astype(np.uint16), check_contrast=False)
             seg_fname = re.sub("(_cut.tif|_cut.png|.tif)", "_seg_bin.png", p)
-            io.imsave(os.path.join(path_seg_bin, seg_fname), (255*seg).astype(np.uint8), check_contrast=False)
+            io.imsave(os.path.join(path_seg_bin, seg_fname), 255*(seg > 0).astype(np.uint8), check_contrast=False)
 
     def postprocess_seg(self, seg: np.ndarray):
         """

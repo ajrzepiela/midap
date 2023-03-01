@@ -27,6 +27,7 @@ Feature:
 - Tracking tool
 - Label images now uint16
 - Bayes tracking now same output as delta 
+- Bayes tracking no mergers reduced skip rate of object to 1 frame
 
 Fix:
 - Track ID of delta lineage started with 0, leading to a lost cell

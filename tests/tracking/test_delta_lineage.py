@@ -1,11 +1,13 @@
+import os
+import tempfile
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
-import tempfile
-import os
+from pytest import fixture, mark
 
 from midap.tracking.delta_lineage import DeltaTypeLineages
-from pytest import fixture, mark
-from pathlib import Path
+
 
 # Fixtures
 ##########
@@ -26,10 +28,9 @@ def fake_data_output(tracking_instance):
 
     # run the tracking
     inputs, results_all = tracking_instance.run_model_crop()
-    #results_all_red = tracking_instance.reduce_data(output_folder=tmp_dir.name, inputs=inputs, results=results_all)
 
     # create the instance
-    lin = DeltaTypeLineages(np.array(inputs), results_all)
+    lin = DeltaTypeLineages(np.array(inputs), results_all, connectivity=2)
 
     # save to file
     out_file = os.path.join(tmp_dir.name, 'track_output_delta.csv')
@@ -58,7 +59,7 @@ def example_data_output():
     inputs_all = data_inp['inputs_all']
 
     # create the instance
-    lin = DeltaTypeLineages(inputs_all, results_all_red)
+    lin = DeltaTypeLineages(inputs_all, results_all_red, connectivity=2)
 
     # creat lineages
     lin.generate_lineages()
