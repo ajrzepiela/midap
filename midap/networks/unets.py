@@ -1,3 +1,5 @@
+from typing import Optional, List
+
 import tensorflow as tf
 
 
@@ -121,12 +123,13 @@ class UNetv1(UNetBaseClass):
     This implements the standard class of UNets used in the pipeline
     """
 
-    def __init__(self, input_size=(256, 512, 1), dropout=0.5, inference=False):
+    def __init__(self, input_size=(256, 512, 1), dropout=0.5, inference=False, metrics: Optional[List]=None):
         """
         Initializes the UNet
         :param input_size: Size of the input
         :param dropout: Dropout factor for the dropout layers
         :param inference: If False, model is compiled for training
+        :param metrics: Additional metric to add for the training (only if inference=False)
         """
 
         # define the layers
@@ -193,4 +196,8 @@ class UNetv1(UNetBaseClass):
             # loss functions
             self.add_loss(self.weighted_binary_crossentropy(y_true=targets_tensor, y_pred=conv10,
                                                             weights=weights_tensor))
-            self.compile(optimizer=self.optimizer, loss=None, metrics=['accuracy'])
+            if metrics is not None:
+                metrics = ['accuracy'] + metrics
+            else:
+                metrics = ['accuracy']
+            self.compile(optimizer=self.optimizer, loss=None, metrics=metrics)

@@ -19,6 +19,23 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.5]
+
+2023-02-21
+
+Feature:
+- Refactor preprocessing to use the tf.data API
+- Added custom metrics and evaluations
+- Added a Tensorboard callback to the model training
+- Sorted all the training data and added it to polybox
+- Training script can take config file or arguments
+- Updated example notebooks
+
+Efficiency:
+- Improved weight calculation efficiency
+
+Fix:
+- Venv on euler updated to python 3.10, to avoid install failure of new python > 3.8 requirement
 
 ## [0.3.5]
 

@@ -1,6 +1,9 @@
+from typing import Optional, List
+
+import tensorflow as tf
+
 from midap.networks.layers import UNetLayerClassicDown, UNetLayerClassicUp
 from midap.networks.unets import UNetBaseClass
-import tensorflow as tf
 
 
 class CustomUNet(UNetBaseClass):
@@ -9,7 +12,7 @@ class CustomUNet(UNetBaseClass):
     This class implements a custom UNet based on the UNetBaseClass with it's preimplemented functions
     """
 
-    def __init__(self, input_size=(256, 512, 1), dropout=0.5, inference=False):
+    def __init__(self, input_size=(256, 512, 1), dropout=0.5, inference=False, metrics: Optional[List]=None):
         """
         Initializes the UNet
         :param input_size: Size of the input
@@ -61,7 +64,11 @@ class CustomUNet(UNetBaseClass):
             # loss functions
             self.add_loss(self.weighted_binary_crossentropy(y_true=targets_tensor, y_pred=self.out,
                                                             weights=weights_tensor))
-            self.compile(optimizer=self.optimizer, loss=None, metrics=['accuracy'])
+            if metrics is not None:
+                metrics = ['accuracy'] + metrics
+            else:
+                metrics = ['accuracy']
+            self.compile(optimizer=self.optimizer, loss=None, metrics=metrics)
 
     def save(self, filepath, **kwargs):
         """
