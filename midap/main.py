@@ -40,6 +40,11 @@ def run_module(args=None):
                              "file is generated in the current working directory. This option is meant generate "
                              "config file templates for the '--headless' mode. Note that this will overwrite "
                              "if a file already exists.")
+    parser.add_argument("--prepare_config_cluster", action="store_true",
+                    help="This option is meant to generate a config file and the output folder structure for a "
+                            "dataset. The output folder is decompressed and can be uploaded to the cluster to "
+                            "continue the pipeline in the '--headless' mode. Note that this will overwrite "
+                            "if a file already exists.")
 
     # parsing
     args = parser.parse_args(args)
@@ -296,6 +301,8 @@ def run_module(args=None):
                         config.set(identifier, f"ModelWeights_{channel}", weights)
                         config.to_file()
 
+        current_path.joinpath(checkpoint.fname).unlink(missing_ok=True)
+
     # we cycle through all pos identifiers again to perform all tasks fully
     #######################################################################
 
@@ -311,6 +318,11 @@ def run_module(args=None):
             # split frames
             with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="SplitFramesFull",
                                    identifier=identifier, copy_path=current_path) as checker:
+
+                # exit if this is only run to prepare config
+                if args.prepare_config_cluster:
+                    sys.exit('Preparation of config file is finished. Please follow instructions on https://github.com/Microbial-Systems-Ecology/midap/wiki/MIDAP-On-Euler to submit your job on the cluster.')
+
                 # check to skip
                 checker.check()
 
