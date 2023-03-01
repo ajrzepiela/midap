@@ -6,7 +6,6 @@ import btrack
 import h5py
 import numpy as np
 import pandas as pd
-from btrack import datasets
 from btrack.constants import BayesianUpdates
 from numba import njit, typed, types
 from tqdm import tqdm
@@ -86,28 +85,26 @@ class BayesianCellTracking(Tracking):
         # gen the inputs
         objects = btrack.utils.segmentation_to_objects(segmentation=self.seg_imgs, intensity_image=self.raw_imgs,
                                                        assign_class_ID=True)
-        config_file = datasets.cell_config()
+        config_file = Path(__file__).parent.joinpath("btrack_conf.json")
 
         # choose update method depending on number of cells
-        cum_sum_cells = np.sum([np.max(s) for s in self.seg_imgs])
+        cum_sum_cells = np.sum([len(np.unique(s)) - 1 for s in self.seg_imgs])
         num_frames = len(self.seg_imgs)
         max_cells_frame = 1_000
         max_cells_total = num_frames * max_cells_frame
 
-        if cum_sum_cells < max_cells_total:
-            update_method = BayesianUpdates.EXACT
-        else:
-            update_method = BayesianUpdates.APPROXIMATE
-
         # initialise a tracker session using a context manager
         with btrack.BayesianTracker() as tracker:
-            tracker.update_method = update_method
+            if cum_sum_cells < max_cells_total:
+                tracker.update_method = BayesianUpdates.EXACT
+            else:
+                tracker.update_method = BayesianUpdates.APPROXIMATE
+                tracker.max_search_radius = 256
 
             # configure the tracker using a config file
             tracker.configure(config_file)
 
             # set params
-            tracker.max_search_radius = 100
             tracker.tracking_updates = ["VISUAL", "MOTION"]
 
             # append the objects to be tracked
@@ -191,6 +188,8 @@ class BayesianCellTracking(Tracking):
                 lineage_id += 1
 
         self.logger.info("Creating label stack...")
+        # Note: There is the function btrack.utils.update_segmentation that deos this as well, however, this function
+        # removes all segmentations whose centroid is not inside the cell, so we use the class_id work around
         label_stack = self.seg_imgs.copy().astype(np.int32)
         label_transform(labels=label_stack, transformations=np.array(label_transforms, dtype=np.int32))
 
