@@ -19,7 +19,29 @@ Efficiency:
 Fix:
 - ...
 
-## [0.3.5]
+
+## [0.3.7]
+
+2023-03-01
+
+Feature:
+- Tracking tool
+- Label images now uint16
+- Bayes tracking now same output as delta 
+- Bayes tracking no mergers reduced skip rate of object to 1 frame
+
+Fix:
+- Track ID of delta lineage started with 0, leading to a lost cell
+- Fixed double assignment bug in delta tracking, where the same cell can be overwritten, i.e. be the successor for two cells
+- Delta tracking added connectivity to lineage
+
+Efficiency:
+- Delta tracking now avoids resize of input
+- Delta tracking data prep and cleanup much more efficient
+- Delta tracking lower memory footprint
+- Bayes tracking data transformation more efficient
+
+## [0.3.6]
 
 2023-02-21
 
