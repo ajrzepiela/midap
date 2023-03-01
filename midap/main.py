@@ -284,12 +284,16 @@ def run_module(args=None):
                     model_weights = config.get(identifier, f"ModelWeights_{channel}", fallback=None)
 
                     # run the selector
-                    path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
-                                                                               "model_weights_family_mother_machine")
+                    segmentation_class = config.get(identifier, "SegmentationClass")
+                    if segmentation_class == "HybridSegmentation":
+                        path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
+                                                                                   "model_weights_hybrid")
+                    else:
+                        path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
+                                                                                   "model_weights_family_mother_machine")
                     weights = segment_cells.main(path_model_weights=path_model_weights, path_pos=current_path,
                                                  path_channel=channel, postprocessing=True, network_name=model_weights,
-                                                 segmentation_class=config.get(identifier, "SegmentationClass"),
-                                                 just_select=True)
+                                                 segmentation_class=segmentation_class, just_select=True)
 
                     # save to config
                     if model_weights is None:
@@ -364,9 +368,8 @@ def run_module(args=None):
                     # get the current model weight (if defined)
                     model_weights = config.get(identifier, f"ModelWeights_{channel}")
 
-                    # run the segmentation
-                    path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
-                                                                               "model_weights_family_mother_machine")
+                    # run the segmentation, the actual path to the weights does not matter anymore since it is selected
+                    path_model_weights = Path(__file__).parent.parent.joinpath("model_weights")
                     _ = segment_cells.main(path_model_weights=path_model_weights, path_pos=current_path,
                                            path_channel=channel, postprocessing=True, network_name=model_weights,
                                            segmentation_class=config.get(identifier, "SegmentationClass"))

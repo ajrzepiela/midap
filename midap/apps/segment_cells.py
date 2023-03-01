@@ -7,6 +7,7 @@ from pathlib import Path
 # to get all subclasses
 from midap.segmentation import *
 from midap.segmentation import base_segmentator
+from midap.utils import get_inheritors
 
 ### Functions
 #############
@@ -30,7 +31,7 @@ def main(path_model_weights: Union[str,bytes,os.PathLike], path_pos: Union[str,b
 
     # get the right subclass
     class_instance = None
-    for subclass in base_segmentator.SegmentationPredictor.__subclasses__():
+    for subclass in get_inheritors(base_segmentator.SegmentationPredictor):
         if subclass.__name__ == segmentation_class:
             class_instance = subclass
 
