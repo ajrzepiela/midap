@@ -37,7 +37,6 @@ jobs:
       id: download_info
       shell: bash -l {0}
       run: |
-        cat "midap/apps/download_info.json" | jq -r '.model_weights.version'
         echo "WEIGHTS_VERSION=$(cat midap/apps/download_info.json | jq -r '.model_weights.version')" >> $GITHUB_ENV
         echo "PSF_VERSION=$(cat midap/apps/download_info.json | jq -r '.psf.version')" >> $GITHUB_ENV
         echo "DATA_VERSION=$(cat midap/apps/download_info.json | jq -r '.example_data.version')" >> $GITHUB_ENV
