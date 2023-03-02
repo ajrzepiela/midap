@@ -19,6 +19,13 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.8]
+
+Feature:
+- Additional flag `--prepare_cluster_config` to prepare config file for cluster run
+
+Fix:
+- Remove `checkpoints.log` after collecting parameters to avoid issues during restart of pipeline with generated config file.
 
 ## [0.3.7]
 

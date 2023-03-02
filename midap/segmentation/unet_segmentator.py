@@ -66,7 +66,7 @@ class UNetSegmentation(SegmentationPredictor):
             # now we create a figures for the GUI
             figures = []
             for seg, model_name in zip(segs, labels):
-                fig, ax = plt.subplots(figsize=(3,3))
+                fig, ax = plt.subplots(figsize=(2.5,2.5))
                 ax.imshow(img)
                 ax.contour(seg, [0.5], colors='r', linewidths=0.5)
                 ax.set_xticks([])
