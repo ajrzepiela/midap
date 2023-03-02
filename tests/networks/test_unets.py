@@ -11,7 +11,7 @@ def test_UNetv1():
     # path to weights
     weight_path = Path(__file__).absolute().parent.parent.parent
     weight_path = weight_path.joinpath("model_weights", "model_weights_legacy",
-                                       "model_weights_Caulobacter-crescentus-CB15_mKate2_v01.h5")
+                                       "model_weights_C-crescentus-CB15_mKate2_v01.h5")
 
     # create the model (no inference mode)
     inp_size = (64, 128, 1)

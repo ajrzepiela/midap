@@ -59,7 +59,7 @@ def test_main(prep_dirs):
 
     # Tests for UNetSegmentation
     segmentation_class = "UNetSegmentation"
-    network_name = path_model_weights.joinpath("model_weights_Caulobacter-crescentus-CB15_mKate2_v01.h5")
+    network_name = path_model_weights.joinpath("model_weights_C-crescentus-CB15_mKate2_v01.h5")
 
     # just the selection
     network_name_new = main(path_model_weights=path_model_weights, path_pos=path_pos, path_channel=path_channel,

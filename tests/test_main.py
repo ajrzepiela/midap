@@ -65,7 +65,7 @@ def prep_settings(prep_dir):
     config.set("pos1", "Corners", "7,102,68,155")
     path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
                                                                "model_weights_legacy",
-                                                               "model_weights_Caulobacter-crescentus-CB15_mKate2_v01.h5")
+                                                               "model_weights_C-crescentus-CB15_mKate2_v01.h5")
     config.set("pos1", "ModelWeights_PH", f"{path_model_weights}")
     config.to_file()
 
