@@ -139,10 +139,6 @@ def run_module(args=None):
         config = Config.from_file(config_file, full_check=True)
         checkpoint = Checkpoint(check_file)
 
-        # we create a checkpoint with the current config
-        # Note that this is a dummy checkpoint such that we can use the --restart flag in the worst case
-        checkpoint.set_state(state="None", flush=True)
-
     # we are not restarting nor are we in headless mode
     else:
         logger.info("Starting up initial GUI...")
@@ -151,10 +147,6 @@ def run_module(args=None):
         # load in the config and create a checkpoint
         config = Config.from_file(fname=config_file, full_check=False)
         checkpoint = Checkpoint(check_file)
-
-        # we create a checkpoint with the current config
-        # Note that this is a dummy checkpoint such that we can use the --restart flag in the worst case
-        checkpoint.set_state(state="None", flush=True)
 
     # Setup
     #######
@@ -295,7 +287,7 @@ def run_module(args=None):
                                                                                    "model_weights_hybrid")
                     else:
                         path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
-                                                                                   "model_weights_family_mother_machine")
+                                                                                   "model_weights_legacy")
                     weights = segment_cells.main(path_model_weights=path_model_weights, path_pos=current_path,
                                                  path_channel=channel, postprocessing=True, network_name=model_weights,
                                                  segmentation_class=segmentation_class, just_select=True)
@@ -304,8 +296,6 @@ def run_module(args=None):
                     if model_weights is None:
                         config.set(identifier, f"ModelWeights_{channel}", weights)
                         config.to_file()
-
-        current_path.joinpath(checkpoint.fname).unlink(missing_ok=True)
 
     # we cycle through all pos identifiers again to perform all tasks fully
     #######################################################################
@@ -408,10 +398,9 @@ def run_module(args=None):
                                      tracking_class=config.get(identifier, "TrackingClass"),
                                      loglevel=args.loglevel)
 
-        # if we are here, we copy the config file to the identifier and remove the checkpoint from the identifier
+        # if we are here, we copy the config file to the identifier
         logger.info(f"Finished with identifier {identifier}, coping settings...")
         config.to_file(current_path)
-        current_path.joinpath(checkpoint.fname).unlink(missing_ok=True)
 
     logger.info("Done!")
 

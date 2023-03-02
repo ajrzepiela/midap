@@ -71,7 +71,10 @@ class UNetSegmentation(SegmentationPredictor):
                 ax.contour(seg, [0.5], colors='r', linewidths=0.5)
                 ax.set_xticks([])
                 ax.set_yticks([])
-                ax.set_title(model_name)
+                if len(model_name) > 20:
+                    ax.set_title(model_name, fontsize=8)
+                else:
+                    ax.set_title(model_name)
                 figures.append(fig)
 
             # Title for the GUI

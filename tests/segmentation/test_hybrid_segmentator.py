@@ -112,8 +112,8 @@ def test_run_image_stack(segmentation_instance):
     for f in seg_files:
         fpath = os.path.join(channel_path, "seg_im", f)
         img = imread(fpath)
-        # only one label and background
-        assert np.unique(img).size == 2
+        # equal to 1 with new border removal
+        assert np.unique(img).size == 1
 
     # path to actual model weights
     weight_path = Path(__file__).absolute().parent.parent.parent
@@ -128,5 +128,5 @@ def test_run_image_stack(segmentation_instance):
     for f in seg_files:
         fpath = os.path.join(channel_path, "seg_im", f)
         img = imread(fpath)
-        # only one label and background
-        assert np.unique(img).size == 2
+        # equal to 1 with new border removal
+        assert np.unique(img).size == 1

@@ -104,17 +104,21 @@ def main(args=None):
                 else:
                     print(f"New version of {zip_file.name} available!")
 
-            # ask to download again if we want to
-            if up_to_date and args.force:
-                answer = query_yes_no(f"{zip_file.name} appears to be already downloaded, overwrite?")
-                if not answer:
+            if up_to_date:
+                # ask to download again if we want to
+                if args.force:
+                    answer = query_yes_no(f"{zip_file.name} appears to be already downloaded, overwrite?")
+                    if not answer:
+                        continue
+                else:
                     continue
-
-            # we first remove the old arxiv
-            rmtree(final_folder, ignore_errors=False)
 
             # download
             download_file(url=url, fname=zip_file, desc=f"Downloading {fname}")
+
+            # remove the old folder
+            if final_folder.exists():
+                rmtree(final_folder, ignore_errors=False)
 
             # unzip
             unpack_archive(filename=zip_file, extract_dir=zip_file.parent)
