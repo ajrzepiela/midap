@@ -7,6 +7,7 @@ from typing import Union, Optional
 
 import requests
 from tqdm import tqdm
+import json
 
 
 def query_yes_no(question: str, default="yes"):
@@ -82,10 +83,11 @@ def main(args=None):
     root = Path(__file__).parent.parent.parent
 
     # download the files
-    downloads = [("https://polybox.ethz.ch/index.php/s/a1oLGN73UNuxwQv/download", "psf.zip", "v0.1"),
-                 ("https://polybox.ethz.ch/index.php/s/otjTueqrs4i6i5K/download", "model_weights.zip", "v0.1"),
-                 ("https://polybox.ethz.ch/index.php/s/Ub30B0ivoTdGWzK/download", "example_data.zip", "v0.1"),
-                 ]
+    with open(Path(__file__).parent.joinpath("download_info.json"), "r") as f:
+        d_dict = json.load(f)
+    downloads = [(d_dict["psf"]["url"], d_dict["psf"]["name"], d_dict["psf"]["version"]),
+                 (d_dict["model_weights"]["url"], d_dict["model_weights"]["name"], d_dict["model_weights"]["version"]),
+                 (d_dict["example_data"]["url"], d_dict["example_data"]["name"], d_dict["example_data"]["version"])]
     for url, fname, version in downloads:
         # The full path of the downloaded file and the folder of the unpacked file
         zip_file = root.joinpath(fname)
