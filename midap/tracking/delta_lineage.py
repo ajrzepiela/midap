@@ -5,7 +5,7 @@ from typing import Optional, Union
 import h5py
 import numpy as np
 import pandas as pd
-from skimage.measure import regionprops, label
+from skimage.measure import label
 from tqdm import tqdm
 
 from ..utils import get_logger
@@ -26,11 +26,12 @@ class DeltaTypeLineages:
     # this logger will be shared by all instances and subclasses
     logger = logger
 
-    def __init__(self, inputs: np.ndarray, results: np.ndarray, generate_lineage=True):
+    def __init__(self, inputs: np.ndarray, results: np.ndarray, connectivity: int, generate_lineage=True):
         """
         Initializes the class
         :param inputs: input array for tracking network
         :param results: output array of tracking network
+        :param connectivity: The connectivity that should be used to label
         :param generate_lineage: Generate the lineages immediately, defaults to True
         """
 
@@ -39,7 +40,7 @@ class DeltaTypeLineages:
         # we append a input for the last frame
         last_frame = np.zeros_like(inputs[:1])
         last_frame[0,...,0] = inputs[-1,...,2]
-        last_frame[0,...,1] = label(inputs[-1,...,3])
+        last_frame[0,...,1] = label(inputs[-1,...,3], connectivity=connectivity)
 
         self.inputs = np.concatenate([inputs, last_frame], axis=0)
         self.n_frames = len(self.inputs)
@@ -61,10 +62,7 @@ class DeltaTypeLineages:
         """
 
         columns = ['frame', 'labelID', 'trackID', 'lineageID', 'trackID_d1', 'trackID_d2', 'split',
-                   'trackID_mother', 'area', 'edges_min_row', 'edges_min_col', 'edges_max_row',
-                   'edges_max_col', 'intensity_max', 'intensity_mean', 'intensity_min',
-                   'minor_axis_length', 'major_axis_length',
-                   'first_frame', 'last_frame']
+                   'trackID_mother', 'first_frame', 'last_frame']
         return pd.DataFrame(columns=columns)
 
     def generate_lineages(self):
@@ -73,16 +71,16 @@ class DeltaTypeLineages:
         """
         self.logger.info('Generate lineages...')
         # init the global unique ID and the track ID that track the cell through multiple cells
-        global_id = 0
-        track_id = 0
+        global_id = 1
+        track_id = 1
 
         # this goes through all labeled input the last
-        for frame_num, label_inp in tqdm(enumerate(self.inputs[...,1])):
+        for frame_num, label_inp in tqdm(enumerate(self.inputs[...,1]), total=self.n_frames):
             # we get all cells in the frame, first element is background
             current_local_ids = np.unique(label_inp)[1:]
 
             # cycle through all local ids
-            for local_id in tqdm(current_local_ids):
+            for local_id in current_local_ids:
                 # track the cell if it's not already part of a lineage
                 if local_id not in self.track_output.loc[self.track_output["frame"] == frame_num, "labelID"].values:
                     global_id, track_id = self._track_cell(frame_index=frame_num, cell_label=local_id,
@@ -111,7 +109,6 @@ class DeltaTypeLineages:
 
         # we get the cell properties
         cell = (self.inputs[frame_index,...,1] == cell_label)
-        cell_props = regionprops(cell.astype(int), intensity_image=self.inputs[frame_index, :, :, 0])[0]
 
         # update label stack
         self.label_stack[frame_index, cell] = track_id
@@ -121,16 +118,6 @@ class DeltaTypeLineages:
         self.track_output.loc[global_id, 'labelID'] = cell_label
         self.track_output.loc[global_id, 'trackID'] = track_id
         self.track_output.loc[global_id, 'lineageID'] = lineage_id
-        self.track_output.loc[global_id, 'area'] = cell_props.area
-        self.track_output.loc[global_id, 'edges_min_row'] = cell_props.bbox[0]
-        self.track_output.loc[global_id, 'edges_min_col'] = cell_props.bbox[1]
-        self.track_output.loc[global_id, 'edges_max_row'] = cell_props.bbox[2]
-        self.track_output.loc[global_id, 'edges_max_col'] = cell_props.bbox[3]
-        self.track_output.loc[global_id, 'intensity_max'] = cell_props.intensity_max
-        self.track_output.loc[global_id, 'intensity_mean'] = cell_props.intensity_mean
-        self.track_output.loc[global_id, 'intensity_min'] = cell_props.intensity_min
-        self.track_output.loc[global_id, 'minor_axis_length'] = cell_props.minor_axis_length
-        self.track_output.loc[global_id, 'major_axis_length'] = cell_props.major_axis_length
         self.track_output.loc[global_id, 'first_frame'] = first_frame
         if mother_id is not None:
             self.track_output.loc[global_id, 'trackID_mother'] = mother_id
@@ -230,15 +217,17 @@ class DeltaTypeLineages:
         output_folder = Path(output_folder)
 
         # save everything
-        self.track_output.to_csv(output_folder.joinpath('track_output_delta.csv'), index=True)
+        csv_file = output_folder.joinpath('track_output_delta.csv')
+        self.track_output.to_csv(csv_file, index=True, index_label="globalID")
 
         raw_inputs = self.inputs[:, :, :, 0]
-        with h5py.File(output_folder.joinpath('raw_inputs_delta.h5'), 'w') as hf:
-            hf.create_dataset('raw_inputs', data=raw_inputs)
+        data_file = output_folder.joinpath('tracking_delta.h5')
+        with h5py.File(data_file, 'w') as hf:
+            hf.create_dataset('images', data=raw_inputs.astype(float), dtype=float)
+            hf.create_dataset('labels', data=self.label_stack.astype(int), dtype=int)
 
         segs = self.inputs[0, :, :, 3]
         with h5py.File(output_folder.joinpath('segmentations_delta.h5'), 'w') as hf:
             hf.create_dataset('segmentations', data=segs)
 
-        with h5py.File(output_folder.joinpath('label_stack_delta.h5'), 'w') as hf:
-            hf.create_dataset('label_stack', data=self.label_stack)
+        return data_file, csv_file

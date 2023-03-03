@@ -1,4 +1,4 @@
-matplotlib>=3.3.0
+matplotlib==3.6.3
 napari==0.4.16
 numpy==1.23.4
 pandas>=1.5.1
@@ -11,5 +11,6 @@ tqdm>=4.64.0
 gitpython
 btrack==0.4.6
 scikit-learn
+numba
 pytest
 coverage

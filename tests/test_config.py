@@ -73,14 +73,15 @@ def test_Config(tmp_dir):
     # and the model weights
     try:
         # if omni pose is supported we test it
+        import omnipose
         from cellpose import models
         config.set("pos1", "SegmentationClass", "OmniSegmentation")
         config.set("pos1", "ModelWeights_None", "bact_phase_omni")
     except ImportError:
         # otherwise we use the standard but add existing model weights
         path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
-                                                                   "model_weights_family_mother_machine",
-                                                                   "model_weights_CB15-WT.h5")
+                                                                   "model_weights_legacy",
+                                                                   "model_weights_C-crescentus-CB15_mKate2_v01.h5")
         config.set("pos1", "ModelWeights_None", f"{path_model_weights}")
 
     config.validate_id_section("pos1", basic=False)

@@ -167,7 +167,7 @@ class Config(ConfigParser):
 
             # check the model weights
             for channel in self.getlist(id_name, "Channels"):
-                if self.get(id_name, "SegmentationClass") == "UNetSegmentation":
+                if self.get(id_name, "SegmentationClass") in ["UNetSegmentation", "HybridSegmentation"]:
                     model_weights = self.get(id_name, f"ModelWeights_{channel}")
                     model_path = Path(model_weights)
                     if not (model_path.exists() and model_path.suffix == ".h5") and model_weights != "watershed":

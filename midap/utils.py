@@ -98,7 +98,7 @@ def convert_to_bytes(file_or_bytes: Union[str, bytes], resize: Optional[Tuple[in
         scale = min(new_height / cur_height, new_width / cur_width)
         img = img.resize((int(cur_width * scale), int(cur_height * scale)), PIL.Image.ANTIALIAS)
     with io.BytesIO() as bio:
-        img.save(bio, format="PNG")
+        img.save(bio, format="GIF")
         del img
         return bio.getvalue()
 
@@ -128,7 +128,7 @@ def GUI_selector(figures: Collection[plt.Figure], labels: Collection[str], title
         buf = io.BytesIO()
         fig.savefig(buf, format='png')
         buf.seek(0)
-        buf = buf.read()
+        buf = convert_to_bytes(buf.read())
         buffers.append(buf)
         # the first button starts as selected
         if i == 0:
@@ -149,6 +149,9 @@ def GUI_selector(figures: Collection[plt.Figure], labels: Collection[str], title
     # if we still have elements in the line, append the line
     if len(new_line) > 0:
         buttons.append(new_line)
+
+    # get the number of rows
+    num_rows = len(buttons)
 
     # close all figs
     if close_figs:
@@ -177,7 +180,7 @@ def GUI_selector(figures: Collection[plt.Figure], labels: Collection[str], title
         win_w -= 120
         # resize the imgage
         for buf, label in zip(buffers, labels):
-            window[label].update(image_data=convert_to_bytes(buf, ((win_h / num_cols), (win_w / num_cols))))
+            window[label].update(image_data=convert_to_bytes(buf, ((win_h / num_rows), (win_w / num_cols))))
 
     # timer for the resize
     timer_windowResize = threading.Timer(THREADWAIT, resize_buttons)

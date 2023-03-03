@@ -7,6 +7,7 @@ from typing import Union, Optional
 
 import requests
 from tqdm import tqdm
+import json
 
 
 def query_yes_no(question: str, default="yes"):
@@ -82,11 +83,12 @@ def main(args=None):
     root = Path(__file__).parent.parent.parent
 
     # download the files
-    downloads = [("https://polybox.ethz.ch/index.php/s/a1oLGN73UNuxwQv/download", "psf.zip"),
-                 ("https://polybox.ethz.ch/index.php/s/XoaFLr346h8GxzP/download", "model_weights.zip"),
-                 ("https://polybox.ethz.ch/index.php/s/Ub30B0ivoTdGWzK/download", "example_data.zip"),
-                 ]
-    for url, fname in downloads:
+    with open(Path(__file__).parent.joinpath("download_info.json"), "r") as f:
+        d_dict = json.load(f)
+    downloads = [(d_dict["psf"]["url"], d_dict["psf"]["name"], d_dict["psf"]["version"]),
+                 (d_dict["model_weights"]["url"], d_dict["model_weights"]["name"], d_dict["model_weights"]["version"]),
+                 (d_dict["example_data"]["url"], d_dict["example_data"]["name"], d_dict["example_data"]["version"])]
+    for url, fname, version in downloads:
         # The full path of the downloaded file and the folder of the unpacked file
         zip_file = root.joinpath(fname)
         final_folder = Path(os.path.splitext(zip_file)[0])
@@ -94,8 +96,18 @@ def main(args=None):
 
         # Download the file
         try:
-            # if the download appeared succesfull
+            # check if the current files are up to date
+            up_to_date = False
             if current_done.exists():
+                with open(current_done, "r") as f:
+                    content = f.read()
+                if content == version:
+                    up_to_date = True
+                else:
+                    print(f"New version of {zip_file.name} available!")
+
+            if up_to_date:
+                # ask to download again if we want to
                 if args.force:
                     answer = query_yes_no(f"{zip_file.name} appears to be already downloaded, overwrite?")
                     if not answer:
@@ -103,18 +115,19 @@ def main(args=None):
                 else:
                     continue
 
-            # we first remove the old arxiv
-            rmtree(final_folder, ignore_errors=True)
-
             # download
             download_file(url=url, fname=zip_file, desc=f"Downloading {fname}")
 
+            # remove the old folder
+            if final_folder.exists():
+                rmtree(final_folder, ignore_errors=False)
+
             # unzip
-            unpack_archive(zip_file)
+            unpack_archive(filename=zip_file, extract_dir=zip_file.parent)
 
             # create the donefile
-            current_done.touch()
-
+            with open(current_done, "w+") as f:
+                f.write(version)
         finally:
             # clean up if necessary
             zip_file.unlink(missing_ok=True)

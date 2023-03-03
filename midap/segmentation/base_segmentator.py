@@ -6,6 +6,7 @@ from typing import Union
 import numpy as np
 import skimage.io as io
 from skimage.measure import label, regionprops
+from skimage.segmentation import clear_border
 from tqdm import tqdm
 
 from ..utils import get_logger
@@ -84,14 +85,17 @@ class SegmentationPredictor(ABC):
             if self.postprocessing:
                 seg = self.postprocess_seg(seg)
 
-            # label
-            seg_label = label(seg, connectivity=self.connectivity)
+            # remove borders from the segmentation
+            seg = clear_border(seg)
+
+            # label in case no post processing or border removal
+            seg = label(seg, connectivity=self.connectivity)
 
             # save individual image
             label_fname = re.sub("(_cut.tif|_cut.png|.tif)", "_seg.tif", p)
-            io.imsave(os.path.join(path_seg, label_fname), seg_label.astype(np.int64), check_contrast=False)
+            io.imsave(os.path.join(path_seg, label_fname), seg.astype(np.uint16), check_contrast=False)
             seg_fname = re.sub("(_cut.tif|_cut.png|.tif)", "_seg_bin.png", p)
-            io.imsave(os.path.join(path_seg_bin, seg_fname), (255*seg).astype(np.uint8), check_contrast=False)
+            io.imsave(os.path.join(path_seg_bin, seg_fname), 255*(seg > 0).astype(np.uint8), check_contrast=False)
 
     def postprocess_seg(self, seg: np.ndarray):
         """
@@ -110,7 +114,8 @@ class SegmentationPredictor(ABC):
         min_size = np.mean(areas)*0.01
         mask_sizes = (sizes > min_size)
         mask_sizes[0] = 0
-        img_filt = (mask_sizes[label_objects] > 0).astype(int)
+        # we multiply the labels to get a labelled image back
+        img_filt = (mask_sizes[label_objects] > 0).astype(int)*label_objects
 
         return img_filt
 

@@ -49,7 +49,7 @@ def test_main(prep_dirs):
 
     # prep the remaining arguments
     path_model_weights = Path(__file__).parent.parent.parent.joinpath("model_weights",
-                                                                      "model_weights_family_mother_machine")
+                                                                      "model_weights_legacy")
     postprocessing = True
 
     # Test for invalid segmentation class
@@ -59,7 +59,7 @@ def test_main(prep_dirs):
 
     # Tests for UNetSegmentation
     segmentation_class = "UNetSegmentation"
-    network_name = path_model_weights.joinpath("model_weights_CB15-WT.h5")
+    network_name = path_model_weights.joinpath("model_weights_C-crescentus-CB15_mKate2_v01.h5")
 
     # just the selection
     network_name_new = main(path_model_weights=path_model_weights, path_pos=path_pos, path_channel=path_channel,
@@ -87,6 +87,7 @@ def test_main(prep_dirs):
 
     # Tests for Omni if supported
     try:
+        import omnipose
         from cellpose import models
         segmentation_class = "OmniSegmentation"
         network_name = "bact_fluor_omni"

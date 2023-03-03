@@ -13,7 +13,7 @@ on:
 
 # Env variables
 env:
-  CACHE_NUMBER: 1  # increase to reset cache manually
+  CACHE_NUMBER: 3  # increase to reset cache manually
 
 # Jobs
 jobs:
@@ -49,33 +49,43 @@ jobs:
       - name: Set cache date
         run: echo "DATE_YM=$(date +'%Y%m')" >> $GITHUB_ENV
 
+      - name: Extract versions
+        id: download_info
+        shell: bash -l {0}
+        run: |
+          echo "WEIGHTS_VERSION=$(cat midap/apps/download_info.json | jq -r '.model_weights.version')" >> $GITHUB_ENV
+          echo "PSF_VERSION=$(cat midap/apps/download_info.json | jq -r '.psf.version')" >> $GITHUB_ENV
+          echo "DATA_VERSION=$(cat midap/apps/download_info.json | jq -r '.example_data.version')" >> $GITHUB_ENV
+          echo "WEIGHTS_NAME=$(cat midap/apps/download_info.json | jq -r '.model_weights.name')" >> $GITHUB_ENV
+          echo "WEIGHTS_URL=$(cat midap/apps/download_info.json | jq -r '.model_weights.url')" >> $GITHUB_ENV
+
       - name: Cache weights
         uses: actions/cache@v3
         with:
           enableCrossOsArchive: 'true'
           path: |
             model_weights/model_weights_tracking/*
-            model_weights/model_weights_family_mother_machine/model_weights_CB15-WT.h5
+            model_weights/model_weights_legacy/model_weights_C-crescentus-CB15_mKate2_v01.h5
             model_weights/.success
             psf/.success
             example_data/.success
-          key: ${{ env.DATE_YM }}-${{ env.CACHE_NUMBER }}
+          key: ${{ env.DATE_YM }}-${{ env.CACHE_NUMBER }}-${{ env.WEIGHTS_VERSION }}-${{ env.DATA_VERSION }}-${{ env.PSF_VERSION }}
         id: cache_weights
 
       - name: Download weights
         shell: bash -l {0}
         run: |
           echo "Download weights"
-          wget -O model_weights.zip https://polybox.ethz.ch/index.php/s/XoaFLr346h8GxzP/download
+          wget -O ${{ env.WEIGHTS_NAME }} ${{ env.WEIGHTS_URL }}
           echo "Extract model weights"
-          unzip model_weights.zip
+          unzip ${{ env.WEIGHTS_NAME }}
           echo "Remove zip-files"
-          rm model_weights.zip
-          touch model_weights/.success
+          rm ${{ env.WEIGHTS_NAME }}
+          echo -n "${{ env.WEIGHTS_VERSION }}" > model_weights/.success
           mkdir psf
-          touch psf/.success
+          echo -n "${{ env.PSF_VERSION }}" > psf/.success
           mkdir example_data
-          touch example_data/.success
+          echo -n "${{ env.DATA_VERSION }}" > example_data/.success
         if: ${{ steps.cache_weights.outputs.cache-hit != 'true' }}
 
   build:
@@ -105,36 +115,28 @@ jobs:
         shell: bash -l {0}
         run: echo "DATE_YM=$(date +'%Y%m')" >> $GITHUB_ENV
 
-      # cache for the weights
+      - name: Extract versions
+        id: download_info
+        shell: bash -l {0}
+        run: |
+          echo "WEIGHTS_VERSION=$(cat midap/apps/download_info.json | jq -r '.model_weights.version')" >> $GITHUB_ENV
+          echo "PSF_VERSION=$(cat midap/apps/download_info.json | jq -r '.psf.version')" >> $GITHUB_ENV
+          echo "DATA_VERSION=$(cat midap/apps/download_info.json | jq -r '.example_data.version')" >> $GITHUB_ENV
+          echo "WEIGHTS_NAME=$(cat midap/apps/download_info.json | jq -r '.model_weights.name')" >> $GITHUB_ENV
+          echo "WEIGHTS_URL=$(cat midap/apps/download_info.json | jq -r '.model_weights.url')" >> $GITHUB_ENV
+
       - name: Cache weights
         uses: actions/cache@v3
         with:
           enableCrossOsArchive: 'true'
           path: |
             model_weights/model_weights_tracking/*
-            model_weights/model_weights_family_mother_machine/model_weights_CB15-WT.h5
+            model_weights/model_weights_legacy/model_weights_C-crescentus-CB15_mKate2_v01.h5
             model_weights/.success
             psf/.success
             example_data/.success
-          key: ${{ env.DATE_YM }}-${{ env.CACHE_NUMBER }}
+          key: ${{ env.DATE_YM }}-${{ env.CACHE_NUMBER }}-${{ env.WEIGHTS_VERSION }}-${{ env.DATA_VERSION }}-${{ env.PSF_VERSION }}
         id: cache_weights
-
-      # We need to do this here because the cross OS cache bugs out sometimes
-      - name: Download weights Windows
-        shell: bash -l {0}
-        run: |
-          echo "Download weights"
-          wget -O model_weights.zip https://polybox.ethz.ch/index.php/s/XoaFLr346h8GxzP/download
-          echo "Extract model weights"
-          unzip model_weights.zip
-          echo "Remove zip-files"
-          rm model_weights.zip
-          touch model_weights/.success
-          mkdir psf
-          touch psf/.success
-          mkdir example_data
-          touch example_data/.success
-        if: ${{ steps.cache_weights.outputs.cache-hit != 'true' && matrix.label == 'windows-64'}}
 
       # date for the cache
       - name: Set cache date
