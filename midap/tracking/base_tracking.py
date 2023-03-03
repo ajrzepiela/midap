@@ -60,6 +60,7 @@ class Tracking(ABC):
             self.input_size = (32, 32, 4)
         else:
             self.input_size = input_size
+        self.max_input_size = 256
         self.target_size = target_size
         self.connectivity = connectivity
 
@@ -160,6 +161,8 @@ class DeltaTypeTracking(Tracking):
         min_dist = int(np.max(np.min(dist_mat, axis=1)))
         # the square crop region should be large enough to fit the biggest cell
         min_dist = np.maximum(min_dist, np.max([r.axis_major_length for r in props_curr]).astype(int))
+        # it should not be bigger than the frame itself or max input shape
+        min_dist = np.minimum(np.minimum(self.max_input_size, np.min(label_cur_frame.shape)), min_dist)
         if min_dist >= self.input_size[0]:
             self.logger.info(f"Current max dist between cells: {min_dist}, increasing input size of model...")
             self.input_size = (min_dist // 32 + 1) * 32, (min_dist // 32 + 1) * 32, 4

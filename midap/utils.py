@@ -150,6 +150,9 @@ def GUI_selector(figures: Collection[plt.Figure], labels: Collection[str], title
     if len(new_line) > 0:
         buttons.append(new_line)
 
+    # get the number of rows
+    num_rows = len(buttons)
+
     # close all figs
     if close_figs:
         plt.close("all")
@@ -177,7 +180,7 @@ def GUI_selector(figures: Collection[plt.Figure], labels: Collection[str], title
         win_w -= 120
         # resize the imgage
         for buf, label in zip(buffers, labels):
-            window[label].update(image_data=convert_to_bytes(buf, ((win_h / num_cols), (win_w / num_cols))))
+            window[label].update(image_data=convert_to_bytes(buf, ((win_h / num_rows), (win_w / num_cols))))
 
     # timer for the resize
     timer_windowResize = threading.Timer(THREADWAIT, resize_buttons)

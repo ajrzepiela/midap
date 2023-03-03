@@ -1,5 +1,6 @@
 import os
-from typing import Collection, Union
+from pathlib import Path
+from typing import Collection, Union, List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -53,22 +54,14 @@ class UNetSegmentation(SegmentationPredictor):
 
             # scale the image and pad
             img = self.scale_pixel_vals(io.imread(os.path.join(path_to_cutouts, path_img)))
-            img_pad = self.pad_image(img)
 
             # Get all the labels
             labels = ['watershed']
-            model_weights = os.listdir(self.path_model_weights)
-            labels += [mw.split('.')[0].split('_')[-1] for mw in model_weights]
+            model_weights = list(Path(self.path_model_weights).glob("*.h5"))
+            labels += [mw.stem.replace("model_weights_", "") for mw in model_weights]
 
             # create the segmentations
-            watershed_seg = self.segment_region_based(img, 0.16, 0.19)
-            segs = [watershed_seg]
-            for m in model_weights:
-                model_pred = UNetv1(input_size=img_pad.shape[1:3] + (1,), inference=True)
-                model_pred.load_weights(os.path.join(self.path_model_weights, m))
-                y_pred = model_pred.predict(img_pad)
-                seg = (self.undo_padding(y_pred) > 0.5).astype(int)
-                segs.append(seg)
+            segs = self._segs_for_selection(model_weights, img)
 
             # now we create a figures for the GUI
             figures = []
@@ -78,7 +71,10 @@ class UNetSegmentation(SegmentationPredictor):
                 ax.contour(seg, [0.5], colors='r', linewidths=0.5)
                 ax.set_xticks([])
                 ax.set_yticks([])
-                ax.set_title(model_name)
+                if len(model_name) > 20:
+                    ax.set_title(model_name, fontsize=8)
+                else:
+                    ax.set_title(model_name)
                 figures.append(fig)
 
             # Title for the GUI
@@ -96,7 +92,34 @@ class UNetSegmentation(SegmentationPredictor):
                 sel_model_weights = model_weights[ix_model_weights - 1]
                 self.model_weights = os.path.join(self.path_model_weights, sel_model_weights)
 
-        # set the segmentation method
+        # set the method via private function
+        self._set_segmentation_method()
+
+    def _segs_for_selection(self, model_weights: List[Union[str, bytes, os.PathLike]], img: np.ndarray):
+        """
+        Given the model weights, returns a selection of segmentation to use for the GUI selector
+        :param model_weights: A list of model weights
+        :param img: The image to segment
+        :return: A list of segmentations starting with the watershed segmentation, i.e. 1 longer than model_weights
+        """
+
+        img_pad = self.pad_image(img)
+        watershed_seg = self.segment_region_based(img, 0.16, 0.19)
+        segs = [watershed_seg]
+        for m in model_weights:
+            model_pred = UNetv1(input_size=img_pad.shape[1:3] + (1,), inference=True)
+            model_pred.load_weights(m)
+            y_pred = model_pred.predict(img_pad)
+            seg = (self.undo_padding(y_pred) > 0.5).astype(int)
+            segs.append(seg)
+
+        return segs
+
+    def _set_segmentation_method(self):
+        """
+        Sets the segmentation method according to the model_weights of the class
+        """
+
         if self.model_weights == 'watershed':
             self.segmentation_method = self.seg_method_watershed
         else:
@@ -130,17 +153,19 @@ class UNetSegmentation(SegmentationPredictor):
 
         return segs
 
-    def seg_method_watershed(self, imgs_in: Collection[np.ndarray]):
+    def seg_method_watershed(self, imgs_in: Collection[np.ndarray], min_val=0.16, max_val=0.19):
         """
         Performs watershed segmentation with scaling
         :param imgs_in: List of input images
+        :param min_val: minimum value used for the watershed markers
+        :param max_val: maximum value used for the watershed markers
         :return: List of segmentations
         """
 
         segs = []
         for img_in in tqdm(imgs_in):
             img = self.scale_pixel_vals(img_in)
-            seg = self.segment_region_based(img, 0.16, 0.19)
+            seg = self.segment_region_based(img, min_val=min_val, max_val=max_val)
             segs.append(seg)
 
         return segs

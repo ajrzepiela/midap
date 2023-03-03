@@ -242,7 +242,7 @@ class CheckpointManager(object):
         # if there is no Error and we successfully finished the job we reset the checkpoint
         if exc_val is None:
             self.checkpoint.set_state(state="None", identifier="None", flush=True)
-            self.save_files()
+            self.unlink_checkpoint(missing_ok=True)
             return True
 
         # we update the checkpoint if we fail otherwise
@@ -264,3 +264,17 @@ class CheckpointManager(object):
             logger.info(f"Saving a copy of the checkpoint and settings to: {self.copy_path}")
             self.checkpoint.to_file(self.copy_path)
             self.config.to_file(self.copy_path)
+
+    def unlink_checkpoint(self, missing_ok=True):
+        """
+        Removes the checkpoints from disk
+        :param missing_ok: Argument forwarded tp Path.unlink
+        """
+
+        # the standard path
+        original_path = Path(self.checkpoint.fname)
+        original_path.unlink(missing_ok=missing_ok)
+
+        # the copy one
+        if self.copy_path is not None:
+            Path(self.copy_path).joinpath(original_path.name).unlink(missing_ok=missing_ok)

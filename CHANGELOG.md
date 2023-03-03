@@ -19,7 +19,22 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.9]
+
+2023-03-02
+
+Feature:
+- File download has now versioning, making a new force download possible
+- Rename of model weights according to discussion
+- Added new hybrid models using watershed + UNet
+- Checkpoints with "None" states are not saved to disk anymore
+
+Fix:
+- Some minor bug fixes in the download script
+
 ## [0.3.8]
+
+2023-03-01
 
 Feature:
 - Additional flag `--prepare_cluster_config` to prepare config file for cluster run
