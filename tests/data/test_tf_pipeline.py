@@ -122,6 +122,23 @@ def test_map_brightness(sample_images):
     run_statics(TFPipe._map_brightness, i, w, l, image_only_transform=True, max_delta=max_delta)
 
 
+def test_map_gamma(sample_images):
+    """
+    Tests the map gamma method, also tests the rescale method
+    :param sample_images: A fixture that creates sample images
+    """
+
+    # extract
+    i, w, l = sample_images
+    # gamma transform need inputs to be positive
+    _, (i, w, l) = TFPipe._rescale(tf.constant(1), (i, w, l))
+
+    # the cropping
+    delta_gamma = 0.1
+    delta_gain = 0.1
+    run_statics(TFPipe._map_gamma, i, w, l, image_only_transform=True, delta_gamma=delta_gamma, delta_gain=delta_gain)
+
+
 def test_map_contrast(sample_images):
     """
     Tests the map contrast method

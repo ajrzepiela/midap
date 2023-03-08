@@ -82,12 +82,21 @@ def get_files(ctx: click.Context, param: click.Argument, filename: tuple):
 @click.option('--shuffle_buffer', type=int, default=128, help='The shuffle buffer used for the training set')
 @click.option('--image_size', type=(int, int, int), default=(128, 128, 1),
               help='The target image size including channel dimension')
+@click.option('--delta_gamma', type=float, default=0.1,
+              help='The max delta_gamma for random gamma adjustments, can be None -> no adjustments')
+@click.option('--delta_gain', type=float, default=0.1,
+              help='The max delta_gain for random gamma adjustments, can be None -> no adjustments')
+@click.option('--delta_brightness', type=float, default=0.4,
+              help='The max delta_brightness for random brightness adjustments, can be None -> no adjustments')
 @click.option('--delta_brightness', type=float, default=0.4,
               help='The max delta_brightness for random brightness adjustments, can be None -> no adjustments')
 @click.option('--lower_contrast', type=float, default=0.2,
               help='The lower limit for random contrast adjustments, can be None -> no adjustments')
 @click.option('--upper_contrast', type=float, default=0.5,
               help='The upper limit for random contrast adjustments, can be None -> no adjustments')
+@click.option('--rescale', is_flag=True,
+              help="If set, all images are rescaled between 0 and 1, note this will undo the contrast and brightness "
+                   "adjustments.")
 @click.option('--n_repeats', type=int, default=50,
               help='The number of repeats of random operations per original image, i.e. number of data augmentations')
 @click.option('--train_seed', type=(int, int), default=None,
@@ -156,10 +165,11 @@ def main(**kwargs):
                      val_size=kwargs["val_size"], sigma=kwargs["sigma"], w_0=kwargs["w_0"], w_c0=kwargs["w_c0"],
                      w_c1=kwargs["w_c1"], loglevel=kwargs["loglevel"], np_random_seed=kwargs["np_random_seed"],
                      batch_size=kwargs["batch_size"], shuffle_buffer=kwargs["shuffle_buffer"],
-                     image_size=kwargs["image_size"], delta_brightness=kwargs["delta_brightness"],
+                     image_size=kwargs["image_size"], delta_gamma=kwargs["delta_gamma"],
+                     delta_gain=kwargs["delta_gain"], delta_brightness=kwargs["delta_brightness"],
                      lower_contrast=kwargs["lower_contrast"], upper_contrast=kwargs["upper_contrast"],
-                     n_repeats=kwargs["n_repeats"], train_seed=kwargs["train_seed"], val_seed=kwargs["val_seed"],
-                     test_seed=kwargs["val_seed"])
+                     rescale=kwargs["rescale"], n_repeats=kwargs["n_repeats"], train_seed=kwargs["train_seed"],
+                     val_seed=kwargs["val_seed"], test_seed=kwargs["val_seed"])
 
     # import the right model
     if kwargs["custom_model"] is None:
