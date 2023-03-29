@@ -47,7 +47,7 @@ def main(path: Union[str,bytes,os.PathLike], save_dir: Union[str,bytes,os.PathLi
     for ix in tqdm(frames):
         frame = stack[ix]
         if deconvolution:
-            deconvoluted = richardson_lucy(frame, psf, iterations=10, clip=False)
+            deconvoluted = richardson_lucy(frame, psf, num_iter=10, clip=False)
             io.imsave(save_dir.joinpath(f"{raw_filename}_frame{ix:03d}_deconv.png"),
                       deconvoluted, check_contrast=False)
         else:
