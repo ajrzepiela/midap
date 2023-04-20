@@ -18,8 +18,9 @@ class TFPipe(DataProcessor):
     def __init__(self, paths: Union[str, bytes, os.PathLike, List[Union[str, bytes, os.PathLike]]],
                  n_grid=4, test_size=0.15, val_size=0.2, sigma=2.0, w_0=2.0, w_c0=1.0, w_c1=1.1, loglevel=7,
                  np_random_seed: Optional[int] = None, batch_size=32, shuffle_buffer=128, image_size=(128, 128, 1),
+                 delta_gamma: Optional[float] = 0.1, delta_gain: Optional[float] = 0.1,
                  delta_brightness: Optional[float] = 0.4, lower_contrast: Optional[float] = 0.2,
-                 upper_contrast: Optional[float] = 0.5, n_repeats: Optional[int] = 50,
+                 upper_contrast: Optional[float] = 0.5, rescale=False, n_repeats: Optional[int] = 50,
                  train_seed: Optional[tuple] = None, val_seed=(11, 12), test_seed=(13, 14)):
         """
         Initializes the TFPipe instance. Note that a lot parameters are used to implement the weight map
@@ -41,10 +42,18 @@ class TFPipe(DataProcessor):
         :param batch_size: The batch size of the data sets
         :param shuffle_buffer: The shuffle buffer used for the training set
         :param image_size: The target image size including channel dimension
+        :param delta_gamma: The random gamma correction, can be None -> no adjustments
+                            Note gamma and gain need both be present to make a gamma adjustment
+        :param delta_gain: The random gain correction, can be None -> no adjustments
+                           Note gamma and gain need both be present to make a gamma adjustment
+
         :param delta_brightness: The max delta_brightness for random brightness adjustments,
                                  can be None -> no adjustments
         :param lower_contrast: The lower limit for random contrast adjustments, can be None -> no adjustments
         :param upper_contrast: The upper limit for random contrast adjustments, can be None -> no adjustments
+        :param rescale: If True, all images are rescales between 0 and 1, note this will undo the brightness and
+                        contrast adjustments
+
         :param n_repeats: The number of repeats of random operations per original image, i.e. number of data
                           augmentations
         :param train_seed: A tuple of two seed used to seed the stateless random operations of the training dataset.
@@ -76,9 +85,9 @@ class TFPipe(DataProcessor):
 
         # set the TF datasets
         self.set_tf_dsets(batch_size=batch_size, shuffle_buffer=shuffle_buffer, image_size=image_size,
-                          delta_brightness=delta_brightness, lower_contrast=lower_contrast,
-                          upper_contrast=upper_contrast, n_repeats=n_repeats, train_seed=train_seed, val_seed=val_seed,
-                          test_seed=test_seed)
+                          delta_gamma=delta_gamma, delta_gain=delta_gain, delta_brightness=delta_brightness,
+                          lower_contrast=lower_contrast, upper_contrast=upper_contrast, rescale=rescale,
+                          n_repeats=n_repeats, train_seed=train_seed, val_seed=val_seed, test_seed=test_seed)
 
         # create the config for the meta data
         self.config = ConfigParser()
@@ -134,6 +143,34 @@ class TFPipe(DataProcessor):
         else:
             seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(num, dtype=tf.int32)
             i = tf.image.stateless_random_brightness(image=i, max_delta=max_delta, seed=seed)
+
+        return num, (i, w, l)
+
+    @staticmethod
+    def _map_gamma(num: tf.Tensor, imgs: Tuple[tf.Tensor], delta_gamma: float, delta_gain: float,
+                      stateless_seed: Optional[tuple]=None):
+        """
+        Performs a gamma adjust operation on image, leaves weight and label map
+        :param num: A Tensor with the number of the sample used to increase the stateless seed (if provided)
+        :param imgs: A suple of the image, weight and label map
+        :param delta_gamma: The range (-delta_gamma, delta_gamma) for gamma factor
+        :param delta_gain: The range (-delta_gain, delta_gain) for gamma factor
+        :param stateless_seed: If provided, used as input for the stateless crop operation, otherwise and unseeded
+                               stateful crop is used
+        :return: The tensors of value, cropped
+        """
+
+        i, w, l = imgs
+        if stateless_seed is None:
+            gamma = tf.random.uniform(shape=(), minval=1.0-delta_gamma, maxval=1.0+delta_gamma)
+            gain = tf.random.uniform(shape=(), minval=1.0+-delta_gain, maxval=1.0+delta_gain)
+            i = tf.image.adjust_gamma(image=i, gamma=gamma, gain=gain)
+        else:
+            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(num, dtype=tf.int32)
+            gamma = tf.random.stateless_uniform(shape=(), minval=1.0-delta_gamma, maxval=1.0+delta_gamma, seed=seed)
+            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(num, dtype=tf.int32) + 1234
+            gain = tf.random.stateless_uniform(shape=(), minval=1.0-delta_gain, maxval=1.0+delta_gain, seed=seed)
+            i = tf.image.adjust_gamma(image=i, gamma=gamma, gain=gain)
 
         return num, (i, w, l)
 
@@ -209,6 +246,23 @@ class TFPipe(DataProcessor):
         return num, tuple(out[..., i:i+1] for i in range(3))
 
     @staticmethod
+    def _rescale(num: tf.Tensor, imgs: Tuple[tf.Tensor, tf.Tensor, tf.Tensor]):
+        """
+        Rescales the images to have a range between 0 and 1
+        :param num: A Tensor with the number of the sample used to increase the stateless seed (if provided)
+        :param imgs: A suple of the image, weight and label map
+        :return: The tensors rescaled and the number
+        """
+
+        # combine
+        i, w, l = imgs
+
+        # rescale
+        i = (i - tf.reduce_min(i))/(tf.reduce_max(i) - tf.reduce_min(i))
+
+        return num, (i, w, l)
+
+    @staticmethod
     def zip_inputs(images: np.ndarray, weights: np.ndarray, segmentations: np.ndarray):
         """
         Puts images, weights and segmentations (labels) into a TF dataset
@@ -224,8 +278,9 @@ class TFPipe(DataProcessor):
 
         return tf.data.Dataset.zip((img_dset, w_dset, seg_dset))
 
-    def set_tf_dsets(self, batch_size, shuffle_buffer=128, image_size=(128, 128, 1), delta_brightness: Optional[float] = 0.4,
-                     lower_contrast: Optional[float] = 0.2, upper_contrast: Optional[float] = 0.5,
+    def set_tf_dsets(self, batch_size, shuffle_buffer=128, image_size=(128, 128, 1),  delta_gamma: Optional[float] = 0.1,
+                     delta_gain: Optional[float] = 0.1, delta_brightness: Optional[float] = 0.4,
+                     lower_contrast: Optional[float] = 0.2, upper_contrast: Optional[float] = 0.5, rescale=False,
                      n_repeats: Optional[int] = 50, train_seed: Optional[tuple] = None, val_seed=(11, 12),
                      test_seed=(13, 14)):
         """
@@ -233,10 +288,16 @@ class TFPipe(DataProcessor):
         :param batch_size: The batch size of the data sets
         :param shuffle_buffer: The shuffle buffer used for the training set
         :param image_size: The target image size including channel dimension
+        :param delta_gamma: The random gamma correction, can be None -> no adjustments
+                            Note gamma and gain need both be present to make a gamma adjustment
+        :param delta_gain: The random gain correction, can be None -> no adjustments
+                           Note gamma and gain need both be present to make a gamma adjustment
         :param delta_brightness: The max delta_brightness for random brightness adjustments, 
                                  can be None -> no adjustments
         :param lower_contrast: The lower limit for random contrast adjustments, can be None -> no adjustments
         :param upper_contrast: The upper limit for random contrast adjustments, can be None -> no adjustments
+        :param rescale: If True, all images are rescales between 0 and 1, note this will undo the brightness and
+                        contrast adjustments
         :param n_repeats: The number of repeats of random operations per original image, i.e. number of data 
                           augmentations 
         :param train_seed: A tuple of two seed used to seed the stateless random operations of the training dataset. 
@@ -294,7 +355,20 @@ class TFPipe(DataProcessor):
             d.map(lambda num, imgs: self._map_lr_flip(num, imgs, stateless_seed=val_seed))
             for d in self.dsets_val]
         # perform the augmentations
-        if delta_brightness is not None:
+        if delta_gamma is not None and delta_gain is not None:
+            self.dsets_train = [
+                d.map(lambda num, imgs: self._map_gamma(num, imgs, delta_gamma=delta_gamma, delta_gain=delta_gain,
+                                                        stateless_seed=train_seed))
+                for d in self.dsets_train]
+            self.dsets_test = [
+                d.map(lambda num, imgs: self._map_gamma(num, imgs, delta_gamma=delta_gamma, delta_gain=delta_gain,
+                                                        stateless_seed=test_seed))
+                for d in self.dsets_test]
+            self.dsets_val = [
+                d.map(lambda num, imgs: self._map_gamma(num, imgs, delta_gamma=delta_gamma, delta_gain=delta_gain,
+                                                        stateless_seed=val_seed))
+                for d in self.dsets_val]
+        if not rescale and delta_brightness is not None:
             self.dsets_train = [d.map(
                 lambda num, imgs: self._map_brightness(num, imgs, max_delta=delta_brightness, stateless_seed=train_seed))
                 for d in self.dsets_train]
@@ -304,19 +378,25 @@ class TFPipe(DataProcessor):
             self.dsets_val = [d.map(
                 lambda num, imgs: self._map_brightness(num, imgs, max_delta=delta_brightness, stateless_seed=val_seed))
                 for d in self.dsets_val]
-        if lower_contrast is not None and upper_contrast is not None:
+        if not rescale and lower_contrast is not None and upper_contrast is not None:
             self.dsets_train = [
                 d.map(lambda num, imgs: self._map_contrast(num, imgs, lower=lower_contrast, upper=upper_contrast,
-                                                         stateless_seed=train_seed))
+                                                           stateless_seed=train_seed))
                 for d in self.dsets_train]
             self.dsets_test = [
                 d.map(lambda num, imgs: self._map_contrast(num, imgs, lower=lower_contrast, upper=upper_contrast,
-                                                         stateless_seed=test_seed))
+                                                           stateless_seed=test_seed))
                 for d in self.dsets_test]
             self.dsets_val = [
                 d.map(lambda num, imgs: self._map_contrast(num, imgs, lower=lower_contrast, upper=upper_contrast,
-                                                         stateless_seed=val_seed))
+                                                           stateless_seed=val_seed))
                 for d in self.dsets_val]
+
+        # rescale all images
+        if rescale:
+            self.dsets_train = [d.map(self._rescale) for d in self.dsets_train]
+            self.dsets_test = [d.map(self._rescale) for d in self.dsets_test]
+            self.dsets_val = [d.map(self._rescale) for d in self.dsets_val]
 
         # finalize train dset
         dset_train = tf.data.Dataset.sample_from_datasets(self.dsets_train)
