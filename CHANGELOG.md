@@ -19,6 +19,13 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.10]
+
+TBD
+
+Feature:
+- STrack as new tracking algorithm (https://github.com/Helena-todd/STrack)
+
 ## [0.3.9]
 
 2023-03-02
