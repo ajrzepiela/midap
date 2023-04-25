@@ -12,6 +12,7 @@ import os
 
 from skimage import io
 from pathlib import Path
+from tqdm import tqdm
 
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
@@ -28,9 +29,10 @@ def load_tif(path_img: str):
 
     save_dir.mkdir(parents=True, exist_ok=True)
 
-    for ix in range(num_frames):
+    print('Splitting frames (image stack)...')
+    for ix in tqdm(range(num_frames)):
         io.imsave(save_dir.joinpath(f"_{raw_filename}_frame{ix:03d}_cut.png"),
-                      img_stack[ix], check_contrast=False)
+                      (img_stack[ix]*255).astype(np.uint8), check_contrast=False)
         
     files_cut_im = sorted(os.listdir(save_dir))
 
@@ -48,9 +50,10 @@ def load_h5(path_seg: str, thr: float = 0.9):
 
     save_dir.mkdir(parents=True, exist_ok=True)
 
-    for ix in range(num_frames):
+    print('Splitting frames (segmentation)...')
+    for ix in tqdm(range(num_frames)):
         io.imsave(save_dir.joinpath(f"_{raw_filename}_frame{ix:03d}_seg.png"),
-                      (dset[ix][:,:,0] > thr).astype(int), check_contrast=False)
+                      255*(dset[ix][:,:,0] > thr).astype(np.uint8), check_contrast=False)
         
     files_seg_im = sorted(os.listdir(save_dir))
 
