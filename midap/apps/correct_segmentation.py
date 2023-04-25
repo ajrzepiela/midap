@@ -7,26 +7,30 @@ Correct a segmentation generated with Midap
 import argparse
 import h5py
 import numpy as np
-import os
-
-
-from skimage import io
-from pathlib import Path
-from tqdm import tqdm
-
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button
+import os
+from pathlib import Path
+from skimage import io
+from typing import List, Tuple
+from tqdm import tqdm
 
 from midap.correction.napari_correction import Correction
 
-def load_tif(path_img: str):
+def load_tif(path_img: str) -> Tuple[str, List[str]]:
+    """
+    Load tif file and split stack into single frames and saves
+    frames as single images.
+    :param path_img: Path to the tif stack.
+    :return: Directory and file names of images.
+    """
+
     img_stack = io.imread(path_img)
     num_frames = len(img_stack)
 
     directory = 'cut_im/'
     raw_filename = path_img.stem
     save_dir = path_img.parent.joinpath(raw_filename, directory)
-
     save_dir.mkdir(parents=True, exist_ok=True)
 
     print('Splitting frames (image stack)...')
@@ -38,7 +42,16 @@ def load_tif(path_img: str):
 
     return save_dir, files_cut_im
 
-def load_h5(path_seg: str, thr: float = 0.9):
+
+def load_h5(path_seg: str, thr: float = 0.9) -> Tuple[str, List[str]]:
+    """
+    Load h5 file and split file into single thresholded frames and saves
+    frames as single images.
+    :param path_seg: Path to the h5 file.
+    :param thr: Threshold for image binarization.
+    :return: Directory and file names of segmentations.
+    """
+
     f = h5py.File(path_seg)
     key = list(f.keys())[0]
     dset = np.array(f[key])
@@ -61,7 +74,13 @@ def load_h5(path_seg: str, thr: float = 0.9):
 
 
 
-def get_file_names(path_img: str, path_seg: str):
+def get_file_names(path_img: str, path_seg: str) -> Tuple[str, str, List[str], List[str]]:
+    """
+    Get file names of all raw images and segmentations.
+    :param path_img: Path to image file/folder.
+    :param path_seg: Path to segmentation file/folder.
+    :return: Directory and file names of images and segmentations.
+    """
 
     path_img = Path(path_img)
     path_seg = Path(path_seg)
@@ -103,9 +122,6 @@ def main() -> None:
 
     # get file names
     dir_cut_im, dir_seg_im, files_cut_im, files_seg_im = get_file_names(args.path_img, args.path_seg)
-
-    #files_cut_im = sorted(os.listdir(args.path_img))
-    #files_seg_im = sorted(os.listdir(args.path_seg))
 
     # plot first time frame
     fig, ax = plt.subplots()
