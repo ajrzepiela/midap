@@ -19,6 +19,14 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.10]
+
+2023-04-27
+
+Feature:
+- STrack as new tracking algorithm (https://github.com/Helena-todd/STrack)
+- Handling of ilastik output files (tif-stack: cropped images, h5-file: probabilities) for manual segmentation correction.
+
 ## [0.3.9]
 
 2023-03-02
