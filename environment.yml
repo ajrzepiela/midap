@@ -13,6 +13,7 @@ dependencies:
     - PySimpleGUI>=4.60.4
     - scikit-image>=0.19.3
     - gitpython
+    - cellpose
     - omnipose
     - btrack==0.4.6
     - pytest
