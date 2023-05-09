@@ -26,7 +26,7 @@ Feature
 2023-05-10
 
 - Added fine-tuned omnipose models and upped the model weights version in the json.
-
+- Update env file accordingly
 
 ## [0.3.10]
 
