@@ -8,7 +8,7 @@ __all__ = [os.path.basename(f)[:-3] for f in modules if os.path.isfile(f) and no
 # we remove omnipose if it wasn't installed (e.g. on an M1 Mac)
 try:
     import omnipose
-    from cellpose import models
+    from cellpose_omni import models
 except ImportError:
     __all__.remove("omni_segmentator")
 
