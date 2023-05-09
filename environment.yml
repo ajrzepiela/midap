@@ -1,4 +1,4 @@
-name: midap_gugu
+name: midap
 channels:
   - defaults
 dependencies:
