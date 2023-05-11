@@ -1,9 +1,10 @@
 import os
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
 import skimage.io as io
-from cellpose import models
+from cellpose_omni import models
 
 from .base_segmentator import SegmentationPredictor
 from ..utils import GUI_selector
@@ -49,10 +50,18 @@ class OmniSegmentation(SegmentationPredictor):
             img = self.scale_pixel_vals(io.imread(os.path.join(path_to_cutouts, path_img)))
 
             # display different segmentation models
-            labels = ['bact_phase_cp', 'bact_fluor_cp', 'bact_phase_omni', 'bact_fluor_omni']
+            label_dict = {'bact_phase_cp': 'bact_phase_cp',
+                          'bact_fluor_cp': 'bact_fluor_cp',
+                          'bact_phase_omni': 'bact_phase_omni',
+                          'bact_fluor_omni': 'bact_fluor_omni',}
+            for custom_model in Path(self.path_model_weights).iterdir():
+                label_dict.update({custom_model.name: custom_model})
             figures = []
-            for model_name in labels:
-                model = models.CellposeModel(gpu=False, model_type=model_name)
+            for model_name, model_path in label_dict.items():
+                if Path(model_path).is_file():
+                    model = models.CellposeModel(gpu=False, pretrained_model=str(model_path))
+                else:
+                    model = models.CellposeModel(gpu=False, model_type=model_name)
                 # predict, we only need the mask, see omnipose tutorial for the rest of the args
                 mask, _, _ = model.eval(img, channels=[0, 0], rescale=None, mask_threshold=-1,
                                         transparency=True, flow_threshold=0, omni=True, resample=True, verbose=0)
@@ -73,13 +82,16 @@ class OmniSegmentation(SegmentationPredictor):
             title = f'Segmentation Selection for channel: {channel}'
 
             # start the gui
-            marked = GUI_selector(figures=figures, labels=labels, title=title)
+            marked = GUI_selector(figures=figures, labels=list(label_dict.keys()), title=title)
 
             # set weights
-            self.model_weights = marked
+            self.model_weights = label_dict[marked]
 
         # helper function for the seg method
-        model = models.CellposeModel(gpu=False, model_type=self.model_weights)
+        if Path(self.model_weights).is_file():
+            model = models.CellposeModel(gpu=False, pretrained_model=str(self.model_weights))
+        else:
+            model = models.CellposeModel(gpu=False, model_type=self.model_weights)
 
         def seg_method(imgs):
             mask, _, _ = model.eval(imgs, channels=[0, 0], rescale=None, mask_threshold=-1,
