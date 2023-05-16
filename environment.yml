@@ -2,9 +2,10 @@ name: midap
 channels:
   - defaults
 dependencies:
-  - python=3.9
+  - python=3.10
+  - nomkl
   - tensorflow
-  - pytorch
+  - numba
   - pip
   - pyqt
   - pip:
