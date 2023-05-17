@@ -48,6 +48,7 @@ def main(path: Union[str,bytes,os.PathLike], save_dir: Union[str,bytes,os.PathLi
         frame = stack[ix]
         if deconvolution:
             deconvoluted = richardson_lucy(frame, psf, num_iter=10, clip=False)
+            deconvoluted = (256*(deconvoluted - deconvoluted.min())/(deconvoluted.max()- deconvoluted.min())).astype(np.uint8)
             io.imsave(save_dir.joinpath(f"{raw_filename}_frame{ix:03d}_deconv.png"),
                       deconvoluted, check_contrast=False)
         else:
