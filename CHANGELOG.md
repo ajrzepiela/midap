@@ -19,6 +19,23 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.11]
+
+Feature
+
+2023-05-10
+
+- Added fine-tuned omnipose models and upped the model weights version in the json.
+- Update env file accordingly
+
+## [0.3.10]
+
+2023-04-27
+
+Feature:
+- STrack as new tracking algorithm (https://github.com/Helena-todd/STrack)
+- Handling of ilastik output files (tif-stack: cropped images, h5-file: probabilities) for manual segmentation correction.
+
 ## [0.3.9]
 
 2023-03-02

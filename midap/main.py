@@ -285,6 +285,9 @@ def run_module(args=None):
                     if segmentation_class == "HybridSegmentation":
                         path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
                                                                                    "model_weights_hybrid")
+                    elif segmentation_class == "OmniSegmentation":
+                        path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
+                                                                                   "model_weights_omni")
                     else:
                         path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
                                                                                    "model_weights_legacy")
