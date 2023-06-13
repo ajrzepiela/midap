@@ -94,6 +94,8 @@ class OmniSegmentation(SegmentationPredictor):
             model = models.CellposeModel(gpu=False, model_type=self.model_weights)
 
         def seg_method(imgs):
+            # scale all the images
+            imgs = [self.scale_pixel_vals(img) for img in imgs]
             mask, _, _ = model.eval(imgs, channels=[0, 0], rescale=None, mask_threshold=-1,
                                     transparency=True, flow_threshold=0, omni=True, resample=True, verbose=0)
 

@@ -294,7 +294,7 @@ def run_module(args=None):
                     weights = segment_cells.main(path_model_weights=path_model_weights, path_pos=current_path,
                                                  path_channel=channel, postprocessing=True, network_name=model_weights,
                                                  segmentation_class=segmentation_class, just_select=True,
-                                                 img_threshold=config.getfloat(identifier, "ImgThreshold")),
+                                                 img_threshold=config.getfloat(identifier, "ImgThreshold"))
 
                     # save to config
                     if model_weights is None:
@@ -405,6 +405,7 @@ def run_module(args=None):
 
         # Cleanup
         for channel in config.getlist(identifier, "Channels"):
+            logger.info(f"Cleaning up {identifier} and channel {channel}...")
             with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config,
                                    state=f"Cleanup_{channel}", identifier=identifier,
                                    copy_path=current_path) as checker:
@@ -416,10 +417,10 @@ def run_module(args=None):
                     # get a list of files to remove
                     file_ext = config.get("General", "FileType")
                     if file_ext == "ome.tif":
-                        files = base_path.joinpath(channel).glob(f"*{identifier}*/**/*.ome.tif")
+                        files = base_path.joinpath(identifier, channel).glob(f"*{identifier}*/**/*.ome.tif")
                     else:
-                        files = base_path.joinpath(channel).glob(f"*{identifier}*.{file_ext}")
-
+                        files = base_path.joinpath(identifier, channel).glob(f"*{identifier}*.{file_ext}")
+                    
                     # remove the files
                     for file in files:
                         file.unlink(missing_ok=True)
