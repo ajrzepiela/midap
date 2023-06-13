@@ -420,7 +420,7 @@ def run_module(args=None):
                         files = base_path.joinpath(identifier, channel).glob(f"*{identifier}*/**/*.ome.tif")
                     else:
                         files = base_path.joinpath(identifier, channel).glob(f"*{identifier}*.{file_ext}")
-                    
+
                     # remove the files
                     for file in files:
                         file.unlink(missing_ok=True)

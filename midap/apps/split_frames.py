@@ -44,6 +44,11 @@ def main(path: Union[str,bytes,os.PathLike], save_dir: Union[str,bytes,os.PathLi
     # split the frames
     logger.info("Splitting frames...")
     stack = io.imread(path)
+
+    # single image stuff
+    if stack.ndim == 2:
+        stack = stack[None, ...]
+
     for ix in tqdm(frames):
         frame = stack[ix]
         if deconvolution:
