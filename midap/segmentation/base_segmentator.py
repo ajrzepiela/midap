@@ -28,7 +28,7 @@ class SegmentationPredictor(ABC):
     logger = logger
 
     def __init__(self, path_model_weights: Union[str, bytes, os.PathLike], postprocessing: bool, div=16, connectivity=1,
-                 model_weights: Union[str, bytes, os.PathLike, None]=None):
+                 model_weights: Union[str, bytes, os.PathLike, None]=None, img_threshold=1.0):
         """
         Initializes the SegmentationPredictor instance
         :param path_model_weights: Path to the model weights
@@ -37,6 +37,8 @@ class SegmentationPredictor(ABC):
                     divisible by div
         :param connectivity: The connectivity used for the segmentation, see skimage.measure.label
         :param model_weights: Weights of the models to use, can be used to set the segmentation method
+        :param img_threshold: Threshold for the images, all values brighter than this will be capped, defaults to 1.0,
+                              which means no thresholding
         """
 
         # set the params
@@ -44,6 +46,7 @@ class SegmentationPredictor(ABC):
         self.postprocessing = postprocessing
         self.div = div
         self.connectivity = connectivity
+        self.threshold = img_threshold
 
         # This variable is used in case custom methods do not want the images padded (default)
         self.require_padding = False
@@ -121,12 +124,14 @@ class SegmentationPredictor(ABC):
 
     def scale_pixel_vals(self, img: np.ndarray):
         """
-        Scales the values of the pixels of an image such that they are between 0 and 1
+        Applies thresholding to and image (defined in init) and then scales the values of the pixels of an image such
+        that they are between 0 and 1.
         :param img: The input image as array
         :returns: The images with pixels scales between 0 and 1
         """
 
         img = np.array(img)
+        img = np.clip(img, img.min(), self.threshold*img.max())
         return ((img - img.min()) / (img.max() - img.min()))
 
     @abstractmethod
