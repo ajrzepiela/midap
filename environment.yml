@@ -2,7 +2,7 @@ name: midap
 channels:
   - defaults
 dependencies:
-  - python=3.10
+  - python=3.9
   - nomkl
   - tensorflow
   - numba
@@ -13,7 +13,6 @@ dependencies:
     - napari
     - PySimpleGUI>=4.60.4
     - scikit-image==0.19.3
-    - scikit-image>=0.19.3
     - gitpython
     - omnipose
     - btrack==0.4.6
