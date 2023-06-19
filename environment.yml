@@ -11,6 +11,7 @@ dependencies:
     - matplotlib>=3.3.0,<=3.6.3
     - napari
     - PySimpleGUI>=4.60.4
+    - scikit-image==0.19.3
     - scikit-image>=0.19.3
     - gitpython
     - omnipose
