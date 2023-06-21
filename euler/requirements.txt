@@ -7,7 +7,7 @@ Pillow>=9.3.0
 psutil==5.9.0
 PySimpleGUI>=4.60.4
 PyYAML>=6.0
-scikit-image>=0.19.3
+scikit-image==0.19.3
 tqdm>=4.64.0
 gitpython
 btrack==0.4.6

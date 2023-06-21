@@ -32,6 +32,17 @@ from midap.tracking import base_tracking
 tracking_subclasses = [subclass.__name__ for subclass in get_inheritors(base_tracking.Tracking)]
 tracking_subclasses.remove("DeltaTypeTracking")
 
+def collapse(layout, key):
+    """
+    Collapse a layout into a single line
+    :param layout: The target layout
+    :param key: The key
+    :return: The new pin
+    """
+
+    # sg.pin allows us to diplay or hide the column
+    return sg.pin(sg.Column(layout, key=key))
+
 # main function of the App
 ##########################
 
@@ -129,6 +140,31 @@ def main(config_file="settings.ini", loglevel=7):
             default_ph = splits[0]
             default_ch = ",".join(splits[1:])
 
+        # Advanced options
+        SYMBOL_RIGHT = '▶'
+        SYMBOL_DOWN = '▼'
+
+        advanced_options = [# What to keep
+                            [sg.Text("Keep the following files: ", font="bold")],
+                            [sg.Checkbox("Original file copy", key="keep_copy",
+                                         default=defaults.getboolean("KeepCopyOriginal"), size=30),
+                             sg.Checkbox("Raw images", key="keep_raw",
+                                         default=defaults.getboolean("KeepRawImages"))],
+                            [sg.Checkbox("Cut images", key="keep_cut",
+                                         default=defaults.getboolean("KeepCutoutImages"), size=30),
+                             sg.Checkbox("Segmented images (labeled)", key="keep_seg_label",
+                                         default=defaults.getboolean("KeepSegImagesLabel"))],
+                            [sg.Checkbox("Segmented images (binary)", key="keep_seg_bin",
+                                         default=defaults.getboolean("KeepSegImagesBin"), size=30),
+                             sg.Checkbox("Segmented images (tracking)", key="keep_seg_track",
+                                         default=defaults.getboolean("KeepSegImagesTrack"))],
+                            # Thresholding
+                            [sg.Text("Thresholding: \n"
+                                     "Enter a value between 0 (black) and 1 (white) to cap the brightest parts of the images.",
+                                     font="bold")],
+                            [sg.Input(default_text=defaults["ImgThreshold"], size=30, key="thresholding_val")],]
+
+
         # Family Machine specific layout
         layout_family_machine = [[sg.Frame("Conditional Run", [[
             sg.Column(workflow, background_color="white"),
@@ -155,24 +191,45 @@ def main(config_file="settings.ini", loglevel=7):
                                           key="track_method_text", font="bold")],
                                  [sg.DropDown(key="track_method", values=tracking_subclasses,
                                               default_value=defaults["TrackingClass"])],
-                                 [sg.Text("")],
                                  [sg.Text("Preprocessing", font="bold")],
                                  [sg.Checkbox("Deconvolution of images", key="deconv", font="bold",
                                               default=(defaults["Deconvolution"] == "deconv_family_machine"))],
+                                 [sg.Text("")],
+                                 [sg.Text(SYMBOL_RIGHT, enable_events=True, key='-OPEN_ADV-'),
+                                  sg.Text("Advanced Options")],
+                                 [collapse(advanced_options, '-SEC_ADV-')],
                                  [sg.Text("")],
                                  [sg.Column([[sg.OK(), sg.Cancel()]], key="col_final")]]
 
         # Finalize the layout
         window = sg.Window(f"Params for '{id_name}' of {unique_identifiers}", layout_family_machine).Finalize()
 
-        # Read Params and close window
-        event, values = window.read()
-        window.close()
+        # Set the advanced options to be collapsed
+        advanced_opened = False
+        window['-SEC_ADV-'].update(visible=advanced_opened)
+        while True:
+            event, values = window.read()
 
-        # Return False if we cancel or press "X"
-        if event == "Cancel" or event is None:
-            logging.critical("GUI was cancelled or unexpectedly closed, exiting...")
-            exit(1)
+            # debug event
+            logger.debug(f"Event: {event}")
+
+            # if we are ok, we break
+            if event == "OK":
+                break
+
+            # Return False if we cancel or press "X"
+            if event == "Cancel" or event is None:
+                logging.critical("GUI was cancelled or unexpectedly closed, exiting...")
+                exit(1)
+
+            # handle the advanced options
+            if event == '-OPEN_ADV-':
+                advanced_opened = not advanced_opened
+                window['-OPEN_ADV-'].update(SYMBOL_DOWN if advanced_opened else SYMBOL_RIGHT)
+                window['-SEC_ADV-'].update(visible=advanced_opened)
+
+        # close the window
+        window.close()
 
         # Set the general parameter
         section = {}
@@ -205,6 +262,21 @@ def main(config_file="settings.ini", loglevel=7):
         section["CutImgClass"] = values["imcut"]
         section["SegmentationClass"] = values["seg_method"]
         section["TrackingClass"] = values["track_method"]
+
+        # The advanced options
+        section["KeepCopyOriginal"] = values["keep_copy"]
+        section["KeepRawImages"] = values["keep_raw"]
+        section["KeepCutoutImages"] = values["keep_cut"]
+        section["KeepSegImagesLabel"] = values["keep_seg_label"]
+        section["KeepSegImagesBin"] = values["keep_seg_bin"]
+        section["KeepSegImagesTrack"] = values["keep_seg_track"]
+
+        # Thresholding
+        threshold = float(values["thresholding_val"])
+        if threshold <= 0 or threshold > 1:
+            logging.error(f"Thresholding value must be between 0 and 1. Got {threshold}")
+            exit(1)
+        section["ImgThreshold"] = values["thresholding_val"]
 
         # overwrite the section defaults
         config.read_dict({id_name: section})

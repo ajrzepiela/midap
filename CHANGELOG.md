@@ -19,6 +19,17 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.12]
+
+Feature
+
+TBD
+
+- New advanced options in GUI
+- Brightness thresholding and notebook
+- Support for single image runs
+
+
 ## [0.3.11]
 
 Feature
