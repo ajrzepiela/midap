@@ -122,7 +122,7 @@ def main(config_file="settings.ini", loglevel=7):
 
         # the defaults come either from the first section or from the last that we set
         defaults = config[id_name] if i == 0 else config[unique_identifiers[i-1]]
-
+    
         # Common elements of the next GUI part
         workflow = [[sg.Text("Part of pipeline", justification="center", size=(16, 1))],
                     [sg.T("         "), sg.Radio("Segmentation and Tracking", "RADIO1", key="segm_track",
@@ -148,7 +148,7 @@ def main(config_file="settings.ini", loglevel=7):
         # Advanced options
         SYMBOL_RIGHT = '▶'
         SYMBOL_DOWN = '▼'
-
+        
         advanced_options = [# What to keep
                             [sg.Text("Keep the following files: ", font="bold")],
                             [sg.Checkbox("Original file copy", key="keep_copy",
@@ -167,7 +167,7 @@ def main(config_file="settings.ini", loglevel=7):
                             [sg.Text("Thresholding: \n"
                                      "Enter a value between 0 (black) and 1 (white) to cap the brightest parts of the images.",
                                      font="bold")],
-                            [sg.Input(default_text=defaults["ImgThreshold"], size=30, key="thresholding_val")],]
+                            [sg.Input(default_text=defaults["ImgThreshold"], size=30, key="thresholding_val")],
 
         if general["DataType"] == "Family_Machine":
             # Segmentation
@@ -308,6 +308,9 @@ def main(config_file="settings.ini", loglevel=7):
             logging.error(f"Thresholding value must be between 0 and 1. Got {threshold}")
             exit(1)
         section["ImgThreshold"] = values["thresholding_val"]
+
+        # Tracking options
+        section["FluoChange"] = values["fluo_change"]
 
         # overwrite the section defaults
         config.read_dict({id_name: section})
