@@ -78,9 +78,13 @@ def run_module(args=None):
     # to avoid loading times later
     from midap.checkpoint import Checkpoint, CheckpointManager
     from midap.config import Config
+<<<<<<< HEAD
     from midap.apps import download_files, init_GUI, split_frames, cut_chamber, segment_cells, segment_analysis, track_cells
     from midap.main_family_machine import run_family_machine
     from midap.main_mother_machine import run_mother_machine
+=======
+    from midap.apps import download_files, init_GUI, split_frames, cut_chamber, segment_cells, segment_analysis, track_cells, track_analysis
+>>>>>>> 26595d2 (Implement main functionality of fluo change analysis)
     logger.info("Done!")
 
     # Download the files if necessary
