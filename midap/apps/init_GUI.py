@@ -282,7 +282,11 @@ def main(config_file="settings.ini", loglevel=7):
         # The remaining generals
         section["StartFrame"] = values["start_frame"]
         section["EndFrame"] = values["end_frame"]
+
+        if values["fluo_change"]:
+            values["phase_segmentation"] = True
         section["PhaseSegmentation"] = values["phase_segmentation"]
+       
 
         # The classes
         section["CutImgClass"] = values["imcut"]
