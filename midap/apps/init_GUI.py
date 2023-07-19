@@ -162,7 +162,14 @@ def main(config_file="settings.ini", loglevel=7):
                             [sg.Text("Thresholding: \n"
                                      "Enter a value between 0 (black) and 1 (white) to cap the brightest parts of the images.",
                                      font="bold")],
-                            [sg.Input(default_text=defaults["ImgThreshold"], size=30, key="thresholding_val")],]
+                            [sg.Input(default_text=defaults["ImgThreshold"], size=30, key="thresholding_val")],
+                            
+                            # Segmentation
+                            [sg.Text("Segmentation options:",
+                                     font="bold")],
+                            [sg.Checkbox("Remove border cells", key="remove_border",
+                                         default=defaults.getboolean("RemoveBorder"), size=30)],
+                            ]
 
 
         # Family Machine specific layout
@@ -270,6 +277,7 @@ def main(config_file="settings.ini", loglevel=7):
         section["KeepSegImagesLabel"] = values["keep_seg_label"]
         section["KeepSegImagesBin"] = values["keep_seg_bin"]
         section["KeepSegImagesTrack"] = values["keep_seg_track"]
+        section["RemoveBorder"] = values["remove_border"]
 
         # Thresholding
         threshold = float(values["thresholding_val"])

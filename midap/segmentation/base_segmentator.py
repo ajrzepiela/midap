@@ -55,7 +55,7 @@ class SegmentationPredictor(ABC):
         self.model_weights = model_weights
         self.segmentation_method = None
 
-    def run_image_stack(self, channel_path: Union[str, bytes, os.PathLike]):
+    def run_image_stack(self, channel_path: Union[str, bytes, os.PathLike], clean_border: bool):
         """
         Performs image segmentation, postprocessing and storage for all images found in channel_path
         :param channel_path: Directory of the channel used for the analysis
@@ -89,7 +89,8 @@ class SegmentationPredictor(ABC):
                 seg = self.postprocess_seg(seg)
 
             # remove borders from the segmentation
-            seg = clear_border(seg)
+            if clean_border:
+                seg = clear_border(seg)
 
             # label in case no post processing or border removal
             seg = label(seg, connectivity=self.connectivity)
