@@ -102,7 +102,7 @@ def test_run_image_stack(segmentation_instance):
     segmentation_instance.model_weights = 'watershed'
 
     # run the stack
-    segmentation_instance.run_image_stack(channel_path=channel_path)
+    segmentation_instance.run_image_stack(channel_path=channel_path, clean_border=True)
 
     # we check that we got three files (we use the directly imported methods because the others were monkeypatched)
     seg_files = listdir(os.path.join(channel_path, "seg_im"))
@@ -122,7 +122,7 @@ def test_run_image_stack(segmentation_instance):
     segmentation_instance.model_weights = str(weight_path)
 
     # run the stack
-    segmentation_instance.run_image_stack(channel_path=channel_path)
+    segmentation_instance.run_image_stack(channel_path=channel_path, clean_border=True)
 
     # we check that was labeled correctly
     for f in seg_files:

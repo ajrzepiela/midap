@@ -55,7 +55,7 @@ def test_main(prep_dirs):
     # Test for invalid segmentation class
     with pytest.raises(ValueError):
         main(path_model_weights=path_model_weights, path_pos=path_pos, path_channel=path_channel,
-             segmentation_class="This is not a valid class", postprocessing=postprocessing)
+             segmentation_class="This is not a valid class", postprocessing=postprocessing, clean_border=True)
 
     # Tests for UNetSegmentation
     segmentation_class = "UNetSegmentation"
@@ -64,14 +64,14 @@ def test_main(prep_dirs):
     # just the selection
     network_name_new = main(path_model_weights=path_model_weights, path_pos=path_pos, path_channel=path_channel,
                             segmentation_class=segmentation_class, postprocessing=postprocessing,
-                            network_name=network_name,  just_select=True)
+                            clean_border=True, network_name=network_name,  just_select=True)
 
     assert Path(network_name_new) == Path(network_name)
 
     # now actual segmentation
     _ = main(path_model_weights=path_model_weights, path_pos=path_pos, path_channel=path_channel,
-             segmentation_class=segmentation_class, postprocessing=postprocessing, network_name=network_name,
-             just_select=False)
+             segmentation_class=segmentation_class, postprocessing=postprocessing, clean_border=True,
+             network_name=network_name, just_select=False)
 
     # get the segmented images and the solution
     sol_imgs = sorted(sol_path.glob("*.png"))
@@ -95,7 +95,7 @@ def test_main(prep_dirs):
         # just the selection, testing the actual segmentation would require larger images
         network_name_new = main(path_model_weights=path_model_weights, path_pos=path_pos, path_channel=path_channel,
                                 segmentation_class=segmentation_class, postprocessing=postprocessing,
-                                network_name=network_name,  just_select=True)
+                                clean_border=True, network_name=network_name,  just_select=True)
 
         assert network_name_new == network_name
     except ImportError:

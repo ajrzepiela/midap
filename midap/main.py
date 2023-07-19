@@ -292,8 +292,9 @@ def run_module(args=None):
                         path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
                                                                                    "model_weights_legacy")
                     weights = segment_cells.main(path_model_weights=path_model_weights, path_pos=current_path,
-                                                 path_channel=channel, postprocessing=True, network_name=model_weights,
-                                                 segmentation_class=segmentation_class, just_select=True)
+                                                 path_channel=channel, postprocessing=True, clean_border=config.get(identifier, "RemoveBorder"), network_name=model_weights,
+                                                 segmentation_class=segmentation_class, just_select=True,
+                                                 img_threshold=config.getfloat(identifier, "ImgThreshold"))
 
                     # save to config
                     if model_weights is None:
@@ -376,8 +377,9 @@ def run_module(args=None):
                     # run the segmentation, the actual path to the weights does not matter anymore since it is selected
                     path_model_weights = Path(__file__).parent.parent.joinpath("model_weights")
                     _ = segment_cells.main(path_model_weights=path_model_weights, path_pos=current_path,
-                                           path_channel=channel, postprocessing=True, network_name=model_weights,
-                                           segmentation_class=config.get(identifier, "SegmentationClass"))
+                                           path_channel=channel, postprocessing=True, clean_border=config.get(identifier, "RemoveBorder"), network_name=model_weights,
+                                           segmentation_class=config.get(identifier, "SegmentationClass"),
+                                           img_threshold=config.getfloat(identifier, "ImgThreshold"))
                     # analyse the images
                     segment_analysis.main(path_seg=current_path.joinpath(channel, seg_im_folder),
                                           path_result=current_path.joinpath(channel),
@@ -400,6 +402,39 @@ def run_module(args=None):
                     track_cells.main(path=current_path.joinpath(channel),
                                      tracking_class=config.get(identifier, "TrackingClass"),
                                      loglevel=args.loglevel)
+
+        # Cleanup
+        for channel in config.getlist(identifier, "Channels"):
+            logger.info(f"Cleaning up {identifier} and channel {channel}...")
+            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config,
+                                   state=f"Cleanup_{channel}", identifier=identifier,
+                                   copy_path=current_path) as checker:
+                # check to skip
+                checker.check()
+
+                # remove everything that the user does not want to keep
+                if not config.getboolean(identifier, "KeepCopyOriginal"):
+                    # get a list of files to remove
+                    file_ext = config.get("General", "FileType")
+                    if file_ext == "ome.tif":
+                        files = base_path.joinpath(identifier, channel).glob(f"*{identifier}*/**/*.ome.tif")
+                    else:
+                        files = base_path.joinpath(identifier, channel).glob(f"*{identifier}*.{file_ext}")
+
+                    # remove the files
+                    for file in files:
+                        file.unlink(missing_ok=True)
+                if not config.getboolean(identifier, "KeepRawImages"):
+                    shutil.rmtree(current_path.joinpath(channel, raw_im_folder), ignore_errors=True)
+                if not config.getboolean(identifier, "KeepCutoutImages"):
+                    shutil.rmtree(current_path.joinpath(channel, cut_im_folder), ignore_errors=True)
+                if not config.getboolean(identifier, "KeepSegImagesLabel"):
+                    shutil.rmtree(current_path.joinpath(channel, seg_im_folder), ignore_errors=True)
+                if not config.getboolean(identifier, "KeepSegImagesBin"):
+                    shutil.rmtree(current_path.joinpath(channel, seg_im_bin_folder), ignore_errors=True)
+                if not config.getboolean(identifier, "KeepSegImagesTrack"):
+                    shutil.rmtree(current_path.joinpath(channel, seg_im_folder, "segmentations_bayesian.h5"),
+                                  ignore_errors=True)
 
         # if we are here, we copy the config file to the identifier
         logger.info(f"Finished with identifier {identifier}, coping settings...")

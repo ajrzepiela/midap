@@ -118,7 +118,15 @@ class Config(ConfigParser):
                                   "CutImgClass": "InteractiveCutout",
                                   "Corners": "None",
                                   "SegmentationClass": "UNetSegmentation",
-                                  "TrackingClass": "DeltaV2Tracking"}})
+                                  "TrackingClass": "DeltaV2Tracking",
+                                  "KeepCopyOriginal": True,
+                                  "KeepRawImages": True,
+                                  "KeepCutoutImages": True,
+                                  "KeepSegImagesLabel": True,
+                                  "KeepSegImagesBin": True,
+                                  "KeepSegImagesTrack": True,
+                                  "ImgThreshold": 1.0,
+                                  "RemoveBorder": False}})
 
     def validate_id_section(self, id_name: str, basic=True):
         """
@@ -146,6 +154,17 @@ class Config(ConfigParser):
 
         # check the booleans
         _ = self.getboolean(id_name, "PhaseSegmentation")
+        _ = self.getboolean(id_name, "KeepCopyOriginal")
+        _ = self.getboolean(id_name, "KeepRawImages")
+        _ = self.getboolean(id_name, "KeepCutoutImages")
+        _ = self.getboolean(id_name, "KeepSegImagesLabel")
+        _ = self.getboolean(id_name, "KeepSegImagesBin")
+        _ = self.getboolean(id_name, "KeepSegImagesTrack")
+        _ = self.getboolean(id_name, "RemoveBorder")
+
+        # check the threshold
+        if (threshold := self.getfloat(id_name, "ImgThreshold")) <= 0.0 or threshold > 1.0:
+            raise ValueError(f"'ImgThreshold' has to be a float between 0.0 and 1.0, is: {threshold}")
 
         # check all the classes
         if self.get(id_name, "CutImgClass") not in imcut_subclasses:
