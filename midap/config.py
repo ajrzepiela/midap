@@ -125,7 +125,8 @@ class Config(ConfigParser):
                                   "KeepSegImagesLabel": True,
                                   "KeepSegImagesBin": True,
                                   "KeepSegImagesTrack": True,
-                                  "ImgThreshold": 1.0}})
+                                  "ImgThreshold": 1.0,
+                                  "RemoveBorder": False}})
 
     def validate_id_section(self, id_name: str, basic=True):
         """
@@ -159,6 +160,7 @@ class Config(ConfigParser):
         _ = self.getboolean(id_name, "KeepSegImagesLabel")
         _ = self.getboolean(id_name, "KeepSegImagesBin")
         _ = self.getboolean(id_name, "KeepSegImagesTrack")
+        _ = self.getboolean(id_name, "RemoveBorder")
 
         # check the threshold
         if (threshold := self.getfloat(id_name, "ImgThreshold")) <= 0.0 or threshold > 1.0:

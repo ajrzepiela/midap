@@ -292,7 +292,7 @@ def run_module(args=None):
                         path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
                                                                                    "model_weights_legacy")
                     weights = segment_cells.main(path_model_weights=path_model_weights, path_pos=current_path,
-                                                 path_channel=channel, postprocessing=True, network_name=model_weights,
+                                                 path_channel=channel, postprocessing=True, clean_border=config.get(identifier, "RemoveBorder"), network_name=model_weights,
                                                  segmentation_class=segmentation_class, just_select=True,
                                                  img_threshold=config.getfloat(identifier, "ImgThreshold"))
 
@@ -377,7 +377,7 @@ def run_module(args=None):
                     # run the segmentation, the actual path to the weights does not matter anymore since it is selected
                     path_model_weights = Path(__file__).parent.parent.joinpath("model_weights")
                     _ = segment_cells.main(path_model_weights=path_model_weights, path_pos=current_path,
-                                           path_channel=channel, postprocessing=True, network_name=model_weights,
+                                           path_channel=channel, postprocessing=True, clean_border=config.get(identifier, "RemoveBorder"), network_name=model_weights,
                                            segmentation_class=config.get(identifier, "SegmentationClass"),
                                            img_threshold=config.getfloat(identifier, "ImgThreshold"))
                     # analyse the images
