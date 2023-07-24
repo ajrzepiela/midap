@@ -17,13 +17,18 @@ from midap.utils import get_logger, get_inheritors
 from midap.imcut import *
 from midap.imcut import base_cutout
 
-imcut_subclasses = [subclass.__name__ for subclass in get_inheritors(base_cutout.CutoutImage)]
+imcut_subclasses = [subclass for subclass in get_inheritors(base_cutout.CutoutImage)]
+family_imcut_cls = [s.__name__ for s in imcut_subclasses if "Family_Machine" in s.supported_setups]
+mother_imcut_cls = [s.__name__ for s in imcut_subclasses if "Mother_Machine" in s.supported_setups]
+
 
 # get all subclasses from the segmentations
 from midap.segmentation import *
 from midap.segmentation import base_segmentator
 
-segmentation_subclasses = [subclass.__name__ for subclass in get_inheritors(base_segmentator.SegmentationPredictor)]
+segmentation_subclasses = [subclass for subclass in get_inheritors(base_segmentator.SegmentationPredictor)]
+family_seg_cls = [s.__name__ for s in segmentation_subclasses if "Family_Machine" in s.supported_setups]
+mother_seg_cls = [s.__name__ for s in segmentation_subclasses if "Mother_Machine" in s.supported_setups]
 
 # get all subclasses from the tracking
 from midap.tracking import *
@@ -62,7 +67,7 @@ def main(config_file="settings.ini", loglevel=7):
     # First part of the GUI
     common_params = [[sg.Text("Select the input data type: ",
                               key="track_method_text", font="bold")],
-                     [sg.DropDown(key="DataType", values=["Family_Machine"], default_value="Family_Machine")],
+                     [sg.DropDown(key="DataType", values=["Family_Machine", "Mother_Machine"], default_value="Family_Machine")],
                      [sg.Text("Choose the target folder: ", key="title_folder_name", font="bold")],
                      [sg.Input(key="folder_name"), sg.FolderBrowse()],
                      [sg.Text("Filetype (e.g. tif, tiff, ome.tif)", key="title_file_type", font="bold")],
@@ -171,8 +176,15 @@ def main(config_file="settings.ini", loglevel=7):
                                          default=defaults.getboolean("RemoveBorder"), size=30)],
                             ]
 
+        # get the vars for the specific layout
+        if general["DataType"] == "Family_Machine":
+            imcut_subclasses = family_imcut_cls
+            segmentation_subclasses = family_seg_cls
+        if general["DataType"] == "Mother_Machine":
+            imcut_subclasses = mother_imcut_cls
+            segmentation_subclasses = mother_seg_cls
 
-        # Family Machine specific layout
+        # Specific layout
         layout_family_machine = [[sg.Frame("Conditional Run", [[
             sg.Column(workflow, background_color="white"),
             sg.Column(frames)
@@ -200,7 +212,7 @@ def main(config_file="settings.ini", loglevel=7):
                                               default_value=defaults["TrackingClass"])],
                                  [sg.Text("Preprocessing", font="bold")],
                                  [sg.Checkbox("Deconvolution of images", key="deconv", font="bold",
-                                              default=(defaults["Deconvolution"] == "deconv_family_machine"))],
+                                              default=~(defaults["Deconvolution"] == "no_deconv"))],
                                  [sg.Text("")],
                                  [sg.Text(SYMBOL_RIGHT, enable_events=True, key='-OPEN_ADV-'),
                                   sg.Text("Advanced Options")],
@@ -256,7 +268,10 @@ def main(config_file="settings.ini", loglevel=7):
 
         # deconv
         if values["deconv"]:
-            section["Deconvolution"] = "deconv_family_machine"
+            if general["DataType"] == "Mother_Machine":
+                section["Deconvolution"] = "deconv_well"
+            elif general["DataType"] == "Family_Machine":
+                section["Deconvolution"] = "deconv_family_machine"
         else:
             section["Deconvolution"] = "no_deconv"
 
