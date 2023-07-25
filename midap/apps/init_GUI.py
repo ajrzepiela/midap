@@ -211,7 +211,7 @@ def main(config_file="settings.ini", loglevel=7):
                                               default_value=defaults["TrackingClass"])],
                                  [sg.Text("Preprocessing", font="bold")],
                                  [sg.Checkbox("Deconvolution of images", key="deconv", font="bold",
-                                              default=~(defaults["Deconvolution"] == "no_deconv"))],
+                                              default=not (defaults["Deconvolution"] == "no_deconv"))],
                                  [sg.Text("")],
                                  [sg.Text(SYMBOL_RIGHT, enable_events=True, key='-OPEN_ADV-'),
                                   sg.Text("Advanced Options")],

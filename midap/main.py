@@ -80,6 +80,7 @@ def run_module(args=None):
     from midap.config import Config
     from midap.apps import download_files, init_GUI, split_frames, cut_chamber, segment_cells, segment_analysis, track_cells
     from midap.main_family_machine import run_family_machine
+    from midap.main_mother_machine import run_mother_machine
     logger.info("Done!")
 
     # Download the files if necessary
@@ -148,6 +149,10 @@ def run_module(args=None):
     # run the pipeline
     if config.get("General", "DataType") == "Family_Machine":
         run_family_machine(config=config, checkpoint=checkpoint, main_args=args, logger=logger, restart=restart)
+    elif config.get("General", "DataType") == "Mother_Machine":
+        run_mother_machine(config=config, checkpoint=checkpoint, main_args=args, logger=logger, restart=restart)
+    else:
+        raise ValueError(f"Unknown DataType: {config.get('General', 'DataType')}")
 
 
 # main routine

@@ -142,6 +142,7 @@ class Config(ConfigParser):
                                       "Channels": 'None',
                                       "CutImgClass": "SemiAutomatedCutout",
                                       "Corners": "None",
+                                      "Offsets": "None",
                                       "SegmentationClass": "OmniSegmentation",
                                       "TrackingClass": "STrack",
                                       "KeepCopyOriginal": True,
@@ -223,6 +224,16 @@ class Config(ConfigParser):
             # check if we have valid integers
             for corner in corner_list:
                 _ = int(corner)
+
+            # check the offsets
+            if machine_type == "Mother_Machine":
+                offsets = self.get(id_name, "Offsets")
+                offset_list = self.getlist(id_name, "Offsets")
+                if len(offset_list) == 0:
+                    raise ValueError(f"'Offsets' is not properly defined: {offsets}")
+                # check if we have valid integers
+                for offset in offset_list:
+                    _ = int(offset)
 
             # check the model weights
             for channel in self.getlist(id_name, "Channels"):
