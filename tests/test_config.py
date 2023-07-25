@@ -35,6 +35,9 @@ def test_Config(tmp_dir):
     Tests the functionality of the Config class
     """
 
+    # General settings and Family Machine
+    # -----------------------------------
+
     # get the class
     config = Config(fname="settings.ini", general={"foo": "bar"})
 
@@ -99,3 +102,21 @@ def test_Config(tmp_dir):
     # check for equality and name
     assert new_config.fname == "settings.ini"
     assert new_config == config
+
+    # Mother Machine Settings
+    # -----------------------
+
+    # get the class
+    config = Config(fname="settings.ini", general={"DataType": "Mother_Machine"})
+
+    # check if we have the correct machine type
+    assert config.get("General", "DataType") == "Mother_Machine"
+
+    # set and id section and check that we don't have the remove border option
+    config.set_id_section("pos1")
+
+    # check all the id section tests
+    config.validate_id_section("pos1", basic=True)
+
+    assert config.get("pos1", "RemoveBorder", fallback=None) is None
+    

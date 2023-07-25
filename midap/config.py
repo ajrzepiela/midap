@@ -150,8 +150,7 @@ class Config(ConfigParser):
                                       "KeepSegImagesLabel": True,
                                       "KeepSegImagesBin": True,
                                       "KeepSegImagesTrack": True,
-                                      "ImgThreshold": 1.0,
-                                      "RemoveBorder": False}})
+                                      "ImgThreshold": 1.0}})
         else:
             raise ValueError(f"Unknown DataType: {self.get('General', 'DataType')}")
 
@@ -194,7 +193,8 @@ class Config(ConfigParser):
         _ = self.getboolean(id_name, "KeepSegImagesLabel")
         _ = self.getboolean(id_name, "KeepSegImagesBin")
         _ = self.getboolean(id_name, "KeepSegImagesTrack")
-        _ = self.getboolean(id_name, "RemoveBorder")
+        if machine_type == "Family_Machine":
+            _ = self.getboolean(id_name, "RemoveBorder")
 
         # check the threshold
         if (threshold := self.getfloat(id_name, "ImgThreshold")) <= 0.0 or threshold > 1.0:
