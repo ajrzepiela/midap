@@ -311,8 +311,9 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
                 if not config.getboolean(identifier, "KeepSegImagesBin"):
                     shutil.rmtree(current_path.joinpath(channel, seg_im_bin_folder), ignore_errors=True)
                 if not config.getboolean(identifier, "KeepSegImagesTrack"):
-                    shutil.rmtree(current_path.joinpath(channel, seg_im_folder, "segmentations_bayesian.h5"),
-                                  ignore_errors=True)
+                    files = current_path.joinpath(channel, track_folder).glob(f"segmentations_*.h5")
+                    for file in files:
+                        file.unlink(missing_ok=True)
 
         # if we are here, we copy the config file to the identifier
         logger.info(f"Finished with identifier {identifier}, coping settings...")

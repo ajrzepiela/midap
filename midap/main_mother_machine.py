@@ -5,6 +5,7 @@ from shutil import copyfile
 import os
 
 import numpy as np
+import pandas as pd
 
 from midap.apps import split_frames, cut_chamber, segment_cells, segment_analysis, track_cells
 from midap.checkpoint import CheckpointManager
@@ -299,5 +300,62 @@ def run_mother_machine(config, checkpoint, main_args, logger, restart=False):
                                        copy_path=current_path) as checker:
                     # check to skip
                     checker.check()
-                    raise NotImplementedError("This part of the code is not implemented yet.")
 
+                    # cycle through all chambers and combine the tracking
+                    track_dfs = []
+                    for chamber in range(len(offsets)):
+                        csv_file = sorted(current_path.joinpath(channel,
+                                                                f"chamber_{chamber}",
+                                                                track_folder).glob("*.csv"))[0]
+                        logger.info(f"Reading {csv_file}")
+                        df = pd.read_csv(csv_file)
+                        df["chamber"] = chamber
+                        track_dfs.append(df)
+
+                    # combine the dataframes
+                    track_df = pd.concat(track_dfs, ignore_index=True)
+                    track_df.to_csv(current_path.joinpath(channel, "combined_lineages.csv"), index=False)
+
+
+        # Cleanup
+        for channel in config.getlist(identifier, "Channels"):
+            logger.info(f"Cleaning up {identifier} and channel {channel}...")
+            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config,
+                                   state=f"Cleanup_{channel}", identifier=identifier,
+                                   copy_path=current_path) as checker:
+                # check to skip
+                checker.check()
+
+                # remove everything that the user does not want to keep
+                if not config.getboolean(identifier, "KeepCopyOriginal"):
+                    # get a list of files to remove
+                    file_ext = config.get("General", "FileType")
+                    if file_ext == "ome.tif":
+                        files = base_path.joinpath(identifier, channel).glob(f"*{identifier}*/**/*.ome.tif")
+                    else:
+                        files = base_path.joinpath(identifier, channel).glob(f"*{identifier}*.{file_ext}")
+
+                    # remove the files
+                    for file in files:
+                        file.unlink(missing_ok=True)
+                # cycle through chambers
+                offsets = list([int(offset) for offset in config.getlist(identifier, "Offsets")])
+                for chamber in range(len(offsets)):
+                    if not config.getboolean(identifier, "KeepRawImages"):
+                        shutil.rmtree(current_path.joinpath(channel, f"chamber_{chamber}", raw_im_folder), ignore_errors=True)
+                    if not config.getboolean(identifier, "KeepCutoutImages"):
+                        shutil.rmtree(current_path.joinpath(channel, f"chamber_{chamber}", cut_im_folder), ignore_errors=True)
+                    if not config.getboolean(identifier, "KeepSegImagesLabel"):
+                        shutil.rmtree(current_path.joinpath(channel, f"chamber_{chamber}", seg_im_folder), ignore_errors=True)
+                    if not config.getboolean(identifier, "KeepSegImagesBin"):
+                        shutil.rmtree(current_path.joinpath(channel, f"chamber_{chamber}", seg_im_bin_folder), ignore_errors=True)
+                    if not config.getboolean(identifier, "KeepSegImagesTrack"):
+                        files = current_path.joinpath(channel, f"chamber_{chamber}", track_folder).glob(f"segmentations_*.h5")
+                        for file in files:
+                            file.unlink(missing_ok=True)
+
+        # if we are here, we copy the config file to the identifier
+        logger.info(f"Finished with identifier {identifier}, coping settings...")
+        config.to_file(current_path)
+
+        logger.info("Done!")
