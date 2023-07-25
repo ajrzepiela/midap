@@ -2,6 +2,7 @@ import shutil
 import sys
 from pathlib import Path
 from shutil import copyfile
+import os
 
 import numpy as np
 
@@ -125,7 +126,7 @@ def run_mother_machine(config, checkpoint, main_args, logger, restart=False):
                     offsets = None
                 else:
                     corners = tuple([int(corner) for corner in config.getlist(identifier, "Corners")])
-                    offsets = tuple([int(offset) for offset in config.getlist(identifier, "Offsets")])
+                    offsets = list([int(offset) for offset in config.getlist(identifier, "Offsets")])
                 cut_corners, offsets = cut_chamber.main(channel=paths,
                                                         cutout_class=config.get(identifier, "CutImgClass"),
                                                         corners=corners,
@@ -138,8 +139,6 @@ def run_mother_machine(config, checkpoint, main_args, logger, restart=False):
                     config.set(identifier, "Corners", corners)
                     config.set(identifier, "Offsets", offsets)
                     config.to_file()
-                raise NotImplementedError("This is not implemented yet")
-
 
             # select the networks
             with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="SegmentationInit",
@@ -165,8 +164,13 @@ def run_mother_machine(config, checkpoint, main_args, logger, restart=False):
                                                                                    "model_weights_omni")
                     else:
                         raise ValueError(f"Unknown segmentation class {segmentation_class}")
+
+                    # point to a chamber for the weights selection
+                    offsets = tuple([int(offset) for offset in config.getlist(identifier, "Offsets")])
+                    path_channel = os.path.join(channel, f"chamber_{offsets[0]}")
                     weights = segment_cells.main(path_model_weights=path_model_weights, path_pos=current_path,
-                                                 path_channel=channel, postprocessing=True, clean_border=config.get(identifier, "RemoveBorder"), network_name=model_weights,
+                                                 path_channel=path_channel, postprocessing=True, clean_border=False,
+                                                 network_name=model_weights,
                                                  segmentation_class=segmentation_class, just_select=True,
                                                  img_threshold=config.getfloat(identifier, "ImgThreshold"))
 
@@ -175,5 +179,125 @@ def run_mother_machine(config, checkpoint, main_args, logger, restart=False):
                         config.set(identifier, f"ModelWeights_{channel}", weights)
                         config.to_file()
 
-                raise NotImplementedError("This is not implemented yet")
+    # we cycle through all pos identifiers again to perform all tasks fully
+    #######################################################################
+
+    for identifier in config.getlist("General", "IdentifierFound"):
+        # read out what we need to do
+        run_segmentation = config.get(identifier, "RunOption").lower() in ['both', 'segmentation']
+        run_tracking = config.get(identifier, "RunOption").lower() in ['both', 'tracking']
+        # current path of the identifier
+        current_path = base_path.joinpath(identifier)
+
+        # stuff we do for the segmentation
+        if run_segmentation:
+            # split frames
+            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="SplitFramesFull",
+                                   identifier=identifier, copy_path=current_path) as checker:
+
+                # exit if this is only run to prepare config
+                if main_args.prepare_config_cluster:
+                    sys.exit('Preparation of config file is finished. Please follow instructions on '
+                             'https://github.com/Microbial-Systems-Ecology/midap/wiki/MIDAP-On-Euler '
+                             'to submit your job on the cluster.')
+
+                # check to skip
+                checker.check()
+
+                logger.info(f"Splitting all frames for {identifier}")
+
+                # split the frames for all channels
+                file_ext = config.get("General", "FileType")
+                for channel in config.getlist(identifier, "Channels"):
+                    paths = list(current_path.joinpath(channel).glob(f"*.{file_ext}"))
+                    if len(paths) > 1:
+                        raise FileExistsError(f"More than one file of the type '.{file_ext}' "
+                                              f"exists for channel {channel}")
+
+                    # get all the frames and split
+                    frames = np.arange(config.getint(identifier, "StartFrame"), config.getint(identifier, "EndFrame"))
+                    split_frames.main(path=paths[0], save_dir=current_path.joinpath(channel, raw_im_folder),
+                                      frames=frames,
+                                      deconv=config.get(identifier, "Deconvolution"),
+                                      loglevel=main_args.loglevel)
+
+            # cut chamber and images
+            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="CutFramesFull",
+                                   identifier=identifier, copy_path=current_path) as checker:
+                # check to skip
+                checker.check()
+
+                logger.info(f"Cutting all frames for {identifier}")
+
+                # get the paths
+                paths = [current_path.joinpath(channel, raw_im_folder)
+                         for channel in config.getlist(identifier, "Channels")]
+
+                # Get the corners and cut
+                corners = tuple([int(corner) for corner in config.getlist(identifier, "Corners")])
+                offsets = list([int(offset) for offset in config.getlist(identifier, "Offsets")])
+                _ = cut_chamber.main(channel=paths, cutout_class=config.get(identifier, "CutImgClass"),
+                                     corners=corners, offsets=offsets)
+
+            # run full segmentation (we checkpoint after each channel)
+            for num, channel in enumerate(config.getlist(identifier, "Channels")):
+                # The phase channel is always the first
+                if num == 0 and not config.getboolean(identifier, "PhaseSegmentation"):
+                    continue
+
+                # Run the segmentation for all chambers
+                offsets = list([int(offset) for offset in config.getlist(identifier, "Offsets")])
+                for chamber in range(len(offsets)):
+                    with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config,
+                                           state=f"SegmentationFull_{channel}_chamber_{chamber}",
+                                           identifier=identifier, copy_path=current_path) as checker:
+                        # check to skip
+                        checker.check()
+
+                        logger.info(f"Segmenting all frames for {identifier}, channel {channel} and chamber {chamber}...")
+
+                        # get the current model weight (if defined)
+                        model_weights = config.get(identifier, f"ModelWeights_{channel}")
+
+                        # run the segmentation, the actual path to the weights does not matter anymore since it is selected
+                        path_model_weights = Path(__file__).parent.parent.joinpath("model_weights")
+                        channel_path = os.path.join(channel, f"chamber_{chamber}")
+                        _ = segment_cells.main(path_model_weights=path_model_weights, path_pos=current_path,
+                                               path_channel=channel_path, postprocessing=True,
+                                               clean_border=False,
+                                               network_name=model_weights,
+                                               segmentation_class=config.get(identifier, "SegmentationClass"),
+                                               img_threshold=config.getfloat(identifier, "ImgThreshold"))
+                        # analyse the images
+                        segment_analysis.main(path_seg=current_path.joinpath(channel, f"chamber_{chamber}", seg_im_folder),
+                                              path_result=current_path.joinpath(channel, f"chamber_{chamber}"),
+                                              loglevel=main_args.loglevel)
+
+        if run_tracking:
+            # run tracking (we checkpoint after each channel)
+            for num, channel in enumerate(config.getlist(identifier, "Channels")):
+                # The phase channel is always the first
+                if num == 0 and not config.getboolean(identifier, "PhaseSegmentation"):
+                    continue
+
+                # Run the segmentation for all chambers
+                offsets = list([int(offset) for offset in config.getlist(identifier, "Offsets")])
+                for chamber in range(len(offsets)):
+                    with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config,
+                                           state=f"Tracking_{channel}_chamber_{chamber}", identifier=identifier,
+                                           copy_path=current_path) as checker:
+                        # check to skip
+                        checker.check()
+
+                        # track the cells
+                        track_cells.main(path=current_path.joinpath(channel, f"chamber_{chamber}"),
+                                         tracking_class=config.get(identifier, "TrackingClass"),
+                                         loglevel=main_args.loglevel)
+
+                with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config,
+                                       state=f"CombineTracking_{channel}", identifier=identifier,
+                                       copy_path=current_path) as checker:
+                    # check to skip
+                    checker.check()
+                    raise NotImplementedError("This part of the code is not implemented yet.")
 

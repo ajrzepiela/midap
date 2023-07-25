@@ -81,6 +81,9 @@ class OmniSegmentation(SegmentationPredictor):
 
             # Title for the GUI
             channel = os.path.basename(os.path.dirname(path_to_cutouts))
+            # if we just got the chamber folder, we need to go one more up
+            if channel.startswith('chamber'):
+                channel = os.path.basename(os.path.dirname(os.path.dirname(path_to_cutouts)))
             title = f'Segmentation Selection for channel: {channel}'
 
             # start the gui
@@ -98,8 +101,13 @@ class OmniSegmentation(SegmentationPredictor):
         def seg_method(imgs):
             # scale all the images
             imgs = [self.scale_pixel_vals(img) for img in imgs]
-            mask, _, _ = model.eval(imgs, channels=[0, 0], rescale=None, mask_threshold=-1,
-                                    transparency=True, flow_threshold=0, omni=True, resample=True, verbose=0)
+            # we catch here ValueErrors because omni can fail at masking when there are no cells
+            try:
+                mask, _, _ = model.eval(imgs, channels=[0, 0], rescale=None, mask_threshold=-1,
+                                        transparency=True, flow_threshold=0, omni=True, resample=True, verbose=0)
+            except ValueError:
+                self.logger.warning('Segmentation failed, returning empty mask!')
+                mask = np.zeros((len(imgs), ) + imgs[0].shape, dtype=int)
 
             # add the channel dimension and batch if it was 1
             return mask

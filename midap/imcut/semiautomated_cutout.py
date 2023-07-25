@@ -1,11 +1,10 @@
-import numpy as np
+import multiprocessing as mp
 
 import matplotlib.pyplot as plt
-from matplotlib.widgets  import RectangleSelector
-from skimage.registration import phase_cross_correlation
+import numpy as np
+from matplotlib.widgets import RectangleSelector
 from scipy.signal import find_peaks_cwt
-from scipy.fft import fftn
-import multiprocessing as mp
+from skimage.registration import phase_cross_correlation
 
 from .base_cutout import CutoutImage
 
@@ -101,7 +100,12 @@ class SemiAutomatedCutout(CutoutImage):
         peaks = find_peaks_cwt(-np.abs(shifts[:, -1]), np.arange(5, 10), min_snr=1)
 
         # finally the offsets are just the peaks shifted by the x1 coordinate
-        return peaks - x1
+        offsets = peaks - x1
+
+        # we filter all offsets that are too much to the left (skipped chambers)
+        offsets = offsets[offsets > - x_dim // 2]
+
+        return offsets
 
     def line_select_callback(self, eclick, erelease):
         """

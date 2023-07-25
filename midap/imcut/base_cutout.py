@@ -72,16 +72,20 @@ class CutoutImage(ABC):
             shift = self.align_two_images(src, ref)
             self.shifts.append(shift)
 
-    def do_cutout(self, img, corners_cut):
+    def do_cutout(self, img, corners_cut, padding=10):
         """
         Performs a cutout of an image
         :param img: Image ad array
         :param corners_cut: The corners used for the cutout
+        :param padding: Apply this savety padding to the cutout in case the corner are outside the image
         :returns: The cutout from the image given the corners
         """
 
         # generate cutout of image
-        left_x, right_x, lower_y, upper_y = corners_cut
+        left_x, right_x, lower_y, upper_y = [c + padding for c in corners_cut]
+
+        # pad the image and cutout
+        img = np.pad(img, padding, mode='constant', constant_values=0)
         cutout = img[lower_y:upper_y, left_x:right_x]
         return cutout
 
@@ -192,13 +196,13 @@ class CutoutImage(ABC):
                 aligned_cutouts = []
 
                 # adapt the corner with the shift of the image
-                current_corners = (self.corners_cut[0] + self.offsets[chamber],
-                                   self.corners_cut[1] + self.offsets[chamber],
-                                   self.corners_cut[2],
-                                   self.corners_cut[3])
+                base_corners = (self.corners_cut[0] + self.offsets[chamber],
+                                self.corners_cut[1] + self.offsets[chamber],
+                                self.corners_cut[2],
+                                self.corners_cut[3])
 
                 # perform the cutout of the first image
-                cutout = self.do_cutout(src, current_corners)
+                cutout = self.do_cutout(src, base_corners)
                 # scale the pixel values
                 cut_src = self.scale_pixel_val(cutout)
 
@@ -210,11 +214,12 @@ class CutoutImage(ABC):
                     img = io.imread(files[i])
 
                     # adapt the corner with the shift of the image
-                    left_x, right_x, lower_y, upper_y = current_corners
+                    left_x, right_x, lower_y, upper_y = base_corners
                     current_corners = (left_x - self.shifts[i - 1][1],
                                        right_x - self.shifts[i - 1][1],
                                        lower_y - self.shifts[i - 1][0],
                                        upper_y - self.shifts[i - 1][0])
+
                     cut_img = self.do_cutout(img, current_corners)
                     # sacle the pixel values
                     proc_img = self.scale_pixel_val(cut_img)
