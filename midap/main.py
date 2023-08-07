@@ -51,6 +51,15 @@ def run_module(args=None):
     # Some constants or conventions
     config_file = "settings.ini"
     check_file = "checkpoints.log"
+<<<<<<< HEAD
+=======
+    raw_im_folder = "raw_im"
+    cut_im_folder = "cut_im"
+    cut_im_rawcounts_folder = "cut_im_rawcounts"
+    seg_im_folder = "seg_im"
+    seg_im_bin_folder = "seg_im_bin"
+    track_folder = "track_output"
+>>>>>>> 4a5e423 (Save cut images with raw counts and additionally use them for fluo change analysis)
 
     # Argument handling
     ###################

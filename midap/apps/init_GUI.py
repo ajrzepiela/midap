@@ -155,13 +155,15 @@ def main(config_file="settings.ini", loglevel=7):
                                          default=defaults.getboolean("KeepCopyOriginal"), size=30),
                              sg.Checkbox("Raw images", key="keep_raw",
                                          default=defaults.getboolean("KeepRawImages"))],
-                            [sg.Checkbox("Cut images", key="keep_cut",
+                            [sg.Checkbox("Cut images (normalized)", key="keep_cut",
                                          default=defaults.getboolean("KeepCutoutImages"), size=30),
-                             sg.Checkbox("Segmented images (labeled)", key="keep_seg_label",
-                                         default=defaults.getboolean("KeepSegImagesLabel"))],
-                            [sg.Checkbox("Segmented images (binary)", key="keep_seg_bin",
-                                         default=defaults.getboolean("KeepSegImagesBin"), size=30),
-                             sg.Checkbox("Segmented images (tracking)", key="keep_seg_track",
+                             sg.Checkbox("Cut images (raw counts)", key="keep_cut_raw",
+                                         default=defaults.getboolean("KeepCutoutImagesRaw"), size=30)],
+                            [sg.Checkbox("Segmented images (labeled)", key="keep_seg_label",
+                                         default=defaults.getboolean("KeepSegImagesLabel")),
+                             sg.Checkbox("Segmented images (binary)", key="keep_seg_bin",
+                                         default=defaults.getboolean("KeepSegImagesBin"), size=30)],
+                            [sg.Checkbox("Segmented images (tracking)", key="keep_seg_track",
                                          default=defaults.getboolean("KeepSegImagesTrack"))],
                             # Thresholding
                             [sg.Text("Thresholding: \n"
@@ -297,6 +299,7 @@ def main(config_file="settings.ini", loglevel=7):
         section["KeepCopyOriginal"] = values["keep_copy"]
         section["KeepRawImages"] = values["keep_raw"]
         section["KeepCutoutImages"] = values["keep_cut"]
+        section["KeepCutoutImagesRaw"] = values["keep_cut_raw"]
         section["KeepSegImagesLabel"] = values["keep_seg_label"]
         section["KeepSegImagesBin"] = values["keep_seg_bin"]
         section["KeepSegImagesTrack"] = values["keep_seg_track"]

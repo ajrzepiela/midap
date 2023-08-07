@@ -191,6 +191,7 @@ class Config(ConfigParser):
         _ = self.getboolean(id_name, "KeepCopyOriginal")
         _ = self.getboolean(id_name, "KeepRawImages")
         _ = self.getboolean(id_name, "KeepCutoutImages")
+        _ = self.getboolean(id_name, "KeepCutoutImagesRaw")
         _ = self.getboolean(id_name, "KeepSegImagesLabel")
         _ = self.getboolean(id_name, "KeepSegImagesBin")
         _ = self.getboolean(id_name, "KeepSegImagesTrack")
