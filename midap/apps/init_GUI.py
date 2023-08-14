@@ -174,6 +174,11 @@ def main(config_file="settings.ini", loglevel=7):
             advanced_options += [[sg.Text("Segmentation options:", font="bold")],
                                  [sg.Checkbox("Remove border cells", key="remove_border",
                                          default=defaults.getboolean("RemoveBorder"), size=30)],]
+        if general["DataType"] == "Mother_Machine":
+            # mark cells on top or bottom of cells
+            advanced_options += [[sg.Text("During the tracking mark cell that are at the top/bottom of the chamber:", font="bold")],
+                                 [sg.DropDown(key="cell_marker", values=["top", "bottom", "both", "none"], default_value="none")]]
+
 
         # get the vars for the specific layout
         if general["DataType"] == "Family_Machine":
@@ -294,6 +299,8 @@ def main(config_file="settings.ini", loglevel=7):
 
         if general["DataType"] == "Family_Machine":
             section["RemoveBorder"] = values["remove_border"]
+        if general["DataType"] == "Mother_Machine":
+            section["CellMarker"] = values["cell_marker"]
 
         # Thresholding
         threshold = float(values["thresholding_val"])

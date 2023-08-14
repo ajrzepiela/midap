@@ -309,6 +309,20 @@ def run_mother_machine(config, checkpoint, main_args, logger, restart=False):
                                                                 track_folder).glob("*.csv"))[0]
                         logger.info(f"Reading {csv_file}")
                         df = pd.read_csv(csv_file)
+
+                        # add cell marker
+                        if config.get(identifier, "CellMarker") != "none":
+                            if config.get(identifier, "CellMarker") in ["top", "both"]:
+                                df["top_most"] = 0
+                                idx = df.groupby("frame")["x"].idxmin()
+                                df["top_most"].iloc[idx] = 1
+                            if config.get(identifier, "CellMarker") in ["bottom", "both"]:
+                                df["bottom_most"] = 0
+                                idx = df.groupby("frame")["x"].idxmax()
+                                df["bottom_most"].iloc[idx] = 1
+                            df.to_csv(csv_file, index=False)
+
+                        # add the chamber
                         df["chamber"] = chamber
                         track_dfs.append(df)
 
