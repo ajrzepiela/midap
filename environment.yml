@@ -15,6 +15,7 @@ dependencies:
     - scikit-image==0.19.3
     - gitpython
     - omnipose
+    - stardist
     - btrack==0.4.6
     - pytest
     - coverage
