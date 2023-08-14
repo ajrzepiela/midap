@@ -114,6 +114,7 @@ def test_Config(tmp_dir):
 
     # set and id section and check that we don't have the remove border option
     config.set_id_section("pos1")
+    config.set("pos1", "SegmentationClass", "StarDistSegmentation")
 
     # check all the id section tests
     config.validate_id_section("pos1", basic=True)
