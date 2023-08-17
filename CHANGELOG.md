@@ -23,7 +23,7 @@ Fix:
 
 Feature
 
-TBD
+2023-08-17
 
 - New advanced options in GUI
 - Brightness thresholding and notebook
