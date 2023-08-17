@@ -51,15 +51,6 @@ def run_module(args=None):
     # Some constants or conventions
     config_file = "settings.ini"
     check_file = "checkpoints.log"
-<<<<<<< HEAD
-=======
-    raw_im_folder = "raw_im"
-    cut_im_folder = "cut_im"
-    cut_im_rawcounts_folder = "cut_im_rawcounts"
-    seg_im_folder = "seg_im"
-    seg_im_bin_folder = "seg_im_bin"
-    track_folder = "track_output"
->>>>>>> 4a5e423 (Save cut images with raw counts and additionally use them for fluo change analysis)
 
     # Argument handling
     ###################
@@ -87,13 +78,9 @@ def run_module(args=None):
     # to avoid loading times later
     from midap.checkpoint import Checkpoint, CheckpointManager
     from midap.config import Config
-<<<<<<< HEAD
     from midap.apps import download_files, init_GUI, split_frames, cut_chamber, segment_cells, segment_analysis, track_cells
     from midap.main_family_machine import run_family_machine
     from midap.main_mother_machine import run_mother_machine
-=======
-    from midap.apps import download_files, init_GUI, split_frames, cut_chamber, segment_cells, segment_analysis, track_cells, track_analysis
->>>>>>> 26595d2 (Implement main functionality of fluo change analysis)
     logger.info("Done!")
 
     # Download the files if necessary

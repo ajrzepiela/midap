@@ -97,12 +97,26 @@ class CutoutImage(ABC):
         """
         img_scaled = (255 * ((img - np.min(img))/np.max(img - np.min(img)))).astype('uint8')
         return img_scaled
+    
+    # def save_cutout(self, files, file_names, chamber=None, normalization=True):
+    #     """
+    #     Saves the cutouts into the proper directory
+    #     :param files: A list of arrrays (the cutouts) to save
+    #     :param file_names: The list of file names from the original files
+    #     :param chamber: The chamber number, if None, if won't be included in the path
+    #     """
+    #     # save of cutouts
+    #     # TODO: This should not be hardcoded
+    #     dir_name = os.path.dirname(os.path.dirname(file_names[0]))
+    #     for f, i in zip(file_names, files):
+    #         if normalization:
+    #             fname = f"{os.path.splitext(os.path.basename(f))[0]}_cut.png"
+    #             io.imsave(os.path.join(dir_name, 'cut_im', fname), i, check_contrast=False)
+    #         else:
+    #             fname = f"{os.path.splitext(os.path.basename(f))[0]}_cut_rawcounts.png"
+    #             io.imsave(os.path.join(dir_name, 'cut_im_rawcounts', fname), i, check_contrast=False)
 
-<<<<<<< HEAD
-    def save_cutout(self, files, file_names, chamber=None):
-=======
-    def save_cutout(self, files, file_names, normalization):
->>>>>>> 4a5e423 (Save cut images with raw counts and additionally use them for fluo change analysis)
+    def save_cutout(self, files, file_names, normalization, chamber=None):
         """
         Saves the cutouts into the proper directory
         :param files: A list of arrrays (the cutouts) to save
@@ -112,26 +126,29 @@ class CutoutImage(ABC):
         # save of cutouts
         # TODO: This should not be hardcoded
         dir_name = os.path.dirname(os.path.dirname(file_names[0]))
-        for f, i in zip(file_names, files):
-<<<<<<< HEAD
-            fname = f"{os.path.splitext(os.path.basename(f))[0]}_cut.png"
-            if chamber is None:
-                f_path = os.path.join(dir_name, 'cut_im', fname)
-            else:
-                # we need to create this directory
-                f_path = os.path.join(dir_name, f'chamber_{chamber}', 'cut_im')
-                os.makedirs(f_path, exist_ok=True)
-                f_path = os.path.join(f_path, fname)
-            io.imsave(f_path, i, check_contrast=False)
-=======
-            if normalization:
+        if normalization:
+            for f, i in zip(file_names, files):
                 fname = f"{os.path.splitext(os.path.basename(f))[0]}_cut.png"
-                io.imsave(os.path.join(dir_name, 'cut_im', fname), i, check_contrast=False)
-            else:
+                if chamber is None:
+                    f_path = os.path.join(dir_name, 'cut_im', fname)
+                else:
+                    # we need to create this directory
+                    f_path = os.path.join(dir_name, f'chamber_{chamber}', 'cut_im')
+                    os.makedirs(f_path, exist_ok=True)
+                    f_path = os.path.join(f_path, fname)
+                io.imsave(f_path, i, check_contrast=False)
+        else:
+            for f, i in zip(file_names, files):
                 fname = f"{os.path.splitext(os.path.basename(f))[0]}_cut_rawcounts.png"
-                io.imsave(os.path.join(dir_name, 'cut_im_rawcounts', fname), i, check_contrast=False)
+                if chamber is None:
+                    f_path = os.path.join(dir_name, 'cut_im_rawcounts', fname)
+                else:
+                    # we need to create this directory
+                    f_path = os.path.join(dir_name, f'chamber_{chamber}', 'cut_im_rawcounts')
+                    os.makedirs(f_path, exist_ok=True)
+                    f_path = os.path.join(f_path, fname)
 
->>>>>>> 4a5e423 (Save cut images with raw counts and additionally use them for fluo change analysis)
+                io.imsave(f_path, i, check_contrast=False)
         
     def run_align_cutout(self):
         """

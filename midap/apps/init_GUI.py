@@ -152,30 +152,36 @@ def main(config_file="settings.ini", loglevel=7):
         advanced_options = [# What to keep
                             [sg.Text("Keep the following files: ", font="bold")],
                             [sg.Checkbox("Original file copy", key="keep_copy",
-                                         default=defaults.getboolean("KeepCopyOriginal"), size=30),
-                             sg.Checkbox("Raw images", key="keep_raw",
-                                         default=defaults.getboolean("KeepRawImages"))],
-                            [sg.Checkbox("Cut images (normalized)", key="keep_cut",
-                                         default=defaults.getboolean("KeepCutoutImages"), size=30),
+                                         default=defaults.getboolean("KeepCopyOriginal")),
+                             sg.Checkbox("Cut images (normalized)", key="keep_cut",
+                                         default=defaults.getboolean("KeepCutoutImages")),
+                             sg.Checkbox("Segmented images (labeled)", key="keep_seg_label",
+                                         default=defaults.getboolean("KeepSegImagesLabel"))],
+                            [sg.Checkbox("Raw images", key="keep_raw",
+                                         default=defaults.getboolean("KeepRawImages")),
                              sg.Checkbox("Cut images (raw counts)", key="keep_cut_raw",
-                                         default=defaults.getboolean("KeepCutoutImagesRaw"), size=30)],
-                            [sg.Checkbox("Segmented images (labeled)", key="keep_seg_label",
-                                         default=defaults.getboolean("KeepSegImagesLabel")),
+                                         default=defaults.getboolean("KeepCutoutImagesRaw")),
                              sg.Checkbox("Segmented images (binary)", key="keep_seg_bin",
-                                         default=defaults.getboolean("KeepSegImagesBin"), size=30)],
+                                         default=defaults.getboolean("KeepSegImagesBin"))],
                             [sg.Checkbox("Segmented images (tracking)", key="keep_seg_track",
                                          default=defaults.getboolean("KeepSegImagesTrack"))],
                             # Thresholding
                             [sg.Text("Thresholding: \n"
                                      "Enter a value between 0 (black) and 1 (white) to cap the brightest parts of the images.",
                                      font="bold")],
-                            [sg.Input(default_text=defaults["ImgThreshold"], size=30, key="thresholding_val")],
+                            [sg.Input(default_text=defaults["ImgThreshold"], size=30, key="thresholding_val")],        
+                            ]
 
         if general["DataType"] == "Family_Machine":
             # Segmentation
             advanced_options += [[sg.Text("Segmentation options:", font="bold")],
                                  [sg.Checkbox("Remove border cells", key="remove_border",
                                          default=defaults.getboolean("RemoveBorder"), size=30)],]
+                                        # Tracking options
+            advanced_options += [[sg.Text("Tracking postprocessing: ", font="bold")],
+                                 [sg.Checkbox("Fluorescence change analysis", key="fluo_change",
+                                         default=defaults.getboolean("FluoChange"), size=30)],]
+            
         if general["DataType"] == "Mother_Machine":
             # mark cells on top or bottom of cells
             advanced_options += [[sg.Text("During the tracking mark cell that are at the top/bottom of the chamber:", font="bold")],
@@ -227,7 +233,7 @@ def main(config_file="settings.ini", loglevel=7):
                                  [sg.Column([[sg.OK(), sg.Cancel()]], key="col_final")]]
 
         # Finalize the layout
-        window = sg.Window(f"Params for '{id_name}' of {unique_identifiers}", layout_family_machine).Finalize()
+        window = sg.Window(f"Params for '{id_name}' of {unique_identifiers}", layout_family_machine, size=(600, 1000)).Finalize()
 
         # Set the advanced options to be collapsed
         advanced_opened = False

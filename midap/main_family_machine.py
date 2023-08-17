@@ -5,7 +5,7 @@ from shutil import copyfile
 
 import numpy as np
 
-from midap.apps import split_frames, cut_chamber, segment_cells, segment_analysis, track_cells
+from midap.apps import split_frames, cut_chamber, segment_cells, segment_analysis, track_cells, track_analysis
 from midap.checkpoint import CheckpointManager
 
 
@@ -25,6 +25,7 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
     # folder names
     raw_im_folder = "raw_im"
     cut_im_folder = "cut_im"
+    cut_im_rawcounts_folder = "cut_im_rawcounts"
     seg_im_folder = "seg_im"
     seg_im_bin_folder = "seg_im_bin"
     track_folder = "track_output"
@@ -61,6 +62,7 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
                 for channel in config.getlist(identifier, "Channels"):
                     current_path.joinpath(channel, raw_im_folder).mkdir(parents=True)
                     current_path.joinpath(channel, cut_im_folder).mkdir(parents=True)
+                    current_path.joinpath(channel, cut_im_rawcounts_folder).mkdir(parents=True)
                     current_path.joinpath(channel, seg_im_folder).mkdir(parents=True)
                     current_path.joinpath(channel, seg_im_bin_folder).mkdir(parents=True)
                     current_path.joinpath(channel, track_folder).mkdir(parents=True)
@@ -280,6 +282,12 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
                     track_cells.main(path=current_path.joinpath(channel),
                                      tracking_class=config.get(identifier, "TrackingClass"),
                                      loglevel=main_args.loglevel)
+                    
+            # Tracking postprocessing
+            if config.getboolean(identifier, "FluoChange"):
+                track_analysis.main(path=current_path,
+                                    channels=config.getlist(identifier, "Channels"), 
+                                    tracking_class=config.get(identifier, "TrackingClass"))
 
         # Cleanup
         for channel in config.getlist(identifier, "Channels"):
@@ -306,6 +314,8 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
                     shutil.rmtree(current_path.joinpath(channel, raw_im_folder), ignore_errors=True)
                 if not config.getboolean(identifier, "KeepCutoutImages"):
                     shutil.rmtree(current_path.joinpath(channel, cut_im_folder), ignore_errors=True)
+                if not config.getboolean(identifier, "KeepCutoutImagesRaw"):
+                    shutil.rmtree(current_path.joinpath(channel, cut_im_rawcounts_folder), ignore_errors=True)
                 if not config.getboolean(identifier, "KeepSegImagesLabel"):
                     shutil.rmtree(current_path.joinpath(channel, seg_im_folder), ignore_errors=True)
                 if not config.getboolean(identifier, "KeepSegImagesBin"):
