@@ -28,6 +28,8 @@ TBD
 - New advanced options in GUI
 - Brightness thresholding and notebook
 - Support for single image runs
+- Mother machine support
+- Stardist as new segmentation algorithm
 
 
 ## [0.3.11]

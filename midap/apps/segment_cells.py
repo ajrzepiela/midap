@@ -49,6 +49,7 @@ def main(path_model_weights: Union[str,bytes,os.PathLike], path_pos: Union[str,b
     path_channel = Path(path_pos).joinpath(path_channel)
     # TODO this should not be hardcoded
     path_cut = path_channel.joinpath("cut_im")
+    path_cut.mkdir(exist_ok=True)
 
     # now we select the segmentor
     pred.set_segmentation_method(path_cut)

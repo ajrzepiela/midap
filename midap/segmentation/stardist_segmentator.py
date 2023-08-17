@@ -4,13 +4,14 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import skimage.io as io
-from cellpose_omni import models
+from stardist.models import StarDist2D
+from csbdeep.utils import normalize
 
 from .base_segmentator import SegmentationPredictor
 from ..utils import GUI_selector
 
 
-class OmniSegmentation(SegmentationPredictor):
+class StarDistSegmentation(SegmentationPredictor):
     """
     A class that performs the image segmentation of the cells using a UNet
     """
@@ -50,23 +51,15 @@ class OmniSegmentation(SegmentationPredictor):
 
             # scale the image and pad
             img = self.scale_pixel_vals(io.imread(os.path.join(path_to_cutouts, path_img)))
+            self.logger.info(f'The shape of the image is: {img.shape}')
 
             # display different segmentation models
-            label_dict = {'bact_phase_cp': 'bact_phase_cp',
-                          'bact_fluor_cp': 'bact_fluor_cp',
-                          'bact_phase_omni': 'bact_phase_omni',
-                          'bact_fluor_omni': 'bact_fluor_omni',}
-            for custom_model in Path(self.path_model_weights).iterdir():
-                label_dict.update({custom_model.name: custom_model})
+            labels = ['2D_versatile_fluo', '2D_paper_dsb2018', '2D_versatile_he']
             figures = []
-            for model_name, model_path in label_dict.items():
-                if Path(model_path).is_file():
-                    model = models.CellposeModel(gpu=False, pretrained_model=str(model_path))
-                else:
-                    model = models.CellposeModel(gpu=False, model_type=model_name)
+            for model_name in labels:
+                model = StarDist2D.from_pretrained('2D_versatile_fluo')
                 # predict, we only need the mask, see omnipose tutorial for the rest of the args
-                mask, _, _ = model.eval(img, channels=[0, 0], rescale=None, mask_threshold=-1,
-                                        transparency=True, flow_threshold=0, omni=True, resample=True, verbose=0)
+                mask, _ = model.predict_instances(normalize(img))
                 # omni removes axes that are just 1
                 seg = (mask > 0.5).astype(int)
 
@@ -87,30 +80,22 @@ class OmniSegmentation(SegmentationPredictor):
             title = f'Segmentation Selection for channel: {channel}'
 
             # start the gui
-            marked = GUI_selector(figures=figures, labels=list(label_dict.keys()), title=title)
+            marked = GUI_selector(figures=figures, labels=labels, title=title)
 
             # set weights
-            self.model_weights = label_dict[marked]
+            self.model_weights = marked
 
         # helper function for the seg method
-        if Path(self.model_weights).is_file():
-            model = models.CellposeModel(gpu=False, pretrained_model=str(self.model_weights))
-        else:
-            model = models.CellposeModel(gpu=False, model_type=self.model_weights)
+        model = StarDist2D.from_pretrained(self.model_weights)
 
         def seg_method(imgs):
-            # scale all the images
-            imgs = [self.scale_pixel_vals(img) for img in imgs]
-            # we catch here ValueErrors because omni can fail at masking when there are no cells
-            try:
-                mask, _, _ = model.eval(imgs, channels=[0, 0], rescale=None, mask_threshold=-1,
-                                        transparency=True, flow_threshold=0, omni=True, resample=True, verbose=0)
-            except ValueError:
-                self.logger.warning('Segmentation failed, returning empty mask!')
-                mask = np.zeros((len(imgs), ) + imgs[0].shape, dtype=int)
-
+            masks = []
+            for img in imgs:
+                img = self.scale_pixel_vals(img)
+                mask, _ = model.predict_instances(normalize(img))
+                masks.append(mask)
             # add the channel dimension and batch if it was 1
-            return mask
+            return np.stack(masks, axis=0)
 
         # set the segmentations method
         self.segmentation_method = seg_method
