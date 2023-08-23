@@ -1,16 +1,15 @@
 import os
 from configparser import ConfigParser
-from pathlib import Path
 from typing import Optional, List, Union, Tuple
-from skimage import io
 
 import numpy as np
 import tensorflow as tf
 
 from .preprocessing import DataProcessor
+from ..utils import get_logger
 
 
-class TFPipe(DataProcessor):
+class TFPipeFamilyMachine(DataProcessor):
     """
     This class can be used to createa datasets for TF model training
     """
@@ -414,3 +413,125 @@ class TFPipe(DataProcessor):
         self.dset_train = self.dset_train.batch(batch_size).map(lambda num, imgs: (imgs, imgs[2]))
         self.dset_test = self.dset_test.batch(batch_size).map(lambda num, imgs: (imgs, imgs[2]))
         self.dset_val = self.dset_val.batch(batch_size).map(lambda num, imgs: (imgs, imgs[2]))
+
+
+class TFPipeMotherMachine(object):
+    """
+    This is a data pipeline for the Mother Machine training, it uses the Delta style format
+    """
+
+    def __init__(self, img_dir: Union[str, bytes, os.PathLike], seg_dir: Union[str, bytes, os.PathLike],
+                weight_dir: Union[str, bytes, os.PathLike], test_size=0.15, val_size=0.2,  loglevel=7,
+                np_random_seed: Optional[int] = None, batch_size=32, shuffle_buffer=128, image_size=(256, 32, 1)):
+        """
+        Initializes the TFPipe instance for the mother machine
+        :param img_dir: The directory containing the images
+        :param seg_dir: The directory containing the segmentation masks
+        :param weight_dir: The directory containing the weight maps
+        :param test_size: Ratio for the test set
+        :param val_size: Ratio for the validation set
+        :param loglevel: The loglevel of the logger instance, 0 -> no output, 7 (default) -> max output
+        :param np_random_seed: A random seed for the numpy random seed generator, defaults to None, which will lead
+                               to non-reproducible behaviour. Note that the state will be set at initialisation and
+                               not reset by any of the methods.
+        :param batch_size: The batch size of the data sets
+        :param shuffle_buffer: The shuffle buffer used for the training set
+        :param image_size: The target image size including channel dimension
+        """
+
+        # get the logger
+        self.logger = get_logger(__file__, loglevel)
+
+        # set some attributes
+        self.img_dir = img_dir
+        self.seg_dir = seg_dir
+        self.weight_dir = weight_dir
+        self.test_size = test_size
+        self.val_size = val_size
+        self.batch_size = batch_size
+        self.shuffle_buffer = shuffle_buffer
+        self.image_size = image_size
+
+        # set the numpy random seed
+        if np_random_seed is not None:
+            self.logger.info(f"Setting the numpy random seed to {np_random_seed}")
+            np.random.seed(np_random_seed)
+
+        # set the tf dsets
+        self.set_tf_dsets()
+
+    @classmethod
+    def scale_pixel_vals(cls, img: np.ndarray):
+        """
+        Scales pixel values between 0 and 1. This is just a convenience method and not used otherwise by the class.
+        :param img: An image that should be rescaled
+        :return: The image where all pixels are between 0 and 1
+        """
+
+        img = np.array(img)
+        return ((img - img.min()) / (img.max() - img.min()))
+
+    def _read_img(self, img_path: tf.Tensor, weight_path: tf.Tensor, seg_path: tf.Tensor):
+        """
+        Reads the image, segmentation and weight map from the paths, all images are rescaled to [0, 1] and
+        resizes to the image_size set in the constructor
+        :param img_path: The path to the image, as tf.Tensor and the file has to be a png
+        :param weight_path: The path to the weight map, as tf.Tensor and the file has to be a png
+        :param seg_path: The path to the segmentation, as tf.Tensor and the file has to be a png
+        :return: The image, segmentation and weight map
+        """
+
+        # read the images
+        img = tf.io.decode_png(tf.io.read_file(img_path))
+        weight = tf.io.decode_png(tf.io.read_file(weight_path))
+        seg = tf.io.decode_png(tf.io.read_file(seg_path))
+
+        # rescale
+        img = tf.cast(img, tf.float32)/255.0
+        weight = tf.cast(weight, tf.float32) / 255.0
+        seg = tf.cast(seg, tf.float32)/255.0
+
+        # resize
+        img = tf.image.resize(img, self.image_size[:2])
+        weight = tf.image.resize(weight, self.image_size[:2])
+        seg = tf.image.resize(seg, self.image_size[:2])
+
+        # make sure the seg is binary
+        seg = tf.cast(seg > 0.5, tf.float32)
+
+        return img, weight, seg
+
+    def set_tf_dsets(self):
+        """
+        Create the TF datasets tf_train, tf_test and tf_val
+        """
+
+        # list the files for the three directories
+        img_files_ds = tf.data.Dataset.list_files(os.path.join(self.img_dir, "*"), shuffle=False)
+        seg_files_ds = tf.data.Dataset.list_files(os.path.join(self.seg_dir, "*"), shuffle=False)
+        weight_files_ds = tf.data.Dataset.list_files(os.path.join(self.weight_dir, "*"), shuffle=False)
+
+        # zip all files together
+        files_ds = tf.data.Dataset.zip((img_files_ds, weight_files_ds, seg_files_ds))
+
+        # split the files into train, test and val
+        num_elements = len(files_ds)
+        num_test = int(self.test_size * num_elements)
+        num_val = int(self.val_size * num_elements)
+        num_train = num_elements - num_test - num_val
+        files_ds_train = files_ds.take(num_train)
+        files_ds_test = files_ds.skip(num_train).take(num_test)
+        files_ds_val = files_ds.skip(num_train + num_test).take(num_val)
+
+        # shuffle the files for the training set
+        files_ds_train = files_ds_train.shuffle(buffer_size=self.shuffle_buffer)
+
+        # read the images
+        train_ds = files_ds_train.map(self._read_img)
+        test_ds = files_ds_test.map(self._read_img)
+        val_ds = files_ds_val.map(self._read_img)
+
+        # batch remap all the datasets such that they are compatible with the fit function
+        self.dset_train = train_ds.batch(self.batch_size).map(lambda imgs, weight, seg: ((imgs, weight, seg), seg))
+        self.dset_test = test_ds.batch(self.batch_size).map(lambda imgs, weight, seg: ((imgs, weight, seg), seg))
+        self.dset_val = val_ds.batch(self.batch_size).map(lambda imgs, weight, seg: ((imgs, weight, seg), seg))
