@@ -51,8 +51,6 @@ def configure(ctx: click.Context, param: click.Option, filename: str):
 @click.option('--loglevel', type=int, default=7,
               help='Loglevel of the script can range from 0 (no output) to 7 (debug, default)')
 # training data
-@click.option('--n_grid', type=int, default=4,
-              help='The grid used to split the original image into distinct patches for train, test and val dsets')
 @click.option('--test_size', type=float, default=0.15, help='Ratio for the test set')
 @click.option('--val_size', type=float, default=0.2, help='Ratio for the validation set')
 @click.option('--loglevel', type=int, default=7,
