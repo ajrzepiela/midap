@@ -139,7 +139,7 @@ class CutoutImage(ABC):
                 io.imsave(f_path, i, check_contrast=False)
         else:
             for f, i in zip(file_names, files):
-                fname = f"{os.path.splitext(os.path.basename(f))[0]}_cut_rawcounts.png"
+                fname = f"{os.path.splitext(os.path.basename(f))[0]}_cut_rawcounts.tif"
                 if chamber is None:
                     f_path = os.path.join(dir_name, 'cut_im_rawcounts', fname)
                 else:

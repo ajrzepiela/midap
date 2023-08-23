@@ -64,7 +64,9 @@ def cutout_instance(monkeypatch, img1, img2):
     # directories for the read and write
     img_dir = tmpdir.name
     cut_dir = os.path.join(tmpdir.name, "cut_im")
+    cut_dir_raw = os.path.join(tmpdir.name, "cut_im_rawcounts")
     os.makedirs(cut_dir)
+    os.makedirs(cut_dir_raw)
 
     # thefine the paths
     channels = [os.path.join(img_dir, f"channel_{i}") for i in range(3)]
