@@ -170,8 +170,7 @@ def run_mother_machine(config, checkpoint, main_args, logger, restart=False):
                         raise ValueError(f"Unknown segmentation class {segmentation_class}")
 
                     # point to a chamber for the weights selection
-                    offsets = tuple([int(offset) for offset in config.getlist(identifier, "Offsets")])
-                    path_channel = os.path.join(channel, f"chamber_{offsets[0]}")
+                    path_channel = os.path.join(channel, "chamber_0")
                     weights = segment_cells.main(path_model_weights=path_model_weights, path_pos=current_path,
                                                  path_channel=path_channel, postprocessing=True, clean_border=False,
                                                  network_name=model_weights,
