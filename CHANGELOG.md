@@ -19,6 +19,13 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.13]
+
+2023-08-31
+
+Feature:
+- Added fluo change analysis as advanced option: allows segmentation and tracking of cells with changing fluorescence
+
 ## [0.3.12]
 
 Feature
