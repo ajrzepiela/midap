@@ -122,7 +122,7 @@ def main(config_file="settings.ini", loglevel=7):
 
         # the defaults come either from the first section or from the last that we set
         defaults = config[id_name] if i == 0 else config[unique_identifiers[i-1]]
-
+    
         # Common elements of the next GUI part
         workflow = [[sg.Text("Part of pipeline", justification="center", size=(16, 1))],
                     [sg.T("         "), sg.Radio("Segmentation and Tracking", "RADIO1", key="segm_track",
@@ -148,32 +148,40 @@ def main(config_file="settings.ini", loglevel=7):
         # Advanced options
         SYMBOL_RIGHT = '▶'
         SYMBOL_DOWN = '▼'
-
+        
         advanced_options = [# What to keep
                             [sg.Text("Keep the following files: ", font="bold")],
                             [sg.Checkbox("Original file copy", key="keep_copy",
-                                         default=defaults.getboolean("KeepCopyOriginal"), size=30),
-                             sg.Checkbox("Raw images", key="keep_raw",
-                                         default=defaults.getboolean("KeepRawImages"))],
-                            [sg.Checkbox("Cut images", key="keep_cut",
-                                         default=defaults.getboolean("KeepCutoutImages"), size=30),
+                                         default=defaults.getboolean("KeepCopyOriginal")),
+                             sg.Checkbox("Cut images (normalized)", key="keep_cut",
+                                         default=defaults.getboolean("KeepCutoutImages")),
                              sg.Checkbox("Segmented images (labeled)", key="keep_seg_label",
                                          default=defaults.getboolean("KeepSegImagesLabel"))],
-                            [sg.Checkbox("Segmented images (binary)", key="keep_seg_bin",
-                                         default=defaults.getboolean("KeepSegImagesBin"), size=30),
-                             sg.Checkbox("Segmented images (tracking)", key="keep_seg_track",
+                            [sg.Checkbox("Raw images", key="keep_raw",
+                                         default=defaults.getboolean("KeepRawImages")),
+                             sg.Checkbox("Cut images (raw counts)", key="keep_cut_raw",
+                                         default=defaults.getboolean("KeepCutoutImagesRaw")),
+                             sg.Checkbox("Segmented images (binary)", key="keep_seg_bin",
+                                         default=defaults.getboolean("KeepSegImagesBin"))],
+                            [sg.Checkbox("Segmented images (tracking)", key="keep_seg_track",
                                          default=defaults.getboolean("KeepSegImagesTrack"))],
                             # Thresholding
                             [sg.Text("Thresholding: \n"
                                      "Enter a value between 0 (black) and 1 (white) to cap the brightest parts of the images.",
                                      font="bold")],
-                            [sg.Input(default_text=defaults["ImgThreshold"], size=30, key="thresholding_val")],]
+                            [sg.Input(default_text=defaults["ImgThreshold"], size=30, key="thresholding_val")],        
+                            ]
 
         if general["DataType"] == "Family_Machine":
             # Segmentation
             advanced_options += [[sg.Text("Segmentation options:", font="bold")],
                                  [sg.Checkbox("Remove border cells", key="remove_border",
                                          default=defaults.getboolean("RemoveBorder"), size=30)],]
+                                        # Tracking options
+            advanced_options += [[sg.Text("Tracking postprocessing: ", font="bold")],
+                                 [sg.Checkbox("Fluorescence change analysis", key="fluo_change",
+                                         default=defaults.getboolean("FluoChange"), size=30)],]
+            
         if general["DataType"] == "Mother_Machine":
             # mark cells on top or bottom of cells
             advanced_options += [[sg.Text("During the tracking mark cell that are at the top/bottom of the chamber:", font="bold")],
@@ -225,7 +233,7 @@ def main(config_file="settings.ini", loglevel=7):
                                  [sg.Column([[sg.OK(), sg.Cancel()]], key="col_final")]]
 
         # Finalize the layout
-        window = sg.Window(f"Params for '{id_name}' of {unique_identifiers}", layout_family_machine).Finalize()
+        window = sg.Window(f"Params for '{id_name}' of {unique_identifiers}", layout_family_machine, size=(600, 1000)).Finalize()
 
         # Set the advanced options to be collapsed
         advanced_opened = False
@@ -282,7 +290,11 @@ def main(config_file="settings.ini", loglevel=7):
         # The remaining generals
         section["StartFrame"] = values["start_frame"]
         section["EndFrame"] = values["end_frame"]
+
+        if values["fluo_change"]:
+            values["phase_segmentation"] = True
         section["PhaseSegmentation"] = values["phase_segmentation"]
+       
 
         # The classes
         section["CutImgClass"] = values["imcut"]
@@ -293,6 +305,7 @@ def main(config_file="settings.ini", loglevel=7):
         section["KeepCopyOriginal"] = values["keep_copy"]
         section["KeepRawImages"] = values["keep_raw"]
         section["KeepCutoutImages"] = values["keep_cut"]
+        section["KeepCutoutImagesRaw"] = values["keep_cut_raw"]
         section["KeepSegImagesLabel"] = values["keep_seg_label"]
         section["KeepSegImagesBin"] = values["keep_seg_bin"]
         section["KeepSegImagesTrack"] = values["keep_seg_track"]
@@ -308,6 +321,9 @@ def main(config_file="settings.ini", loglevel=7):
             logging.error(f"Thresholding value must be between 0 and 1. Got {threshold}")
             exit(1)
         section["ImgThreshold"] = values["thresholding_val"]
+
+        # Tracking options
+        section["FluoChange"] = values["fluo_change"]
 
         # overwrite the section defaults
         config.read_dict({id_name: section})

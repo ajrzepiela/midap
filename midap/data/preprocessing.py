@@ -151,7 +151,6 @@ class DataProcessor(object):
                         thrown away
         :return: The tiles of dimension (n_grid x n_grid, img.shape[0]//4, img.shape[1]//4) + img.shape[2:]
         """
-
         # get the shape img
         height, width, *_ = img.shape
 
