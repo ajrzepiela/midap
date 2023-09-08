@@ -3,6 +3,7 @@ from configparser import ConfigParser
 from pathlib import Path
 
 import click
+import datetime
 import tensorflow as tf
 
 from midap.data.tf_pipeline import TFPipe
@@ -159,6 +160,8 @@ def main(**kwargs):
     with open(config_file, "w+") as f:
         config.write(f)
 
+    print(kwargs["train_files"])
+
     # create the TFPipe
     logger.info("Initializing the data pipelines...")
     tf_pipe = TFPipe(paths=kwargs["train_files"], n_grid=kwargs["n_grid"], test_size=kwargs["test_size"],
@@ -209,7 +212,8 @@ def main(**kwargs):
         model.save(Path(kwargs["save_path"]).joinpath("model.h5"))
     else:
         logger.info(f'Saving weights to: {kwargs["save_path"]}')
-        model.save_weights(Path(kwargs["save_path"]).joinpath("weights.h5"), save_format="h5")
+        weights_filename = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        model.save_weights(Path(kwargs["save_path"]).joinpath(weights_filename+".h5"), save_format="h5")
 
 
 if __name__ == '__main__':
