@@ -154,7 +154,8 @@ class Config(ConfigParser):
                                       "KeepSegImagesLabel": True,
                                       "KeepSegImagesBin": True,
                                       "KeepSegImagesTrack": True,
-                                      "ImgThreshold": 1.0,}})
+                                      "ImgThreshold": 1.0,
+                                      "FluoChange": False,}})
         else:
             raise ValueError(f"Unknown DataType: {self.get('General', 'DataType')}")
 
