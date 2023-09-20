@@ -186,6 +186,10 @@ def main(config_file="settings.ini", loglevel=7):
             # mark cells on top or bottom of cells
             advanced_options += [[sg.Text("During the tracking mark cell that are at the top/bottom of the chamber:", font="bold")],
                                  [sg.DropDown(key="cell_marker", values=["top", "bottom", "both", "none"], default_value="none")]]
+            
+            advanced_options += [[sg.Text("Tracking postprocessing: ", font="bold")],
+                                 [sg.Checkbox("Fluorescence change analysis", key="fluo_change",
+                                         default=defaults.getboolean("FluoChange"), size=30)],]
 
 
         # get the vars for the specific layout

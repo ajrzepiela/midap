@@ -230,6 +230,7 @@ class CutoutImage(ABC):
 
                 # list for the aligned cutouts
                 aligned_cutouts = []
+                aligned_cutouts_norm = []
 
                 # adapt the corner with the shift of the image
                 base_corners = (self.corners_cut[0] + self.offsets[chamber],
@@ -243,7 +244,8 @@ class CutoutImage(ABC):
                 cut_src = self.scale_pixel_val(cutout)
 
                 # add to list
-                aligned_cutouts.append(cut_src)
+                aligned_cutouts_norm.append(cut_src)
+                aligned_cutouts.append(cutout)
 
                 # cutout of all other images of all channels
                 for i in tqdm(range(1, len(files))):
@@ -259,9 +261,11 @@ class CutoutImage(ABC):
                     cut_img = self.do_cutout(img, current_corners)
                     # sacle the pixel values
                     proc_img = self.scale_pixel_val(cut_img)
-                    aligned_cutouts.append(proc_img)
+                    aligned_cutouts_norm.append(proc_img)
+                    aligned_cutouts.append(cut_img)
 
-                self.save_cutout(aligned_cutouts, files, chamber=chamber)
+                self.save_cutout(aligned_cutouts_norm, files, normalization=True, chamber=chamber)
+                self.save_cutout(aligned_cutouts, files, normalization=False, chamber=chamber)
 
     @abstractmethod
     def cut_corners(self, img):
