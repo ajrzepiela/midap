@@ -109,7 +109,7 @@ class DataProcessor(object):
             # 1) Load data
             self.logger.info(f"Loading file {img_path}")
             img = self.scale_pixel_vals(io.imread(img_path, as_gray=True))
-            seg = self.scale_pixel_vals(io.imread(seg_path)).astype(int)
+            seg = self.scale_pixel_vals_seg(io.imread(seg_path)).astype(int)
 
             # 2) Generate weight map
             w_string = f"w_0={self.w_0}_w_c0={self.w_c0}_w_c1={self.w_c1}_sigma={self.sigma}"
@@ -203,6 +203,17 @@ class DataProcessor(object):
 
         img = np.array(img)
         return ((img - img.min()) / (img.max() - img.min()))
+    
+    @classmethod
+    def scale_pixel_vals_seg(cls, seg: np.ndarray):
+        """
+        Converts all segmentation images (labeled and binary) to binary image.
+        :param seg: A segmentation image that should be converted
+        :return: The binary segmentation
+        """
+
+        seg = (seg > 0).astype(int)
+        return seg
 
     @staticmethod
     @njit("void(i8[:,:],f8[:,:,:],i4)")
