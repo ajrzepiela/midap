@@ -19,7 +19,7 @@ class UNetSegmentation(SegmentationPredictor):
     A class that performs the image segmentation of the cells using a UNet
     """
 
-    supported_setups = ["Family_Machine"]
+    supported_setups = ["Family_Machine", "Mother_Machine"]
 
     def __init__(self, *args, **kwargs):
         """
@@ -81,6 +81,9 @@ class UNetSegmentation(SegmentationPredictor):
 
             # Title for the GUI
             channel = os.path.basename(os.path.dirname(path_to_cutouts))
+            # if we just got the chamber folder, we need to go one more up
+            if channel.startswith('chamber'):
+                channel = os.path.basename(os.path.dirname(os.path.dirname(path_to_cutouts)))
             title = f'Segmentation Selection for channel: {channel}'
 
             # start the gui
