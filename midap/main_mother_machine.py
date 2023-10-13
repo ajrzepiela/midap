@@ -167,6 +167,9 @@ def run_mother_machine(config, checkpoint, main_args, logger, restart=False):
                     elif segmentation_class == "StarDistSegmentation":
                         path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
                                                                                    "model_weights_legacy")
+                    elif segmentation_class == "UNetSegmentation":
+                        path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
+                                                                                   "model_weights_mother_machine")
                     else:
                         raise ValueError(f"Unknown segmentation class {segmentation_class}")
 
