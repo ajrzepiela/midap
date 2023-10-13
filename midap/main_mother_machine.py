@@ -164,6 +164,9 @@ def run_mother_machine(config, checkpoint, main_args, logger, restart=False):
                     if segmentation_class == "OmniSegmentation":
                         path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
                                                                                    "model_weights_omni")
+                    elif segmentation_class == "StarDistSegmentation":
+                        path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
+                                                                                   "model_weights_legacy")
                     else:
                         raise ValueError(f"Unknown segmentation class {segmentation_class}")
 
