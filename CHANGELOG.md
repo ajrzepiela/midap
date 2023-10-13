@@ -29,9 +29,16 @@ Feature:
 ## [0.3.12]
 
 Feature
+- Mother machine UNet training
+- Mother machine UNet support
+
+
+
+## [0.3.12]
 
 2023-08-17
 
+Feature
 - New advanced options in GUI
 - Brightness thresholding and notebook
 - Support for single image runs
@@ -41,10 +48,9 @@ Feature
 
 ## [0.3.11]
 
-Feature
-
 2023-05-10
 
+Feature
 - Added fine-tuned omnipose models and upped the model weights version in the json.
 - Update env file accordingly
 
