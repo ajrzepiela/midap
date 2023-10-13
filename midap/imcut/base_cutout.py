@@ -97,8 +97,26 @@ class CutoutImage(ABC):
         """
         img_scaled = (255 * ((img - np.min(img))/np.max(img - np.min(img)))).astype('uint8')
         return img_scaled
+    
+    # def save_cutout(self, files, file_names, chamber=None, normalization=True):
+    #     """
+    #     Saves the cutouts into the proper directory
+    #     :param files: A list of arrrays (the cutouts) to save
+    #     :param file_names: The list of file names from the original files
+    #     :param chamber: The chamber number, if None, if won't be included in the path
+    #     """
+    #     # save of cutouts
+    #     # TODO: This should not be hardcoded
+    #     dir_name = os.path.dirname(os.path.dirname(file_names[0]))
+    #     for f, i in zip(file_names, files):
+    #         if normalization:
+    #             fname = f"{os.path.splitext(os.path.basename(f))[0]}_cut.png"
+    #             io.imsave(os.path.join(dir_name, 'cut_im', fname), i, check_contrast=False)
+    #         else:
+    #             fname = f"{os.path.splitext(os.path.basename(f))[0]}_cut_rawcounts.png"
+    #             io.imsave(os.path.join(dir_name, 'cut_im_rawcounts', fname), i, check_contrast=False)
 
-    def save_cutout(self, files, file_names, chamber=None):
+    def save_cutout(self, files, file_names, normalization, chamber=None):
         """
         Saves the cutouts into the proper directory
         :param files: A list of arrrays (the cutouts) to save
@@ -108,16 +126,29 @@ class CutoutImage(ABC):
         # save of cutouts
         # TODO: This should not be hardcoded
         dir_name = os.path.dirname(os.path.dirname(file_names[0]))
-        for f, i in zip(file_names, files):
-            fname = f"{os.path.splitext(os.path.basename(f))[0]}_cut.png"
-            if chamber is None:
-                f_path = os.path.join(dir_name, 'cut_im', fname)
-            else:
-                # we need to create this directory
-                f_path = os.path.join(dir_name, f'chamber_{chamber}', 'cut_im')
-                os.makedirs(f_path, exist_ok=True)
-                f_path = os.path.join(f_path, fname)
-            io.imsave(f_path, i, check_contrast=False)
+        if normalization:
+            for f, i in zip(file_names, files):
+                fname = f"{os.path.splitext(os.path.basename(f))[0]}_cut.png"
+                if chamber is None:
+                    f_path = os.path.join(dir_name, 'cut_im', fname)
+                else:
+                    # we need to create this directory
+                    f_path = os.path.join(dir_name, f'chamber_{chamber}', 'cut_im')
+                    os.makedirs(f_path, exist_ok=True)
+                    f_path = os.path.join(f_path, fname)
+                io.imsave(f_path, i, check_contrast=False)
+        else:
+            for f, i in zip(file_names, files):
+                fname = f"{os.path.splitext(os.path.basename(f))[0]}_cut_rawcounts.tif"
+                if chamber is None:
+                    f_path = os.path.join(dir_name, 'cut_im_rawcounts', fname)
+                else:
+                    # we need to create this directory
+                    f_path = os.path.join(dir_name, f'chamber_{chamber}', 'cut_im_rawcounts')
+                    os.makedirs(f_path, exist_ok=True)
+                    f_path = os.path.join(f_path, fname)
+
+                io.imsave(f_path, i, check_contrast=False)
         
     def run_align_cutout(self):
         """
@@ -133,6 +164,7 @@ class CutoutImage(ABC):
             self.logger.info(f'Starting with channel {channel_id+1}/{len(self.channels)}')
             # list for the aligned cutouts
             aligned_cutouts = []
+            aligned_cutouts_norm = []
 
             # get the first image
             src = io.imread(files[0])
@@ -144,11 +176,13 @@ class CutoutImage(ABC):
 
             # perform the cutout of the first image
             cutout = self.do_cutout(src, self.corners_cut)
+            
             # scale the pixel values
             cut_src = self.scale_pixel_val(cutout)
 
             # add to list
-            aligned_cutouts.append(cut_src)
+            aligned_cutouts_norm.append(cut_src)
+            aligned_cutouts.append(cutout)
 
             # cutout of all other images of all channels
             for i in tqdm(range(1, len(files))):
@@ -163,9 +197,11 @@ class CutoutImage(ABC):
                 cut_img = self.do_cutout(img, current_corners)
                 # sacle the pixel values
                 proc_img = self.scale_pixel_val(cut_img)
-                aligned_cutouts.append(proc_img)
+                aligned_cutouts_norm.append(proc_img)
+                aligned_cutouts.append(cut_img)
 
-            self.save_cutout(aligned_cutouts, files)
+            self.save_cutout(aligned_cutouts_norm, files, normalization=True)
+            self.save_cutout(aligned_cutouts, files, normalization=False)
 
     def run_align_cutout_mother_machine(self):
         """
@@ -194,6 +230,7 @@ class CutoutImage(ABC):
 
                 # list for the aligned cutouts
                 aligned_cutouts = []
+                aligned_cutouts_norm = []
 
                 # adapt the corner with the shift of the image
                 base_corners = (self.corners_cut[0] + self.offsets[chamber],
@@ -207,7 +244,8 @@ class CutoutImage(ABC):
                 cut_src = self.scale_pixel_val(cutout)
 
                 # add to list
-                aligned_cutouts.append(cut_src)
+                aligned_cutouts_norm.append(cut_src)
+                aligned_cutouts.append(cutout)
 
                 # cutout of all other images of all channels
                 for i in tqdm(range(1, len(files))):
@@ -223,9 +261,11 @@ class CutoutImage(ABC):
                     cut_img = self.do_cutout(img, current_corners)
                     # sacle the pixel values
                     proc_img = self.scale_pixel_val(cut_img)
-                    aligned_cutouts.append(proc_img)
+                    aligned_cutouts_norm.append(proc_img)
+                    aligned_cutouts.append(cut_img)
 
-                self.save_cutout(aligned_cutouts, files, chamber=chamber)
+                self.save_cutout(aligned_cutouts_norm, files, normalization=True, chamber=chamber)
+                self.save_cutout(aligned_cutouts, files, normalization=False, chamber=chamber)
 
     @abstractmethod
     def cut_corners(self, img):

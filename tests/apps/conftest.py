@@ -21,6 +21,7 @@ def setup_dir():
     channel = "GFP"
     tmpdir_path.joinpath(channel, "raw_im").mkdir(parents=True)
     tmpdir_path.joinpath(channel, "cut_im").mkdir(parents=True)
+    tmpdir_path.joinpath(channel, "cut_im_rawcounts").mkdir(parents=True)
     tmpdir_path.joinpath(channel, "seg_im").mkdir(parents=True)
     tmpdir_path.joinpath(channel, "seg_im_bin").mkdir(parents=True)
     tmpdir_path.joinpath(channel, "track_output").mkdir(parents=True)

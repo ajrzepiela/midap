@@ -23,6 +23,7 @@ def run_mother_machine(config, checkpoint, main_args, logger, restart=False):
     # folder names
     raw_im_folder = "raw_im"
     cut_im_folder = "cut_im"
+    cut_im_rawcounts_folder = "cut_im_rawcounts"
     seg_im_folder = "seg_im"
     seg_im_bin_folder = "seg_im_bin"
     track_folder = "track_output"
@@ -361,6 +362,8 @@ def run_mother_machine(config, checkpoint, main_args, logger, restart=False):
                         shutil.rmtree(current_path.joinpath(channel, f"chamber_{chamber}", raw_im_folder), ignore_errors=True)
                     if not config.getboolean(identifier, "KeepCutoutImages"):
                         shutil.rmtree(current_path.joinpath(channel, f"chamber_{chamber}", cut_im_folder), ignore_errors=True)
+                    if not config.getboolean(identifier, "KeepCutoutImagesRaw"):
+                        shutil.rmtree(current_path.joinpath(channel, f"chamber_{chamber}", cut_im_rawcounts_folder), ignore_errors=True)
                     if not config.getboolean(identifier, "KeepSegImagesLabel"):
                         shutil.rmtree(current_path.joinpath(channel, f"chamber_{chamber}", seg_im_folder), ignore_errors=True)
                     if not config.getboolean(identifier, "KeepSegImagesBin"):
@@ -375,3 +378,5 @@ def run_mother_machine(config, checkpoint, main_args, logger, restart=False):
         config.to_file(current_path)
 
         logger.info("Done!")
+
+        cut_im_rawcounts_folder = "cut_im_rawcounts"

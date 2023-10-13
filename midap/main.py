@@ -93,7 +93,7 @@ def run_module(args=None):
         config = Config(fname="settings.ini")
         config.to_file(overwrite=True)
         return 0
-
+    
     # check if we are restarting
     restart = False
     if args.restart is not None:
