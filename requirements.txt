@@ -1,0 +1,17 @@
+btrack==0.4.6
+coverage
+gitpython
+matplotlib>=3.3.0,<=3.6.3
+napari
+omnipose==0.4.4
+opencv-python
+pandas==2.0.2
+psutil==5.9.5
+PySimpleGUI>=4.60.4
+pytest
+scikit-image==0.19.3
+stardist==0.8.5
+tensorflow==2.13.0
+tqdm==4.65.0
+#natsort==8.3.1
+-e .
