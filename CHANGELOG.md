@@ -19,6 +19,13 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.14]
+
+2023-11-02
+
+Feature:
+- Added simplified installation process.
+
 ## [0.3.13]
 
 2023-08-31
