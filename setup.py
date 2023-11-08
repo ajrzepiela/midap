@@ -20,7 +20,7 @@ setup(
                         'psutil>=5.9.5',
                         'PySimpleGUI>=4.60.4',
                         'pytest>=7.4.3',
-                        'scikit-image>=0.19.3',
+                        'scikit-image>=0.19.3,<=0.20.0',
                         'stardist>=0.8.5',
                         'tensorflow>=2.13.0',
                         'tqdm>=4.65.0'],
