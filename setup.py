@@ -12,6 +12,7 @@ setup(
     install_requires=['btrack>=0.4.6',
                         'coverage>=7.3.2',
                         'gitpython>=3.1.40',
+                        'jupyterlab==4.0.8',
                         'matplotlib>=3.3.0,<=3.6.3',
                         'napari>=0.4.18',
                         'omnipose==0.4.4',
