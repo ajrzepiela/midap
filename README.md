@@ -19,7 +19,7 @@ The installation was tested on macOS Big Sur (11.6.7), Ubuntu 22.04 and WSL II o
 2. Create and activate the conda environment:
 
 ```
-conda create --name  midap -c defaults python=3.10
+conda create --name midap python=3.10
 conda activate midap
 pip install -e .
 ```
