@@ -28,7 +28,7 @@ class SegmentationPredictor(ABC):
     logger = logger
 
     def __init__(self, path_model_weights: Union[str, bytes, os.PathLike], postprocessing: bool, div=16, connectivity=1,
-                 model_weights: Union[str, bytes, os.PathLike, None]=None, img_threshold=1.0):
+                 model_weights: Union[str, bytes, os.PathLike, None]=None, img_threshold=1.0, jupyter=False):
         """
         Initializes the SegmentationPredictor instance
         :param path_model_weights: Path to the model weights
@@ -54,6 +54,53 @@ class SegmentationPredictor(ABC):
         # params that will be set later
         self.model_weights = model_weights
         self.segmentation_method = None
+
+        self.jupyter = jupyter
+
+    def run_image_stack_jupyter(self, imgs, model_weights, clean_border: bool):
+        """
+        Performs image segmentation, postprocessing and storage for all images found in channel_path
+        :param channel_path: Directory of the channel used for the analysis
+        """
+        #path_cut = os.path.join(imgs_path, "cut_im")
+        # path_seg = os.path.join(channel_path, "seg_im")
+        # path_seg_bin = os.path.join(channel_path, "seg_im_bin")
+
+        # get all the images to segment
+        #path_imgs = np.sort(os.listdir(path_cut))
+
+        # read in all the images
+        # imgs = []
+        # for p in tqdm(path_imgs):
+        #     imgs.append(io.imread(os.path.join(path_cut, p)))
+        #     print(os.path.join(path_cut, p))
+
+        # segement all images
+        self.segment_images_jupyter(imgs, model_weights)
+
+        #save imgs
+
+
+        # self.logger.info('Postprocessing and storage...')
+        # for seg, p in zip(segs, path_imgs):
+        #     # postprocessing
+        #     if self.postprocessing:
+        #         seg = self.postprocess_seg(seg)
+
+        #     # remove borders from the segmentation
+        #     if clean_border:
+        #         seg = clear_border(seg)
+
+        #     # label in case no post processing or border removal
+        #     seg = label(seg, connectivity=self.connectivity)
+
+        #     # save individual image
+        #     os.makedirs(path_seg, exist_ok=True)
+        #     label_fname = re.sub("(_cut.tif|_cut.png|.tif)", "_seg.tif", p)
+        #     io.imsave(os.path.join(path_seg, label_fname), seg.astype(np.uint16), check_contrast=False)
+        #     seg_fname = re.sub("(_cut.tif|_cut.png|.tif)", "_seg_bin.png", p)
+        #     os.makedirs(path_seg_bin, exist_ok=True)
+        #     io.imsave(os.path.join(path_seg_bin, seg_fname), 255*(seg > 0).astype(np.uint8), check_contrast=False)
 
     def run_image_stack(self, channel_path: Union[str, bytes, os.PathLike], clean_border: bool):
         """
