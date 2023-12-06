@@ -83,7 +83,7 @@ jobs:
         # noraml requirements
         pip install -r ./euler/requirements.txt
         # tensorflow is usually taken from euler, minor flake for linting
-        pip install tensorflow flake8
+        pip install tensorflow==2.11.1 flake8
         # the package
         pip install -e .
 

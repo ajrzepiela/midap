@@ -16,13 +16,17 @@ from midap.utils import get_inheritors
 from midap.imcut import *
 from midap.imcut import base_cutout
 
-imcut_subclasses = [subclass.__name__ for subclass in get_inheritors(base_cutout.CutoutImage)]
+imcut_subclasses = [subclass for subclass in get_inheritors(base_cutout.CutoutImage)]
+family_imcut_cls = [s.__name__ for s in imcut_subclasses if "Family_Machine" in s.supported_setups]
+mother_imcut_cls = [s.__name__ for s in imcut_subclasses if "Mother_Machine" in s.supported_setups]
 
 # get all subclasses from the segmentations
 from midap.segmentation import *
 from midap.segmentation import base_segmentator
 
-segmentation_subclasses = [subclass.__name__ for subclass in get_inheritors(base_segmentator.SegmentationPredictor)]
+segmentation_subclasses = [subclass for subclass in get_inheritors(base_segmentator.SegmentationPredictor)]
+family_seg_cls = [s.__name__ for s in segmentation_subclasses if "Family_Machine" in s.supported_setups]
+mother_seg_cls = [s.__name__ for s in segmentation_subclasses if "Mother_Machine" in s.supported_setups]
 
 # get all subclasses from the tracking
 from midap.tracking import *
@@ -90,7 +94,7 @@ class Config(ConfigParser):
         """
 
         # check the DataType
-        allowed_datatype = ["Family_Machine"]
+        allowed_datatype = ["Family_Machine", "Mother_Machine"]
         if self.get("General", "DataType") not in allowed_datatype:
             raise ValueError(f"'DataType' not in {allowed_datatype}")
 
@@ -109,24 +113,51 @@ class Config(ConfigParser):
         :param id_name: Name of the new sections, should be an identifier
         """
 
-        self.read_dict({id_name: {"RunOption": "both",
-                                  "Deconvolution": "no_deconv",
-                                  "StartFrame": 0,
-                                  "EndFrame": 10,
-                                  "PhaseSegmentation": False,
-                                  "Channels": 'None',
-                                  "CutImgClass": "InteractiveCutout",
-                                  "Corners": "None",
-                                  "SegmentationClass": "UNetSegmentation",
-                                  "TrackingClass": "DeltaV2Tracking",
-                                  "KeepCopyOriginal": True,
-                                  "KeepRawImages": True,
-                                  "KeepCutoutImages": True,
-                                  "KeepSegImagesLabel": True,
-                                  "KeepSegImagesBin": True,
-                                  "KeepSegImagesTrack": True,
-                                  "ImgThreshold": 1.0,
-                                  "RemoveBorder": False}})
+        if self.get("General", "DataType") == "Family_Machine":
+            self.read_dict({id_name: {"RunOption": "both",
+                                      "Deconvolution": "no_deconv",
+                                      "StartFrame": 0,
+                                      "EndFrame": 10,
+                                      "PhaseSegmentation": False,
+                                      "Channels": 'None',
+                                      "CutImgClass": "InteractiveCutout",
+                                      "Corners": "None",
+                                      "SegmentationClass": "UNetSegmentation",
+                                      "TrackingClass": "DeltaV2Tracking",
+                                      "KeepCopyOriginal": True,
+                                      "KeepRawImages": True,
+                                      "KeepCutoutImages": True,
+                                      "KeepCutoutImagesRaw": True,
+                                      "KeepSegImagesLabel": True,
+                                      "KeepSegImagesBin": True,
+                                      "KeepSegImagesTrack": True,
+                                      "ImgThreshold": 1.0,
+                                      "RemoveBorder": False,
+                                      "FluoChange": False,}})
+
+        elif self.get("General", "DataType") == "Mother_Machine":
+            self.read_dict({id_name: {"RunOption": "both",
+                                      "Deconvolution": "no_deconv",
+                                      "StartFrame": 0,
+                                      "EndFrame": 10,
+                                      "PhaseSegmentation": False,
+                                      "Channels": 'None',
+                                      "CutImgClass": "SemiAutomatedCutout",
+                                      "Corners": "None",
+                                      "Offsets": "None",
+                                      "SegmentationClass": "OmniSegmentation",
+                                      "TrackingClass": "STrack",
+                                      "KeepCopyOriginal": True,
+                                      "KeepRawImages": True,
+                                      "KeepCutoutImages": True,
+                                      "KeepCutoutImagesRaw": True,
+                                      "KeepSegImagesLabel": True,
+                                      "KeepSegImagesBin": True,
+                                      "KeepSegImagesTrack": True,
+                                      "ImgThreshold": 1.0,
+                                      "FluoChange": False,}})
+        else:
+            raise ValueError(f"Unknown DataType: {self.get('General', 'DataType')}")
 
     def validate_id_section(self, id_name: str, basic=True):
         """
@@ -136,13 +167,20 @@ class Config(ConfigParser):
         :raises: ValueError if invalid value is found or other Errors accordingly
         """
 
+        # get the machine type
+        machine_type = self.get("General", "DataType")
+
         # run option choices
         allowed_run_options = ['both', 'segmentation', 'tracking']
         if self.get(id_name, "RunOption").lower() not in allowed_run_options:
             raise ValueError(f"'RunOption' not in {allowed_run_options}")
 
         # deconvolution choices
-        allowed_deconv = ["deconv_family_machine", "no_deconv"]
+        allowed_deconv = ["no_deconv"]
+        if machine_type == "Family_Machine":
+            allowed_deconv.append("deconv_family_machine")
+        elif machine_type == "Mother_Machine":
+            allowed_deconv.append("deconv_well")
         if self.get(id_name, "Deconvolution").lower() not in allowed_deconv:
             raise ValueError(f"'Deconvolution' not in {allowed_deconv}")
 
@@ -157,20 +195,28 @@ class Config(ConfigParser):
         _ = self.getboolean(id_name, "KeepCopyOriginal")
         _ = self.getboolean(id_name, "KeepRawImages")
         _ = self.getboolean(id_name, "KeepCutoutImages")
+        _ = self.getboolean(id_name, "KeepCutoutImagesRaw")
         _ = self.getboolean(id_name, "KeepSegImagesLabel")
         _ = self.getboolean(id_name, "KeepSegImagesBin")
         _ = self.getboolean(id_name, "KeepSegImagesTrack")
-        _ = self.getboolean(id_name, "RemoveBorder")
+        if machine_type == "Family_Machine":
+            _ = self.getboolean(id_name, "RemoveBorder")
 
         # check the threshold
         if (threshold := self.getfloat(id_name, "ImgThreshold")) <= 0.0 or threshold > 1.0:
             raise ValueError(f"'ImgThreshold' has to be a float between 0.0 and 1.0, is: {threshold}")
 
         # check all the classes
-        if self.get(id_name, "CutImgClass") not in imcut_subclasses:
-            raise ValueError(f"'Class' of 'CutImg' not in {imcut_subclasses}")
-        if self.get(id_name, "SegmentationClass") not in segmentation_subclasses:
-            raise ValueError(f"'Class' of 'Segmentation' not in {segmentation_subclasses}")
+        if machine_type == "Family_Machine":
+            if self.get(id_name, "CutImgClass") not in family_imcut_cls:
+                raise ValueError(f"'Class' of 'CutImg' not in {family_imcut_cls}")
+            if self.get(id_name, "SegmentationClass") not in family_seg_cls:
+                raise ValueError(f"'Class' of 'Segmentation' not in {family_seg_cls}")
+        if machine_type == "Mother_Machine":
+            if self.get(id_name, "CutImgClass") not in mother_imcut_cls:
+                raise ValueError(f"'Class' of 'CutImg' not in {mother_imcut_cls}")
+            if self.get(id_name, "SegmentationClass") not in mother_seg_cls:
+                raise ValueError(f"'Class' of 'Segmentation' not in {mother_seg_cls}")
         if self.get(id_name, "TrackingClass") not in tracking_subclasses:
             raise ValueError(f"'Class' of 'Tracking' not in {tracking_subclasses}")
 
@@ -183,6 +229,16 @@ class Config(ConfigParser):
             # check if we have valid integers
             for corner in corner_list:
                 _ = int(corner)
+
+            # check the offsets
+            if machine_type == "Mother_Machine":
+                offsets = self.get(id_name, "Offsets")
+                offset_list = self.getlist(id_name, "Offsets")
+                if len(offset_list) == 0:
+                    raise ValueError(f"'Offsets' is not properly defined: {offsets}")
+                # check if we have valid integers
+                for offset in offset_list:
+                    _ = int(offset)
 
             # check the model weights
             for channel in self.getlist(id_name, "Channels"):

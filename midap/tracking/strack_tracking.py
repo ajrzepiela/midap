@@ -34,7 +34,7 @@ class STrack(Tracking):
         self.seg_imgs = np.array(segs)
         self.raw_imgs = np.array(raws)
 
-    def track_all_frames(self, output_folder: Union[str, bytes, os.PathLike], max_dist=50.0, max_angle=30.0):
+    def track_all_frames(self, output_folder: Union[str, bytes, os.PathLike], max_dist=50.0, max_angle=30.0): #40
         """
         Tracks all frames and converts output to standard format.
         :param output_folder: Folder for the output

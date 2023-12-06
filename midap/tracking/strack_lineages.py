@@ -123,7 +123,8 @@ class STrackLineage(object):
         for _, row in self.track_df.iterrows():
             label_transformations.append((row["frame"], row["labelID"], row["trackID"]))
         label_transformations = np.array(label_transformations).astype(np.int32)
-        label_transform(label_stack, label_transformations)
+        if label_transformations.size > 0:
+            label_transform(label_stack, label_transformations)
 
         # save the output
         data_file, csv_file = self.store_lineages(output_folder=self.base_dir, df=self.track_df, label_stack=label_stack,

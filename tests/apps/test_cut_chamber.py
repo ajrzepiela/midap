@@ -54,7 +54,6 @@ def test_main(prep_dirs):
     # test error
     with pytest.raises(ValueError):
         main(channel=channel, cutout_class="This is not a valid class", corners=corners)
-
     # run the main
     main(channel=channel, cutout_class=cutout_class, corners=corners)
 

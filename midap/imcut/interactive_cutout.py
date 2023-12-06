@@ -11,6 +11,8 @@ class InteractiveCutout(CutoutImage):
     A class that performs the image cutout for the different channels in interactive mode
     """
 
+    supported_setups = ["Family_Machine"]
+
     def __init__(self, *args, **kwargs):
         """
         Initializes the class with given arguments and keyword arguments

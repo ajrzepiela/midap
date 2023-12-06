@@ -12,6 +12,8 @@ class HybridSegmentation(UNetSegmentation):
     A segmentator that combines Unet with watershed
     """
 
+    supported_setups = ["Family_Machine"]
+
     def __init__(self, *args, **kwargs):
         """
         Initializes the UNetSegmentation using the base class init

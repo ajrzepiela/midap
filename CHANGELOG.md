@@ -19,23 +19,45 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.14]
+
+2023-11-02
+
+Feature:
+- Added simplified installation process.
+
+## [0.3.13]
+
+2023-08-31
+
+Feature:
+- Added fluo change analysis as advanced option: allows segmentation and tracking of cells with changing fluorescence
+
 ## [0.3.12]
 
 Feature
+- Mother machine UNet training
+- Mother machine UNet support
 
-TBD
 
+
+## [0.3.12]
+
+2023-08-17
+
+Feature
 - New advanced options in GUI
 - Brightness thresholding and notebook
 - Support for single image runs
+- Mother machine support
+- Stardist as new segmentation algorithm
 
 
 ## [0.3.11]
 
-Feature
-
 2023-05-10
 
+Feature
 - Added fine-tuned omnipose models and upped the model weights version in the json.
 - Update env file accordingly
 

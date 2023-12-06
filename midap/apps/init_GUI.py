@@ -17,13 +17,18 @@ from midap.utils import get_logger, get_inheritors
 from midap.imcut import *
 from midap.imcut import base_cutout
 
-imcut_subclasses = [subclass.__name__ for subclass in get_inheritors(base_cutout.CutoutImage)]
+imcut_subclasses = [subclass for subclass in get_inheritors(base_cutout.CutoutImage)]
+family_imcut_cls = [s.__name__ for s in imcut_subclasses if "Family_Machine" in s.supported_setups]
+mother_imcut_cls = [s.__name__ for s in imcut_subclasses if "Mother_Machine" in s.supported_setups]
+
 
 # get all subclasses from the segmentations
 from midap.segmentation import *
 from midap.segmentation import base_segmentator
 
-segmentation_subclasses = [subclass.__name__ for subclass in get_inheritors(base_segmentator.SegmentationPredictor)]
+segmentation_subclasses = [subclass for subclass in get_inheritors(base_segmentator.SegmentationPredictor)]
+family_seg_cls = [s.__name__ for s in segmentation_subclasses if "Family_Machine" in s.supported_setups]
+mother_seg_cls = [s.__name__ for s in segmentation_subclasses if "Mother_Machine" in s.supported_setups]
 
 # get all subclasses from the tracking
 from midap.tracking import *
@@ -62,7 +67,7 @@ def main(config_file="settings.ini", loglevel=7):
     # First part of the GUI
     common_params = [[sg.Text("Select the input data type: ",
                               key="track_method_text", font="bold")],
-                     [sg.DropDown(key="DataType", values=["Family_Machine"], default_value="Family_Machine")],
+                     [sg.DropDown(key="DataType", values=["Family_Machine", "Mother_Machine"], default_value="Family_Machine")],
                      [sg.Text("Choose the target folder: ", key="title_folder_name", font="bold")],
                      [sg.Input(key="folder_name"), sg.FolderBrowse()],
                      [sg.Text("Filetype (e.g. tif, tiff, ome.tif)", key="title_file_type", font="bold")],
@@ -117,7 +122,7 @@ def main(config_file="settings.ini", loglevel=7):
 
         # the defaults come either from the first section or from the last that we set
         defaults = config[id_name] if i == 0 else config[unique_identifiers[i-1]]
-
+    
         # Common elements of the next GUI part
         workflow = [[sg.Text("Part of pipeline", justification="center", size=(16, 1))],
                     [sg.T("         "), sg.Radio("Segmentation and Tracking", "RADIO1", key="segm_track",
@@ -143,36 +148,59 @@ def main(config_file="settings.ini", loglevel=7):
         # Advanced options
         SYMBOL_RIGHT = '▶'
         SYMBOL_DOWN = '▼'
-
+        
         advanced_options = [# What to keep
                             [sg.Text("Keep the following files: ", font="bold")],
                             [sg.Checkbox("Original file copy", key="keep_copy",
-                                         default=defaults.getboolean("KeepCopyOriginal"), size=30),
-                             sg.Checkbox("Raw images", key="keep_raw",
-                                         default=defaults.getboolean("KeepRawImages"))],
-                            [sg.Checkbox("Cut images", key="keep_cut",
-                                         default=defaults.getboolean("KeepCutoutImages"), size=30),
+                                         default=defaults.getboolean("KeepCopyOriginal")),
+                             sg.Checkbox("Cut images (normalized)", key="keep_cut",
+                                         default=defaults.getboolean("KeepCutoutImages")),
                              sg.Checkbox("Segmented images (labeled)", key="keep_seg_label",
                                          default=defaults.getboolean("KeepSegImagesLabel"))],
-                            [sg.Checkbox("Segmented images (binary)", key="keep_seg_bin",
-                                         default=defaults.getboolean("KeepSegImagesBin"), size=30),
-                             sg.Checkbox("Segmented images (tracking)", key="keep_seg_track",
+                            [sg.Checkbox("Raw images", key="keep_raw",
+                                         default=defaults.getboolean("KeepRawImages")),
+                             sg.Checkbox("Cut images (raw counts)", key="keep_cut_raw",
+                                         default=defaults.getboolean("KeepCutoutImagesRaw")),
+                             sg.Checkbox("Segmented images (binary)", key="keep_seg_bin",
+                                         default=defaults.getboolean("KeepSegImagesBin"))],
+                            [sg.Checkbox("Segmented images (tracking)", key="keep_seg_track",
                                          default=defaults.getboolean("KeepSegImagesTrack"))],
                             # Thresholding
                             [sg.Text("Thresholding: \n"
                                      "Enter a value between 0 (black) and 1 (white) to cap the brightest parts of the images.",
                                      font="bold")],
-                            [sg.Input(default_text=defaults["ImgThreshold"], size=30, key="thresholding_val")],
-                            
-                            # Segmentation
-                            [sg.Text("Segmentation options:",
-                                     font="bold")],
-                            [sg.Checkbox("Remove border cells", key="remove_border",
-                                         default=defaults.getboolean("RemoveBorder"), size=30)],
+                            [sg.Input(default_text=defaults["ImgThreshold"], size=30, key="thresholding_val")],        
                             ]
 
+        if general["DataType"] == "Family_Machine":
+            # Segmentation
+            advanced_options += [[sg.Text("Segmentation options:", font="bold")],
+                                 [sg.Checkbox("Remove border cells", key="remove_border",
+                                         default=defaults.getboolean("RemoveBorder"), size=30)],]
+                                        # Tracking options
+            advanced_options += [[sg.Text("Tracking postprocessing: ", font="bold")],
+                                 [sg.Checkbox("Fluorescence change analysis", key="fluo_change",
+                                         default=defaults.getboolean("FluoChange"), size=30)],]
+            
+        if general["DataType"] == "Mother_Machine":
+            # mark cells on top or bottom of cells
+            advanced_options += [[sg.Text("During the tracking mark cell that are at the top/bottom of the chamber:", font="bold")],
+                                 [sg.DropDown(key="cell_marker", values=["top", "bottom", "both", "none"], default_value="none")]]
+            
+            advanced_options += [[sg.Text("Tracking postprocessing: ", font="bold")],
+                                 [sg.Checkbox("Fluorescence change analysis", key="fluo_change",
+                                         default=defaults.getboolean("FluoChange"), size=30)],]
 
-        # Family Machine specific layout
+
+        # get the vars for the specific layout
+        if general["DataType"] == "Family_Machine":
+            imcut_subclasses = family_imcut_cls
+            segmentation_subclasses = family_seg_cls
+        if general["DataType"] == "Mother_Machine":
+            imcut_subclasses = mother_imcut_cls
+            segmentation_subclasses = mother_seg_cls
+
+        # Specific layout
         layout_family_machine = [[sg.Frame("Conditional Run", [[
             sg.Column(workflow, background_color="white"),
             sg.Column(frames)
@@ -200,7 +228,7 @@ def main(config_file="settings.ini", loglevel=7):
                                               default_value=defaults["TrackingClass"])],
                                  [sg.Text("Preprocessing", font="bold")],
                                  [sg.Checkbox("Deconvolution of images", key="deconv", font="bold",
-                                              default=(defaults["Deconvolution"] == "deconv_family_machine"))],
+                                              default=not (defaults["Deconvolution"] == "no_deconv"))],
                                  [sg.Text("")],
                                  [sg.Text(SYMBOL_RIGHT, enable_events=True, key='-OPEN_ADV-'),
                                   sg.Text("Advanced Options")],
@@ -209,7 +237,7 @@ def main(config_file="settings.ini", loglevel=7):
                                  [sg.Column([[sg.OK(), sg.Cancel()]], key="col_final")]]
 
         # Finalize the layout
-        window = sg.Window(f"Params for '{id_name}' of {unique_identifiers}", layout_family_machine).Finalize()
+        window = sg.Window(f"Params for '{id_name}' of {unique_identifiers}", layout_family_machine, size=(600, 1000)).Finalize()
 
         # Set the advanced options to be collapsed
         advanced_opened = False
@@ -256,14 +284,21 @@ def main(config_file="settings.ini", loglevel=7):
 
         # deconv
         if values["deconv"]:
-            section["Deconvolution"] = "deconv_family_machine"
+            if general["DataType"] == "Mother_Machine":
+                section["Deconvolution"] = "deconv_well"
+            elif general["DataType"] == "Family_Machine":
+                section["Deconvolution"] = "deconv_family_machine"
         else:
             section["Deconvolution"] = "no_deconv"
 
         # The remaining generals
         section["StartFrame"] = values["start_frame"]
         section["EndFrame"] = values["end_frame"]
+
+        if values["fluo_change"]:
+            values["phase_segmentation"] = True
         section["PhaseSegmentation"] = values["phase_segmentation"]
+       
 
         # The classes
         section["CutImgClass"] = values["imcut"]
@@ -274,10 +309,15 @@ def main(config_file="settings.ini", loglevel=7):
         section["KeepCopyOriginal"] = values["keep_copy"]
         section["KeepRawImages"] = values["keep_raw"]
         section["KeepCutoutImages"] = values["keep_cut"]
+        section["KeepCutoutImagesRaw"] = values["keep_cut_raw"]
         section["KeepSegImagesLabel"] = values["keep_seg_label"]
         section["KeepSegImagesBin"] = values["keep_seg_bin"]
         section["KeepSegImagesTrack"] = values["keep_seg_track"]
-        section["RemoveBorder"] = values["remove_border"]
+
+        if general["DataType"] == "Family_Machine":
+            section["RemoveBorder"] = values["remove_border"]
+        if general["DataType"] == "Mother_Machine":
+            section["CellMarker"] = values["cell_marker"]
 
         # Thresholding
         threshold = float(values["thresholding_val"])
@@ -285,6 +325,9 @@ def main(config_file="settings.ini", loglevel=7):
             logging.error(f"Thresholding value must be between 0 and 1. Got {threshold}")
             exit(1)
         section["ImgThreshold"] = values["thresholding_val"]
+
+        # Tracking options
+        section["FluoChange"] = values["fluo_change"]
 
         # overwrite the section defaults
         config.read_dict({id_name: section})

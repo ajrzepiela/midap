@@ -9,7 +9,7 @@ from typing import Optional, Union, Iterable
 
 
 def main(channel: Union[str, Iterable[str], bytes, Iterable[bytes], os.PathLike, Iterable[os.PathLike]],
-         cutout_class: str, corners: Optional[tuple]=None):
+         cutout_class: str, corners: Optional[tuple]=None, offsets: Optional[list]=None):
     """
     Performs the image cutout and alignment on all images in the paths
     :param channel: A single directory or a list of directories with the images to cut and align
@@ -26,12 +26,24 @@ def main(channel: Union[str, Iterable[str], bytes, Iterable[bytes], os.PathLike,
     if class_instance is None:
         raise ValueError(f"Chosen class does not exist: {cutout_class}")
 
-    cut = class_instance(channel)
-    if corners is not None:
-        cut.corners_cut = corners
-    cut.run_align_cutout()
+    # cutout classes can only support one type of machine
+    if len(class_instance.supported_setups) > 1:
+        raise ValueError(f"Cutout class {cutout_class} supports more than one machine type!")
+    if "Family_Machine" in class_instance.supported_setups:
+        cut = class_instance(channel)
+        if corners is not None:
+            cut.corners_cut = corners
+        cut.run_align_cutout()
 
-    return cut.corners_cut
+        return cut.corners_cut
+    elif "Mother_Machine" in class_instance.supported_setups:
+        cut = class_instance(channel)
+        if corners is not None and offsets is not None:
+            cut.corners_cut = corners
+            cut.offsets = offsets
+        cut.run_align_cutout_mother_machine()
+
+        return cut.corners_cut, cut.offsets
 
 
 # run as main
