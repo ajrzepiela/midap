@@ -22,10 +22,11 @@ class SegmentationJupyter(object):
 
     def __init__(self, path_data: Union[str, os.PathLike]):
         self.path_data = path_data
-        self.path_midap = '/Users/franziskaoschmann/Documents/midap/'
+        #self.path_midap = '/Users/franziskaoschmann/Documents/midap/'
+        self.path_midap = '/cluster/project/sis/cdss/oschmanf/segmentation_training/midap'
 
-        self.path_cut = self.path_data + '/cut_im/'
-        self.path_seg = self.path_data + '/seg_im/'
+        self.path_cut = Path(str(Path(self.path_data).parent) + '/cut_im/')
+        self.path_seg = Path(str(Path(self.path_data).parent) + '/seg_im/')
         os.makedirs(self.path_cut, exist_ok=True)
         os.makedirs(self.path_seg, exist_ok=True)
 
@@ -75,7 +76,7 @@ class SegmentationJupyter(object):
             self.make_cutout(img)
             img_scale = self.scale_pixel_val(self.img_cut)
             self.imgs_cuts.append(img_scale)
-            io.imsave(self.path_cut + ch.split('.')[0] + '_cut.png', img_scale)
+            io.imsave(str(self.path_cut) + '/' + ch.split('.')[0] + '_cut.png', img_scale)
 
     def get_seg_classes(self):
         segmentation_subclasses = [subclass for subclass in get_inheritors(base_segmentator.SegmentationPredictor)]
@@ -170,6 +171,7 @@ class SegmentationJupyter(object):
     def display_input_filenames(self):
         self.get_input_files()
         self.create_checkboxes()
+        
 
     def select_chosen_filenames(self):
         # Get names of chosen files
@@ -177,6 +179,7 @@ class SegmentationJupyter(object):
         for ch in self.checkbox_output.children:
             if ch.value:
                 self.chosen_files.append(ch.description)
+        self.chosen_files = np.sort(self.chosen_files)
 
     def create_checkboxes(self):
         # Create checkboxes
