@@ -15,47 +15,81 @@ from matplotlib.widgets import RadioButtons
 
 from typing import Union, List
 
+
 class SegmentationJupyter(object):
     """
     Loads text data from specific path
     """
 
-    def __init__(self, path_data: Union[str, os.PathLike]):
-        self.path_data = path_data
-        self.path_midap = '/Users/franziskaoschmann/Documents/midap/'
+    def __init__(self, path: Union[str, os.PathLike]):
+        self.path = path
+        self.path_data = path + "/raw_im/"
+        self.path_midap = "/Users/franziskaoschmann/Documents/midap/"
 
-        self.path_cut = self.path_data + '/cut_im/'
-        self.path_seg = self.path_data + '/seg_im/'
+        self.path_cut = self.path + "/cut_im/"
+        self.path_seg = self.path + "/seg_im/"
         os.makedirs(self.path_cut, exist_ok=True)
         os.makedirs(self.path_seg, exist_ok=True)
 
-    # def button_checkboxes_filenames(self):
-    #     """
-    #     Checks if images are large enough for U-Net training.
-    #     """
+    def display_input_filenames(self):
+        """
+        Creates checkboxes for of all files in given folder.
+        """
+        self.get_input_files()
+        self.create_checkboxes()
 
-    #     button = widgets.Button(description="Show file names")
-    #     output = widgets.Output()
+    def get_input_files(self):
+        """
+        Extracts input file names (except e.g. hidden files).
+        """
+        self.input_files = [
+            f for f in os.listdir(self.path_data) if not f.startswith((".", "_"))
+        ]
 
-    #     display(button, output)
+    def create_checkboxes(self):
+        """
+        Creates one checkbox per file in folder and groups all checkboxes.
+        """
+        self.checkbox_widgets = [
+            widgets.Checkbox(
+                value=True, description=f, layout=widgets.Layout(width="100%")
+            )
+            for f in self.input_files
+        ]
 
-    #     def on_button_clicked(b):
-    #         self.display_input_filenames()
-    #         print(self.input_files)
+        # Create observable output for the checkboxes
+        self.checkbox_output = widgets.VBox(self.checkbox_widgets)
 
-    #         #display(widgets.VBox(self.checkbox_widgets))
+    def select_chosen_filenames(self):
+        """
+        Gets chosen file names for further analysis.
+        """
+        self.chosen_files = []
+        for ch in self.checkbox_output.children:
+            if ch.value:
+                self.chosen_files.append(ch.description)
+        self.chosen_files = np.sort(self.chosen_files)
 
-        # return button.on_click(on_button_clicked)
+    def load_all_images(self):
+        """
+        Load all chosen image files.
+        """
+        self.all_imgs = [
+            io.imread(Path(self.path_data).joinpath(c)) for c in self.chosen_files
+        ]
 
-    def load_example_image(self):
-        self.img = io.imread(Path(self.path_data).joinpath(self.chosen_files[0]))
-
-    def show_example_image(self, img):
+    def show_example_image(self, img: np.ndarray):
+        """
+        Displays example image.
+        """
         _, self.ax = plt.subplots()
         self.ax.imshow(img)
         plt.show()
 
     def get_corners_cutout(self):
+        """
+        Gets axis limits for current zoom-in.
+        """
         xlim = [int(xl) for xl in self.ax.get_xlim()]
         ylim = [int(yl) for yl in self.ax.get_ylim()]
 
@@ -65,48 +99,74 @@ class SegmentationJupyter(object):
         self.y_min = np.min(ylim)
         self.y_max = np.max(ylim)
 
-    def make_cutout(self, img):
-        self.img_cut = img[self.y_min:self.y_max, self.x_min:self.x_max]
+    def make_cutouts(self, imgs: List[np.ndarray]):
+        """
+        Generates cutouts for all images.
+        """
+        self.imgs_cut = [
+            img[self.y_min : self.y_max, self.x_min : self.x_max] for img in imgs
+        ]
 
-    def save_cutout(self):
-        self.imgs_cuts = []
-        for ch in self.chosen_files:
-            img = io.imread(Path(self.path_data).joinpath(ch))
-            self.make_cutout(img)
-            img_scale = self.scale_pixel_val(self.img_cut)
-            self.imgs_cuts.append(img_scale)
-            io.imsave(self.path_cut + ch.split('.')[0] + '_cut.png', img_scale)
+    def show_all_cutouts(self):
+        """
+        Displays all cutouts with slider.
+        """
+
+        def f(i):
+            return self.imgs_cut[int(i)]
+
+        fig, ax = plt.subplots()
+        controls = iplt.imshow(f, i=np.arange(0, len(self.imgs_cut) - 1))
+
+        plt.show()
+
+    def save_cutouts(self):
+        """
+        Saves all cutouts to new folder.
+        """
+        for file, cut in zip(self.chosen_files, self.imgs_cut):
+            cut_scale = self.scale_pixel_val(cut)
+            io.imsave(self.path_cut + file.split(".")[0] + "_cut.png", cut_scale)
 
     def get_seg_classes(self):
-        segmentation_subclasses = [subclass for subclass in get_inheritors(base_segmentator.SegmentationPredictor)]
-        self.family_seg_cls = [s.__name__ for s in segmentation_subclasses if "Family_Machine" in s.supported_setups]
+        segmentation_subclasses = [
+            subclass
+            for subclass in get_inheritors(base_segmentator.SegmentationPredictor)
+        ]
+        self.family_seg_cls = [
+            s.__name__
+            for s in segmentation_subclasses
+            if "Family_Machine" in s.supported_setups
+        ]
 
     def display_seg_classes(self):
         self.get_seg_classes()
         self.out = widgets.Dropdown(
             options=self.family_seg_cls,
-            description='Segmentation method:',
+            description="Segmentation method:",
             disabled=False,
         )
 
     def choose_segmentation_weights(self):
         segmentation_class = self.out.label
-        
 
         if segmentation_class == "HybridSegmentation":
-            path_model_weights = Path(self.path_midap).joinpath("model_weights",
-                                                        "model_weights_hybrid")
+            path_model_weights = Path(self.path_midap).joinpath(
+                "model_weights", "model_weights_hybrid"
+            )
         elif segmentation_class == "OmniSegmentation":
-            path_model_weights = Path(self.path_midap).joinpath("model_weights",
-                                                        "model_weights_omni")
+            path_model_weights = Path(self.path_midap).joinpath(
+                "model_weights", "model_weights_omni"
+            )
         else:
-            path_model_weights = Path(self.path_midap).joinpath("model_weights",
-                                                        "model_weights_legacy")
-            
+            path_model_weights = Path(self.path_midap).joinpath(
+                "model_weights", "model_weights_legacy"
+            )
+
         # define variables
-        postprocessing=False
-        network_name=None
-        img_threshold=255
+        postprocessing = False
+        network_name = None
+        img_threshold = 255
 
         # get the right subclass
         class_instance = None
@@ -119,8 +179,13 @@ class SegmentationJupyter(object):
             raise ValueError(f"Chosen class does not exist: {segmentation_class}")
 
         # get the Predictor
-        self.pred = class_instance(path_model_weights=path_model_weights, postprocessing=postprocessing,
-                            model_weights=network_name, img_threshold=img_threshold, jupyter=False)
+        self.pred = class_instance(
+            path_model_weights=path_model_weights,
+            postprocessing=postprocessing,
+            model_weights=network_name,
+            img_threshold=img_threshold,
+            jupyter=False,
+        )
 
         # select the segmentor
         self.pred.set_segmentation_method_jupyter(self.path_cut)
@@ -129,9 +194,9 @@ class SegmentationJupyter(object):
 
     def display_segmentations(self):
         num_col = int(np.ceil(np.sqrt(len(self.segs))))
-        plt.figure(figsize=(10,10))
+        plt.figure(figsize=(10, 10))
         for i, k in enumerate(self.segs.keys()):
-            plt.subplot(num_col,num_col,i+1)
+            plt.subplot(num_col, num_col, i + 1)
             plt.imshow(self.segs[k])
             plt.title(k)
             plt.xticks([])
@@ -141,20 +206,20 @@ class SegmentationJupyter(object):
 
     def display_buttons_weights(self):
         self.out_weights = widgets.RadioButtons(
-        options=list(self.segs.keys()),
-        description='Model weights:',
-        disabled=False
+            options=list(self.segs.keys()), description="Model weights:", disabled=False
         )
 
     def segment_all_images(self):
-        self.pred.run_image_stack_jupyter(self.imgs_cuts, self.out_weights.label, clean_border = False)
+        self.pred.run_image_stack_jupyter(
+            self.imgs_cut, self.out_weights.label, clean_border=False
+        )
 
     def show_segmentations(self):
         def f(i):
             return self.pred.mask[int(i)]
 
         fig, ax = plt.subplots()
-        controls = iplt.imshow(f, i=(0, len(self.pred.mask)-1))
+        controls = iplt.imshow(f, i=np.arange(0, len(self.pred.mask) - 1))
 
         plt.show()
 
@@ -164,27 +229,7 @@ class SegmentationJupyter(object):
         :param img: The input image as array
         :returns: The images with pixels scales to standard RGB values
         """
-        img_scaled = (255 * ((img - np.min(img))/np.max(img - np.min(img)))).astype('uint8')
+        img_scaled = (255 * ((img - np.min(img)) / np.max(img - np.min(img)))).astype(
+            "uint8"
+        )
         return img_scaled
-
-    def display_input_filenames(self):
-        self.get_input_files()
-        self.create_checkboxes()
-
-    def select_chosen_filenames(self):
-        # Get names of chosen files
-        self.chosen_files = []
-        for ch in self.checkbox_output.children:
-            if ch.value:
-                self.chosen_files.append(ch.description)
-
-    def create_checkboxes(self):
-        # Create checkboxes
-        self.checkbox_widgets = [widgets.Checkbox(value=True, description=f, layout=widgets.Layout(width='100%')) for f in self.input_files]
-
-        # Create observable output for the checkboxes
-        self.checkbox_output = widgets.VBox(self.checkbox_widgets)
-
-    def get_input_files(self):
-        #ToDo only img files
-        self.input_files = os.listdir(self.path_data)
