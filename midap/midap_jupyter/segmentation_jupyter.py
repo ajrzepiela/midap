@@ -25,9 +25,9 @@ class SegmentationJupyter(object):
         self.path = path
         self.path_midap = '/cluster/project/sis/cdss/oschmanf/segmentation_training/midap'
        
-        self.path_data = Path(str(Path(self.path).parent) + '/raw_im/')
-        self.path_cut = Path(str(Path(self.path).parent) + '/cut_im/')
-        self.path_seg = Path(str(Path(self.path).parent) + '/seg_im/')
+        self.path_data = self.path + '/raw_im/'
+        self.path_cut = self.path + '/cut_im/'
+        self.path_seg = self.path + '/seg_im/'
         
         os.makedirs(self.path_cut, exist_ok=True)
         os.makedirs(self.path_seg, exist_ok=True)
@@ -125,9 +125,9 @@ class SegmentationJupyter(object):
         """
         Saves all cutouts to new folder.
         """
-        for file, cut in zip(self.chosen_files, self.imgs_cut):
+        for f, cut in zip(self.chosen_files, self.imgs_cut):
             cut_scale = self.scale_pixel_val(cut)
-            io.imsave(self.path_cut + file.split(".")[0] + "_cut.png", cut_scale)
+            io.imsave(self.path_cut + str(Path(f).stem) + "_cut.png", cut_scale)
 
     def get_seg_classes(self):
         segmentation_subclasses = [
