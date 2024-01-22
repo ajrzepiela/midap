@@ -20,7 +20,7 @@ class UNetSegmentation(SegmentationPredictor):
     A class that performs the image segmentation of the cells using a UNet
     """
 
-    supported_setups = ["Family_Machine", "Mother_Machine"]
+    supported_setups = ["Family_Machine", "Mother_Machine", "Jupyter"]
 
     def __init__(self, *args, **kwargs):
         """
@@ -31,6 +31,40 @@ class UNetSegmentation(SegmentationPredictor):
 
         # base class init
         super().__init__(*args, **kwargs)
+
+    def set_segmentation_method_jupyter_all_imgs(self, path_to_cutouts: Union[str, bytes, os.PathLike]):
+        """
+        Performs the weight selection for the segmentation network. A custom method should use this function to set
+        self.segmentation_method to a function that takes an input images and returns a segmentation of the image,
+        i.e. an array in the same shape but with values only 0 (no cell) and 1 (cell)
+        :param path_to_cutouts: The directory in which all the cutout images are
+        """
+
+        # check if we even need to select
+        if self.model_weights is None:
+
+            # get the image that is roughly in the middle of the stack
+            list_files = np.sort([f for f in os.listdir(path_to_cutouts) if not f.startswith((".", "_"))])
+
+            # scale the image and pad
+            imgs = []
+            for f in list_files:
+                img = self.scale_pixel_vals(io.imread(os.path.join(path_to_cutouts, f)))
+                imgs.append(img)
+
+            # Get all the labels
+            labels = ['watershed']
+            model_weights = list(Path(self.path_model_weights).glob("*.h5"))
+            labels += [mw.stem.replace("model_weights_", "") for mw in model_weights]
+
+            self.segs = {}
+            for model_name in labels:
+                self.model_weights = model_name
+                self.segment_images_jupyter(imgs, model_name)
+                
+                # now we create an overlay of the image and the segmentation
+                overl = [mark_boundaries(i, s, color=(1, 0, 0)) for i,s in zip(imgs, self.mask)]
+                self.segs[model_name] = overl
 
     def set_segmentation_method_jupyter(self, path_to_cutouts: Union[str, bytes, os.PathLike]):
         """
@@ -72,38 +106,6 @@ class UNetSegmentation(SegmentationPredictor):
                 # now we create an overlay of the image and the segmentation
                 overl = mark_boundaries(img, seg, color=(1, 0, 0))
                 self.segs[model_name] = overl
-
-                # fig, ax = plt.subplots(figsize=(2.5,2.5))
-                # ax.imshow(img)
-                # ax.contour(seg, [0.5], colors='r', linewidths=0.5)
-                # ax.set_xticks([])
-                # ax.set_yticks([])
-                # if len(model_name) > 20:
-                #     ax.set_title(model_name, fontsize=8)
-                # else:
-                #     ax.set_title(model_name)
-                # figures.append(fig)
-
-        #     # Title for the GUI
-        #     channel = os.path.basename(os.path.dirname(path_to_cutouts))
-        #     # if we just got the chamber folder, we need to go one more up
-        #     if channel.startswith('chamber'):
-        #         channel = os.path.basename(os.path.dirname(os.path.dirname(path_to_cutouts)))
-        #     title = f'Segmentation Selection for channel: {channel}'
-
-        #     # start the gui
-        #     marked = GUI_selector(figures=figures, labels=labels, title=title)
-
-        #     # set the model weights
-        #     if marked == 'watershed':
-        #         self.model_weights = 'watershed'
-        #     else:
-        #         ix_model_weights = np.where([marked == l for l in labels])[0][0]
-        #         sel_model_weights = model_weights[ix_model_weights - 1]
-        #         self.model_weights = os.path.join(self.path_model_weights, sel_model_weights)
-
-        # # set the method via private function
-        # self._set_segmentation_method()
 
     def set_segmentation_method(self, path_to_cutouts: Union[str, bytes, os.PathLike]):
         """
@@ -173,6 +175,32 @@ class UNetSegmentation(SegmentationPredictor):
 
         # set the method via private function
         self._set_segmentation_method()
+
+    def _segs_for_selection_all_imgs(self, model_weights: List[Union[str, bytes, os.PathLike]], imgs: np.ndarray):
+        """
+        Given the model weights, returns a selection of segmentation to use for the GUI selector
+        :param model_weights: A list of model weights
+        :param img: The image to segment
+        :return: A list of segmentations starting with the watershed segmentation, i.e. 1 longer than model_weights
+        """
+
+        imgs_pad = [self.pad_image(img) for img in imgs]
+        imgs_pad = np.squeeze(np.array(imgs_pad), 1)
+        watershed_seg = [self.segment_region_based(img, 0.16, 0.19) for img in imgs]
+        segs = [watershed_seg]
+        print(np.array(imgs_pad).shape)
+        print(imgs_pad[0].shape[:2])
+
+        self.segs = {}
+        for m in model_weights:
+            model_pred = UNetv1(input_size=imgs_pad[0].shape[:2] + (1,), inference=True)
+            model_pred.load_weights(m)
+            y_pred = model_pred.predict(imgs_pad)
+            seg = (self.undo_padding(y_pred) > 0.5).astype(int)
+            self.segs[m] = seg
+            #segs.append(seg)
+
+        #return np.array(segs)
 
     def _segs_for_selection(self, model_weights: List[Union[str, bytes, os.PathLike]], img: np.ndarray):
         """
