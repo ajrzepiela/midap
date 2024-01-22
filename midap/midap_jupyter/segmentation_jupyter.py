@@ -133,28 +133,57 @@ class SegmentationJupyter(object):
             subclass
             for subclass in get_inheritors(base_segmentator.SegmentationPredictor)
         ]
-        self.family_seg_cls = [
+        self.jupyter_seg_cls = [
             s.__name__
             for s in segmentation_subclasses
-            if "Family_Machine" in s.supported_setups
+            if "Jupyter" in s.supported_setups
         ]
 
     def display_seg_classes(self):
+        """
+        Creates one checkbox per model type in folder and groups all checkboxes.
+        """
         self.get_seg_classes()
-        self.out = widgets.Dropdown(
-            options=self.family_seg_cls,
-            description="Segmentation method:",
-            disabled=False,
-        )
-
-    def choose_segmentation_weights(self):
-        segmentation_class = self.out.label
-
-        if segmentation_class == "HybridSegmentation":
-            path_model_weights = Path(self.path_midap).joinpath(
-                "model_weights", "model_weights_hybrid"
+        self.checkbox_widgets = [
+            widgets.Checkbox(
+                value=True, description=m, layout=widgets.Layout(width="100%")
             )
-        elif segmentation_class == "OmniSegmentation":
+            for m in self.jupyter_seg_cls
+        ]
+
+        # Create observable output for the checkboxes
+        self.checkbox_output_models = widgets.VBox(self.checkbox_widgets)
+
+    def select_chosen_models(self):
+        """
+        Gets chosen file names for further analysis.
+        """
+        self.chosen_models = []
+        for ch in self.checkbox_output_models.children:
+            if ch.value:
+                self.chosen_models.append(ch.description)
+
+    # def display_seg_classes(self):
+    #     self.get_seg_classes()
+    #     self.out = widgets.Dropdown(
+    #         options=self.jupyter_seg_cls,
+    #         description="Segmentation method:",
+    #         disabled=False,
+    #     )
+                
+    def run_all_chosen_models(self):
+
+        self.dict_all_models = {}
+        for segmentation_class in self.chosen_models:
+            segs = self.choose_segmentation_weights(segmentation_class)
+            segs = dict(("{}_{}".format(segmentation_class, k),v) for k,v in segs.items())
+            self.dict_all_models.update(segs)
+
+
+    def choose_segmentation_weights(self, segmentation_class):
+        #segmentation_class = self.out.label
+
+        if segmentation_class == "OmniSegmentation":
             path_model_weights = Path(self.path_midap).joinpath(
                 "model_weights", "model_weights_omni"
             )
@@ -188,9 +217,11 @@ class SegmentationJupyter(object):
         )
 
         # select the segmentor
-        self.pred.set_segmentation_method_jupyter(self.path_cut)
+        self.pred.set_segmentation_method_jupyter_all_imgs(self.path_cut)
 
-        self.segs = self.pred.segs
+        #self.segs = self.pred.segs
+
+        return self.pred.segs
 
     def display_segmentations(self):
         num_col = int(np.ceil(np.sqrt(len(self.segs))))
@@ -206,7 +237,7 @@ class SegmentationJupyter(object):
 
     def display_buttons_weights(self):
         self.out_weights = widgets.RadioButtons(
-            options=list(self.segs.keys()), description="Model weights:", disabled=False
+            options=list(self.dict_all_models.keys()), description="Model weights:", disabled=False, layout=widgets.Layout(width="100%")
         )
 
     def segment_all_images(self):

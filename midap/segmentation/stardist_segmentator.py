@@ -16,7 +16,7 @@ class StarDistSegmentation(SegmentationPredictor):
     A class that performs the image segmentation of the cells using a UNet
     """
 
-    supported_setups = ["Family_Machine", "Mother_Machine"]
+    supported_setups = ["Family_Machine", "Mother_Machine", "Jupyter"]
 
     def __init__(self, *args, **kwargs):
         """
