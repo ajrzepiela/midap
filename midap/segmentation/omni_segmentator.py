@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Collection, Union, List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -27,6 +28,51 @@ class OmniSegmentation(SegmentationPredictor):
 
         # base class init
         super().__init__(*args, **kwargs)
+
+    
+    def set_segmentation_method_jupyter_all_imgs(self, path_to_cutouts: Union[str, bytes, os.PathLike]):
+        """
+        Performs the weight selection for the segmentation network. A custom method should use this function to set
+        self.segmentation_method to a function that takes an input images and returns a segmentation of the image,
+        i.e. an array in the same shape but with values only 0 (no cell) and 1 (cell)
+        :param path_to_cutouts: The directory in which all the cutout images are
+        """
+
+        # check if we even need to select
+        if self.model_weights is None:
+
+            # get the image that is roughly in the middle of the stack
+            list_files = np.sort([f for f in os.listdir(path_to_cutouts) if not f.startswith((".", "_"))])
+
+            # scale the image and pad
+            imgs = []
+            for f in list_files:
+                img = self.scale_pixel_vals(io.imread(os.path.join(path_to_cutouts, f)))
+                imgs.append(img)
+
+            # Get all the labels
+            label_dict = {'bact_phase_cp': 'bact_phase_cp',
+                          'bact_fluor_cp': 'bact_fluor_cp',
+                          'bact_phase_omni': 'bact_phase_omni',
+                          'bact_fluor_omni': 'bact_fluor_omni',}
+            for custom_model in Path(self.path_model_weights).iterdir():
+                label_dict.update({custom_model.name: custom_model})
+
+            self.segs = {}
+            for model_name, model_path in label_dict.items():
+                if Path(model_path).is_file():
+                    model = models.CellposeModel(gpu=False, pretrained_model=str(model_path))
+                else:
+                    model = models.CellposeModel(gpu=False, model_type=model_name)
+                # predict, we only need the mask, see omnipose tutorial for the rest of the args
+                masks, _, _ = model.eval(imgs, channels=[0, 0], rescale=None, mask_threshold=-1,
+                                        transparency=True, flow_threshold=0, omni=True, resample=True, verbose=0)
+                # omni removes axes that are just 1
+                masks = (np.array(masks) > 0.5).astype(int)
+                
+                # now we create an overlay of the image and the segmentation
+                overl = [mark_boundaries(i, s, color=(1, 0, 0)) for i,s in zip(imgs, masks)]
+                self.segs[model_name] = overl
 
     def set_segmentation_method_jupyter(self, path_to_cutouts):
         """
