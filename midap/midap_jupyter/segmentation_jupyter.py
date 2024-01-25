@@ -11,6 +11,7 @@ from midap.segmentation import base_segmentator
 from midap.apps import segment_cells
 
 import ipywidgets as widgets
+from ipywidgets import interactive
 from matplotlib.widgets import RadioButtons
 
 from typing import Union, List
@@ -23,12 +24,12 @@ class SegmentationJupyter(object):
 
     def __init__(self, path: Union[str, os.PathLike]):
         self.path = path
-        self.path_midap = '/cluster/project/sis/cdss/oschmanf/segmentation_training/midap'
-       
-        self.path_data = self.path + '/raw_im/'
-        self.path_cut = self.path + '/cut_im/'
-        self.path_seg = self.path + '/seg_im/'
-        
+        self.path_midap = "/Users/franziskaoschmann/Documents/midap"  #'/cluster/project/sis/cdss/oschmanf/segmentation_training/midap'
+
+        self.path_data = self.path + "/raw_im/"
+        self.path_cut = self.path + "/cut_im/"
+        self.path_seg = self.path + "/seg_im/"
+
         os.makedirs(self.path_cut, exist_ok=True)
         os.makedirs(self.path_seg, exist_ok=True)
 
@@ -171,18 +172,59 @@ class SegmentationJupyter(object):
     #         description="Segmentation method:",
     #         disabled=False,
     #     )
-                
-    def run_all_chosen_models(self):
 
+    def run_all_chosen_models(self):
+        """
+        Runs all pretrained models of chosen model types.
+        """
         self.dict_all_models = {}
         for segmentation_class in self.chosen_models:
             segs = self.choose_segmentation_weights(segmentation_class)
-            segs = dict(("{}_{}".format(segmentation_class, k),v) for k,v in segs.items())
+            segs = dict(
+                ("{}_{}".format(segmentation_class, k), v) for k, v in segs.items()
+            )
             self.dict_all_models.update(segs)
 
+    def compare_segmentations(self):
+        """
+        Displays two segmentations side-by-side for comparison of different pretrained models.
+        """
+
+        def f(a, b, c):
+            fig = plt.figure(figsize=(12, 5))
+
+            ax1 = fig.add_subplot(121)
+            plt.imshow(self.dict_all_models[a][int(c)])
+            ax1.set_xticks([])
+            ax1.set_yticks([])
+            plt.title(a)
+
+            ax2 = fig.add_subplot(122, sharex=ax1, sharey=ax1)
+            plt.imshow(self.dict_all_models[b][int(c)])
+            plt.title(b)
+            plt.show()
+
+        self.output_seg_comp = interactive(
+            f,
+            a=widgets.Dropdown(
+                options=self.dict_all_models.keys(),
+                layout=widgets.Layout(width="50%"),
+                description="Model 1",
+            ),
+            b=widgets.Dropdown(
+                options=self.dict_all_models.keys(),
+                layout=widgets.Layout(width="50%"),
+                description="Model 2",
+            ),
+            c=widgets.IntSlider(
+                min=0,
+                max=(len(list(self.dict_all_models.values())[0]) - 1),
+                description="Frame",
+            ),
+        )
 
     def choose_segmentation_weights(self, segmentation_class):
-        #segmentation_class = self.out.label
+        # segmentation_class = self.out.label
 
         if segmentation_class == "OmniSegmentation":
             path_model_weights = Path(self.path_midap).joinpath(
@@ -220,7 +262,7 @@ class SegmentationJupyter(object):
         # select the segmentor
         self.pred.set_segmentation_method_jupyter_all_imgs(self.path_cut)
 
-        #self.segs = self.pred.segs
+        # self.segs = self.pred.segs
 
         return self.pred.segs
 
@@ -238,7 +280,10 @@ class SegmentationJupyter(object):
 
     def display_buttons_weights(self):
         self.out_weights = widgets.RadioButtons(
-            options=list(self.dict_all_models.keys()), description="Model weights:", disabled=False, layout=widgets.Layout(width="100%")
+            options=list(self.dict_all_models.keys()),
+            description="Model weights:",
+            disabled=False,
+            layout=widgets.Layout(width="100%"),
         )
 
     def segment_all_images(self):
