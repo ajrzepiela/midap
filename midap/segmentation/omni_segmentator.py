@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Collection, Union, List
 
 import matplotlib.pyplot as plt
 import numpy as np
