@@ -5,6 +5,7 @@ from typing import Collection, Union, List
 import matplotlib.pyplot as plt
 import numpy as np
 import skimage.io as io
+from skimage.segmentation import mark_boundaries
 from stardist.models import StarDist2D
 from csbdeep.utils import normalize
 
@@ -83,9 +84,15 @@ class StarDistSegmentation(SegmentationPredictor):
             img = self.scale_pixel_vals(io.imread(os.path.join(path_to_cutouts, path_img)))
             self.logger.info(f'The shape of the image is: {img.shape}')
 
-            # get all trained models
-            model_weights = [path for path in Path(self.path_model_weights).iterdir() if path.is_dir()]
-            #labels = ['2D_versatile_fluo', '2D_paper_dsb2018', '2D_versatile_he']
+            # display different segmentation models
+            labels = ['2D_versatile_fluo', '2D_paper_dsb2018']#, '2D_versatile_he']
+            figures = []
+            for model_name in labels:
+                model = StarDist2D.from_pretrained(model_name)
+                # predict, we only need the mask, see omnipose tutorial for the rest of the args
+                mask, _ = model.predict_instances(normalize(img))
+                # omni removes axes that are just 1
+                seg = (mask > 0.5).astype(int)
 
             # create the segmentations
             segs, model_names = self._segs_for_selection(model_weights, img)
