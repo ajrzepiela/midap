@@ -1,9 +1,11 @@
 import os
 from pathlib import Path
+from typing import Collection, Union, List
 
 import matplotlib.pyplot as plt
 import numpy as np
 import skimage.io as io
+from skimage.segmentation import mark_boundaries
 from stardist.models import StarDist2D
 from csbdeep.utils import normalize
 
@@ -27,6 +29,42 @@ class StarDistSegmentation(SegmentationPredictor):
 
         # base class init
         super().__init__(*args, **kwargs)
+
+    def set_segmentation_method_jupyter_all_imgs(self, path_to_cutouts: Union[str, bytes, os.PathLike]):
+        """
+        Performs the weight selection for the segmentation network. A custom method should use this function to set
+        self.segmentation_method to a function that takes an input images and returns a segmentation of the image,
+        i.e. an array in the same shape but with values only 0 (no cell) and 1 (cell)
+        :param path_to_cutouts: The directory in which all the cutout images are
+        """
+
+        # check if we even need to select
+        if self.model_weights is None:
+
+            # get the image that is roughly in the middle of the stack
+            list_files = np.sort([f for f in os.listdir(path_to_cutouts) if not f.startswith((".", "_"))])
+
+            # scale the image and pad
+            imgs = []
+            for f in list_files:
+                img = self.scale_pixel_vals(io.imread(os.path.join(path_to_cutouts, f)))
+                imgs.append(img)
+            imgs = np.array(imgs)
+
+            # Get all the labels
+            labels = ['2D_versatile_fluo', '2D_paper_dsb2018']#, '2D_versatile_he']
+
+            self.segs = {}
+            for model_name in labels:
+                model = StarDist2D.from_pretrained(model_name)
+                # predict, we only need the mask, see omnipose tutorial for the rest of the args
+                mask = np.array([model.predict_instances(normalize(img))[0] for img in imgs])
+                # omni removes axes that are just 1
+                mask = (mask > 0.5).astype(int)
+                
+                # now we create an overlay of the image and the segmentation
+                overl = [mark_boundaries(i, s, color=(1, 0, 0)) for i,s in zip(imgs, mask)]
+                self.segs[model_name] = overl
 
     def set_segmentation_method(self, path_to_cutouts):
         """
@@ -54,10 +92,10 @@ class StarDistSegmentation(SegmentationPredictor):
             self.logger.info(f'The shape of the image is: {img.shape}')
 
             # display different segmentation models
-            labels = ['2D_versatile_fluo', '2D_paper_dsb2018', '2D_versatile_he']
+            labels = ['2D_versatile_fluo', '2D_paper_dsb2018']#, '2D_versatile_he']
             figures = []
             for model_name in labels:
-                model = StarDist2D.from_pretrained('2D_versatile_fluo')
+                model = StarDist2D.from_pretrained(model_name)
                 # predict, we only need the mask, see omnipose tutorial for the rest of the args
                 mask, _ = model.predict_instances(normalize(img))
                 # omni removes axes that are just 1
