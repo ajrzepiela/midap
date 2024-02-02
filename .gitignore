@@ -5,6 +5,7 @@ model_weights/family_machine
 bin/settings.sh
 model_weights
 example_data
+benchmark_data
 psf
 .idea/
 *.swp
