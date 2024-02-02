@@ -83,7 +83,7 @@ class BayesianCellTracking(Tracking):
         """
 
         # gen the inputs
-        objects = btrack.utils.segmentation_to_objects(segmentation=self.seg_imgs, intensity_image=self.raw_imgs,
+        objects = btrack.utils.segmentation_to_objects(segmentation=(self.seg_imgs).astype(int), intensity_image=self.raw_imgs,
                                                        assign_class_ID=True)
         config_file = Path(__file__).parent.joinpath("btrack_conf.json")
 
