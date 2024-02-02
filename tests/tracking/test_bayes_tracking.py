@@ -94,7 +94,6 @@ def test_run_model_crop(tracking_instance):
     Tests the track_all_frames_crop routine with the BayesianCellTracking class
     :param tracking_instance: A pytest fixture of an BayesianCellTracking instance
     """
-
     tracks = tracking_instance.run_model()
     df, label_stack = tracking_instance.generate_midap_output(tracks=tracks)
 

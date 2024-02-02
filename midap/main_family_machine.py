@@ -168,6 +168,9 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
                     elif segmentation_class == "OmniSegmentation":
                         path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
                                                                                    "model_weights_omni")
+                    elif segmentation_class == "StarDistSegmentation":
+                        path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
+                                                                                   "model_weights_stardist")
                     else:
                         path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
                                                                                    "model_weights_legacy")

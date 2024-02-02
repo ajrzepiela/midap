@@ -19,6 +19,14 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.15]
+
+2024-02-02
+
+Feature:
+- Adapted installation process for tensorflow installation on Mac M1/M2 using GPUs.
+- Added functionality to load own StarDist models.
+
 ## [0.3.14]
 
 2023-11-02
