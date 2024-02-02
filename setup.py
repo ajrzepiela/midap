@@ -1,15 +1,9 @@
 from setuptools import setup, find_packages
+import platform
 
-setup(
-    name="midap",
-    version="0.3.15",
-    description='A package for cell segmentation and tracking.',
-    author='Oschmann  Franziska, Fluri Janis',
-    author_email='franziska.oschmann@id.ethz.ch, janis.fluri@id.ethz.ch',
-    python_requires='>=3.9, <4',
-    download_url = 'https://github.com/Microbial-Systems-Ecology/midap/archive/refs/tags/0.3.14.2.tar.gz',
-    keywords='Segmentation, Tracking, Biology',
-    install_requires=['btrack>=0.4.6',
+
+def get_requirements():
+    requirements=['btrack>=0.4.6',
                         'coverage>=7.3.2',
                         'gitpython>=3.1.40',
                         'jupyterlab==4.0.8',
@@ -24,7 +18,24 @@ setup(
                         'scikit-image>=0.19.3,<=0.20.0',
                         'stardist>=0.8.5',
                         'tensorflow>=2.13.0',
-                        'tqdm>=4.65.0'],
+                        'tqdm>=4.65.0']
+
+    if platform.processor() == 'arm':
+        requirements+=['tensorflow-metal']
+
+    return requirements
+    
+
+setup(
+    name="midap",
+    version="0.3.14",
+    description='A package for cell segmentation and tracking.',
+    author='Oschmann  Franziska, Fluri Janis',
+    author_email='franziska.oschmann@id.ethz.ch, janis.fluri@id.ethz.ch',
+    python_requires='>=3.9, <4',
+    download_url = 'https://github.com/Microbial-Systems-Ecology/midap/archive/refs/tags/0.3.14.2.tar.gz',
+    keywords='Segmentation, Tracking, Biology',
+    install_requires=get_requirements(),
     packages=find_packages(include=["midap.*"]),
     project_urls={'Midap': 'https://gitlab.ethz.ch/oschmanf/ackermann-bacteria-segmentation/'},
     entry_points={
