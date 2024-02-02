@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Collection, Union, List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -30,7 +31,13 @@ class StarDistSegmentation(SegmentationPredictor):
 
         self.labels = ['2D_versatile_fluo', '2D_paper_dsb2018']#, '2D_versatile_he']
 
-    def _segs_for_selection(self, model_weights, img):
+    def _segs_for_selection(self, model_weights: List[Union[str, bytes, os.PathLike]], img: np.ndarray):
+        """
+        Given the model weights, returns a selection of segmentation to use for the GUI selector
+        :param model_weights: A list of folders containing pretrained StarDist models
+        :param img: The image to segment
+        :return: A list of segmentations and corresponding labels
+        """
 
         segs_labels = []
         for l in self.labels:
@@ -51,7 +58,7 @@ class StarDistSegmentation(SegmentationPredictor):
         labels_all += [mw.stem.replace("model_weights_", "") for mw in model_weights]
         return segs_all, labels_all
 
-    def set_segmentation_method(self, path_to_cutouts):
+    def set_segmentation_method(self, path_to_cutouts: Union[str, bytes, os.PathLike]):
         """
         Performs the weight selection for the segmentation network. A custom method should use this function to set
         self.segmentation_method to a function that takes an input images and returns a segmentation of the image,
@@ -94,8 +101,6 @@ class StarDistSegmentation(SegmentationPredictor):
                 ax.set_title(l)
                 figures.append(fig)
 
-            
-
             # Title for the GUI
             channel = os.path.basename(os.path.dirname(path_to_cutouts))
             # if we just got the chamber folder, we need to go one more up
@@ -109,7 +114,12 @@ class StarDistSegmentation(SegmentationPredictor):
             self.model_weights = marked
 
         # helper functions for the seg method based on chosen weights
-        def seg_method_name(imgs):
+        def seg_method_name(imgs: Collection[np.ndarray]):
+            """
+            Performs the segmentation given a model name
+            :param imgs: Images to segment
+            :return: The segmented images
+            """
             masks = []
             for img in imgs:
                 img = self.scale_pixel_vals(img)
@@ -118,7 +128,12 @@ class StarDistSegmentation(SegmentationPredictor):
                 masks.append(mask)
             return np.stack(masks, axis=0)
                 
-        def seg_method_dir(imgs):
+        def seg_method_dir(imgs: Collection[np.ndarray]):
+            """
+            Performs the segmentation given a a path to a model directory
+            :param imgs: Images to segment
+            :return: The segmented images
+            """
             masks = []
             for img in imgs:
                 model = StarDist2D(None, name=str(self.model_weights))
