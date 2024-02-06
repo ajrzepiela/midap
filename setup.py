@@ -34,7 +34,7 @@ setup(
     author='Oschmann  Franziska, Fluri Janis',
     author_email='franziska.oschmann@id.ethz.ch, janis.fluri@id.ethz.ch',
     python_requires='>=3.9, <4',
-    download_url = 'https://github.com/Microbial-Systems-Ecology/midap/archive/refs/tags/0.3.14.2.tar.gz',
+    download_url = 'https://github.com/Microbial-Systems-Ecology/midap/archive/refs/tags/0.3.15.tar.gz',
     keywords='Segmentation, Tracking, Biology',
     install_requires=get_requirements(),
     packages=find_packages(include=["midap.*"]),
