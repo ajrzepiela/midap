@@ -21,14 +21,15 @@ def get_requirements():
                         'tqdm>=4.65.0']
 
     if platform.processor() == 'arm':
-        requirements+=['tensorflow-metal']
+        requirements+=['tensorflow-macos',
+                       'tensorflow-metal']
 
     return requirements
     
 
 setup(
     name="midap",
-    version="0.3.14",
+    version="0.3.15",
     description='A package for cell segmentation and tracking.',
     author='Oschmann  Franziska, Fluri Janis',
     author_email='franziska.oschmann@id.ethz.ch, janis.fluri@id.ethz.ch',
