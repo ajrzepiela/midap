@@ -69,6 +69,7 @@ class Correction:
 
         self.cut_im = io.imread(os.path.join(self.path_img, self.files_cut_im[self.frame]))
         self.seg_im = io.imread(os.path.join(self.path_seg, self.files_seg_im[self.ix_seg]))
+        self.orig_seg_im = self.seg_im.copy()
 
         self.overl = mark_boundaries(self.cut_im, self.seg_im, color=(1, 0, 0))
 
@@ -98,7 +99,7 @@ class Correction:
         '''
         orig_seg_dir = os.path.join(self.path_seg, 'orig_seg')
         os.makedirs(orig_seg_dir, exist_ok=True)
-        io.imsave(os.path.join(orig_seg_dir, self.files_seg_im[self.ix_seg]), self.seg_im)
+        io.imsave(os.path.join(orig_seg_dir, self.files_seg_im[self.ix_seg]), self.orig_seg_im)
         io.imsave(os.path.join(self.path_seg,self.files_seg_im[self.ix_seg]), self.edited_labels)
 
     def correct_seg(self, event: matplotlib.backend_bases.MouseEvent) -> None:
