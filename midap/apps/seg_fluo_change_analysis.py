@@ -66,8 +66,9 @@ def fluo_analysis_per_channel(path: Union[str, os.PathLike], ref_channel: str, a
 
         # Loop through all cells of frame
         for i in df.index:
-            intensities_add_ch.append(np.mean(add_ch[df.loc[i].coords]))
-            intensities_raw_add_ch.append(np.mean(add_ch_raw[df.loc[i].coords]))
+            row, col = df.loc[i].coords.T
+            intensities_add_ch.append(np.mean(add_ch[row, col]))
+            intensities_raw_add_ch.append(np.mean(add_ch_raw[row, col]))
 
         df['intensity_'+add_channel] = intensities_add_ch
         df['intensity_raw_'+add_channel] = intensities_raw_add_ch
@@ -101,8 +102,8 @@ def main(path: Union[str, os.PathLike], channels: List[str]):
 
 if __name__ == "__main__":
     path = Path(
-        "/Users/franziskaoschmann/Documents/midap-datasets/Simon-GlucoseAcetate/GlucoseAcetateExampleData/Data/pos1"
+        "/Users/franziskaoschmann/Documents/midap-datasets/fluo_change_giulia/Image_Analysis/pos0/"
     )
-    channels = ["ph", "gfp"]
+    channels = ["phase", "mcherry"]
     tracking_class = "STrack"
     main(path, channels)
