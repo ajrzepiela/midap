@@ -61,9 +61,9 @@ class OmniSegmentation(SegmentationPredictor):
             self.segs = {}
             for model_name, model_path in label_dict.items():
                 if Path(model_path).is_file():
-                    model = models.CellposeModel(gpu=False, pretrained_model=str(model_path))
+                    model = models.CellposeModel(gpu=True, pretrained_model=str(model_path))
                 else:
-                    model = models.CellposeModel(gpu=False, model_type=model_name)
+                    model = models.CellposeModel(gpu=True, model_type=model_name)
                 # predict, we only need the mask, see omnipose tutorial for the rest of the args
                 masks, _, _ = model.eval(imgs, channels=[0, 0], rescale=None, mask_threshold=-1,
                                         transparency=True, flow_threshold=0, omni=True, resample=True, verbose=0)
@@ -112,9 +112,9 @@ class OmniSegmentation(SegmentationPredictor):
             self.segs = {}
             for model_name, model_path in label_dict.items():
                 if Path(model_path).is_file():
-                    model = models.CellposeModel(gpu=False, pretrained_model=str(model_path))
+                    model = models.CellposeModel(gpu=True, pretrained_model=str(model_path))
                 else:
-                    model = models.CellposeModel(gpu=False, model_type=model_name)
+                    model = models.CellposeModel(gpu=True, model_type=model_name)
                 # predict, we only need the mask, see omnipose tutorial for the rest of the args
                 mask, _, _ = model.eval(img, channels=[0, 0], rescale=None, mask_threshold=-1,
                                         transparency=True, flow_threshold=0, omni=True, resample=True, verbose=0)
@@ -128,9 +128,9 @@ class OmniSegmentation(SegmentationPredictor):
     def segment_images_jupyter(self, imgs, model_weights):
         # helper function for the seg method
         if Path(model_weights).is_file():
-            model = models.CellposeModel(gpu=False, pretrained_model=str(model_weights))
+            model = models.CellposeModel(gpu=True, pretrained_model=str(model_weights))
         else:
-            model = models.CellposeModel(gpu=False, model_type=model_weights)
+            model = models.CellposeModel(gpu=True, model_type=model_weights)
 
 
         # scale all the images
@@ -183,9 +183,9 @@ class OmniSegmentation(SegmentationPredictor):
             figures = []
             for model_name, model_path in label_dict.items():
                 if Path(model_path).is_file():
-                    model = models.CellposeModel(gpu=False, pretrained_model=str(model_path))
+                    model = models.CellposeModel(gpu=True, pretrained_model=str(model_path))
                 else:
-                    model = models.CellposeModel(gpu=False, model_type=model_name)
+                    model = models.CellposeModel(gpu=True, model_type=model_name)
                 # predict, we only need the mask, see omnipose tutorial for the rest of the args
                 mask, _, _ = model.eval(img, channels=[0, 0], rescale=None, mask_threshold=-1,
                                         transparency=True, flow_threshold=0, omni=True, resample=True, verbose=0)
@@ -216,9 +216,9 @@ class OmniSegmentation(SegmentationPredictor):
 
         # helper function for the seg method
         if Path(self.model_weights).is_file():
-            model = models.CellposeModel(gpu=False, pretrained_model=str(self.model_weights))
+            model = models.CellposeModel(gpu=True, pretrained_model=str(self.model_weights))
         else:
-            model = models.CellposeModel(gpu=False, model_type=self.model_weights)
+            model = models.CellposeModel(gpu=True, model_type=self.model_weights)
 
         def seg_method(imgs):
             # scale all the images
