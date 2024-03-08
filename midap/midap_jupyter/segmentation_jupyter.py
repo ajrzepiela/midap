@@ -151,14 +151,15 @@ class SegmentationJupyter(object):
 
         # add length of axis to dict
         axis_length_dict = dict()
-        for name, length in zip(self.name_add_dims, np.array(np.array(img).shape)[self.ix_diff]):
+        for name, length in zip(name_dims, np.array(np.array(img).shape)[self.ix_diff]):
             axis_length_dict[name] = length
 
         # check which axes are currently present and create dict for assignment of new axes
         present_dims = list(set(self.name_add_dims)&(set(name_dims)))
         dims_assign_dict = dict()
 
-        for md, ixd in zip(present_dims, self.ix_diff):
+        #for md, ixd in zip(present_dims, self.ix_diff):
+        for md, ixd in zip(name_dims, self.ix_diff):
             dims_assign_dict[md] = ixd
 
         # move axes to (num_frames, height, width, num_channels)
@@ -167,9 +168,10 @@ class SegmentationJupyter(object):
         img_clean = np.array(img_clean)
 
         if 'num_images' in dims_assign_dict.keys() and 'num_channels' in dims_assign_dict.keys():
-            img_clean = np.moveaxis(img_clean, dims_assign_dict['num_images'], 0)
+            new_ax_im_len = np.where(np.array(self.img_shape) == axis_length_dict['num_images'])[0][0]
+            img_clean = np.moveaxis(img_clean, new_ax_im_len, 0)
        
-            new_ax_ch_len = np.where(self.img.shape == axis_length_dict['num_channels'])[0][0]
+            new_ax_ch_len = np.where(np.array(img_clean.shape) == axis_length_dict['num_channels'])[0][0]
             img_clean = np.moveaxis(img_clean, new_ax_ch_len, -1)
 
 
