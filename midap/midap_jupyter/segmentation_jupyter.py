@@ -29,10 +29,10 @@ class SegmentationJupyter(object):
 
         self.path_data_input = self.path + "/input_data/"
         self.path_data = self.path + "/raw_im/"
-        self.path_cut = self.path + "/cut_im/"
+        self.path_cut_base = self.path + "/cut_im/"
         self.path_seg = self.path + "/seg_im/"
 
-        os.makedirs(self.path_cut, exist_ok=True)
+        os.makedirs(self.path_cut_base, exist_ok=True)
         os.makedirs(self.path_seg, exist_ok=True)
 
 
@@ -244,9 +244,8 @@ class SegmentationJupyter(object):
         """
 
         # update path to cutout images and create dir if necessary
-        self.path_cut = Path(self.path_cut).joinpath(self.chosen_files[0].split('.')[0])
-        if not os.path.exists(self.path_cut): 
-            os.makedirs(self.path_cut) 
+        self.path_cut = Path(self.path_cut_base).joinpath(self.chosen_files[0].split('.')[0])
+        os.makedirs(self.path_cut, exist_ok=True) 
 
         for i, cut in enumerate(self.imgs_cut):
             cut_scale = self.scale_pixel_val(cut)
