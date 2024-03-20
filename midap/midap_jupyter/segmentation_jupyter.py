@@ -117,11 +117,11 @@ class SegmentationJupyter(object):
         self.img_width = img.width
 
 
-    def get_img_dims_ix(self, img):
+    def get_img_dims_ix(self, imgs: np.ndarray):
         """
         Gets indices of img width and height in img shape.
         """
-        self.img_shape = np.array(np.array(img).shape)
+        self.img_shape = np.array(np.array(imgs).shape)
 
         if self.img_height != self.img_width:
             self.ix_height = np.where(self.img_shape == self.img_height)[0][0]
@@ -131,11 +131,11 @@ class SegmentationJupyter(object):
             self.ix_width = np.where(self.img_shape == self.img_width)[0][1]
 
 
-    def get_ix_add_dims(self, img):
+    def get_ix_add_dims(self, imgs: np.ndarray):
         """
         Gets axis of additional dimensions (number of frames and number of channels).
         """
-        ix_dims = np.arange(len(np.array(img).shape))
+        ix_dims = np.arange(len(np.array(imgs).shape))
         self.ix_diff = list(set(ix_dims).difference(set([self.ix_height, self.ix_width])))
 
 
@@ -148,7 +148,12 @@ class SegmentationJupyter(object):
         self.hbox_dropdowns = widgets.HBox(list_dropdowns)
 
 
-    def make_dropdown(self, size_dim, name_add_dims):
+    def make_dropdown(self, size_dim: int, name_add_dims: str):
+        """
+        Makes one dropdown per additional axis.
+        :param size_dim: Length of additional axis.
+        :param name_add_dims: Name of additional axis.
+        """
         drop_options = name_add_dims
         dropdown = widgets.Dropdown(
                         options=drop_options,
@@ -159,51 +164,53 @@ class SegmentationJupyter(object):
         return dropdown
 
 
-    def align_img_dims(self):
+    def spec_img_dims(self):
         """
-        Aligns image dimensions to following pattern: (num_imgs, height, width, num_channels).
+        Specify image dimensions acc. to following pattern: (num_imgs, height, width, num_channels).
         """
 
         # get indices of frame and channel indentifier
         name_dims = [c.value for c in self.hbox_dropdowns.children]
 
-        # add length of axis to dict
-        axis_length_dict = dict()
-        for name, length in zip(name_dims, np.array(np.array(self.imgs).shape)[self.ix_diff]):
-            axis_length_dict[name] = length
-
         # check which axes are currently present and create dict for assignment of new axes
-        #present_dims = list(set(self.name_add_dims)&(set(name_dims)))
-        dims_assign_dict = dict()
+        self.dims_assign_dict = dict()
+        self.axis_length_dict = dict()
 
-        #for md, ixd in zip(present_dims, self.ix_diff):
         for md, ixd in zip(name_dims, self.ix_diff):
-            dims_assign_dict[md] = ixd
+            self.dims_assign_dict[md] = ixd
+            self.axis_length_dict[md] = self.img_shape[ixd]
+
+
+    def align_img_dims(self, imgs: np.ndarray):
+        """
+        Aligns image dimensions to following pattern: (num_imgs, height, width, num_channels).
+        """
 
         # move axes to (num_frames, height, width, num_channels)
-        # ToDo: optimize and simplify
-        self.imgs_clean = self.imgs.copy()
-        self.imgs_clean = np.array(self.imgs_clean)
+        imgs_clean = imgs.copy()
+        imgs_clean = np.array(imgs_clean)
 
-        if 'num_images' in dims_assign_dict.keys() and 'num_channels' in dims_assign_dict.keys():
-            new_ax_im_len = np.where(np.array(self.img_shape) == axis_length_dict['num_images'])[0][0]
-            self.imgs_clean = np.moveaxis(self.imgs_clean, new_ax_im_len, 0)
+        if 'num_images' in self.dims_assign_dict.keys() and 'num_channels' in self.dims_assign_dict.keys():
+            new_ax_im_len = np.where(np.array(self.img_shape) == self.axis_length_dict['num_images'])[0][0]
+            imgs_clean = np.moveaxis(imgs_clean, new_ax_im_len, 0)
        
-            new_ax_ch_len = np.where(np.array(self.imgs_clean.shape) == axis_length_dict['num_channels'])[0][0]
-            self.imgs_clean = np.moveaxis(self.imgs_clean, new_ax_ch_len, -1)
+            new_ax_ch_len = np.where(np.array(imgs_clean.shape) == self.axis_length_dict['num_channels'])[0][0]
+            imgs_clean = np.moveaxis(imgs_clean, new_ax_ch_len, -1)
 
-        if 'num_images' in dims_assign_dict.keys() and 'num_channels' not in dims_assign_dict.keys():
-            self.imgs_clean = np.moveaxis(self.imgs_clean, self.dims_assign_dict['num_images'], 0)
+        if 'num_images' in self.dims_assign_dict.keys() and 'num_channels' not in self.dims_assign_dict.keys():
+            imgs_clean = np.moveaxis(imgs_clean, self.dims_assign_dict['num_images'], 0)
 
-        if 'num_images' not in dims_assign_dict.keys() and 'num_channels' in dims_assign_dict.keys():
-            self.imgs_clean = np.moveaxis(self.imgs_clean, dims_assign_dict['num_channels'], -1)
+        if 'num_images' not in self.dims_assign_dict.keys() and 'num_channels' in self.dims_assign_dict.keys():
+            imgs_clean = np.moveaxis(imgs_clean, self.dims_assign_dict['num_channels'], -1)
 
         # add axis in case one is missing
-        if 'num_images' not in dims_assign_dict.keys():
-            self.imgs_clean = np.expand_dims(self.imgs_clean, axis=0)
+        if 'num_images' not in self.dims_assign_dict.keys():
+            imgs_clean = np.expand_dims(imgs_clean, axis=0)
 
-        if 'num_channels' not in dims_assign_dict.keys():
-            self.imgs_clean = np.expand_dims(self.imgs_clean, axis=-1)
+        if 'num_channels' not in self.dims_assign_dict.keys():
+            imgs_clean = np.expand_dims(imgs_clean, axis=-1)
+
+        return imgs_clean
 
 
     def show_example_image(self, img: np.ndarray):
@@ -215,14 +222,14 @@ class SegmentationJupyter(object):
         plt.show()
 
 
-    def select_channel(self):
+    def select_channel(self, imgs: np.ndarray):
         """
         Creates a figure linked to a dropdown to select channel.
         """
         def f(a, c):
 
             _, ax1 = plt.subplots()
-            ax1.imshow(self.imgs_clean[int(c),:,:,int(a)])
+            ax1.imshow(imgs[int(c),:,:,int(a)])
             ax1.set_xticks([])
             ax1.set_yticks([])
             plt.title('Channel: ' + str(a))
@@ -231,25 +238,27 @@ class SegmentationJupyter(object):
         self.output_seg_ch = interactive(
             f,
             a=widgets.Dropdown(
-                options=np.arange(self.imgs_clean.shape[-1]),
+                options=np.arange(imgs.shape[-1]),
                 layout=widgets.Layout(width="50%"),
                 description="Channel",
             ),
             c=widgets.IntSlider(
                 min=0,
-                max=self.imgs_clean.shape[0] - 1,
+                max=imgs.shape[0] - 1,
                 description="Frame",
             ),
         )
 
 
-    def set_channel(self):
+    def set_channel(self, imgs: np.ndarray):
         """
         Set selected channel based on label of dropdown.
         """
         self.selected_ch = int(self.output_seg_ch.children[0].label)
-        self.imgs_sel_ch = self.imgs_clean[:,:,:,self.selected_ch]
-        self.imgs_sel_ch = np.expand_dims(self.imgs_sel_ch, -1)
+        imgs_sel_ch = imgs[:,:,:,self.selected_ch]
+        imgs_sel_ch = np.expand_dims(imgs_sel_ch, -1)
+
+        return imgs_sel_ch
 
 
     def get_corners_cutout(self):
@@ -266,33 +275,34 @@ class SegmentationJupyter(object):
         self.y_max = np.max(ylim)
 
 
-    def make_cutouts(self):
+    def make_cutouts(self, imgs: np.ndarray):
         """
         Generates cutouts for all images.
         """
-        self.imgs_cut = np.array([
-            img[self.y_min : self.y_max, self.x_min : self.x_max, 0] for img in self.imgs_sel_ch
+        imgs_cut = np.array([
+            img[self.y_min : self.y_max, self.x_min : self.x_max, 0] for img in imgs
         ])
+        return imgs_cut
 
 
-    def show_all_cutouts(self):
+    def show_all_cutouts(self, imgs: np.ndarray):
         """
         Displays all cutouts with slider.
         """
 
         def f(i):
-            return self.imgs_cut[int(i)]
+            return imgs[int(i)]
 
-        if len(self.imgs_cut) > 1:
+        if len(imgs) > 1:
             fig, ax = plt.subplots()
-            controls = iplt.imshow(f, i=np.arange(0, len(self.imgs_cut) - 1))
+            controls = iplt.imshow(f, i=np.arange(0, len(imgs) - 1))
         else:
             fig, ax = plt.subplots()
-            plt.imshow(self.imgs_cut[0])
+            plt.imshow(imgs[0])
         plt.show()
 
 
-    def save_cutouts(self):
+    def save_cutouts(self, imgs: np.ndarray):
         """
         Saves all cutouts in new folder.
         """
@@ -301,7 +311,7 @@ class SegmentationJupyter(object):
         self.path_cut = Path(self.path_cut_base).joinpath(self.chosen_files[0].split('.')[0])
         os.makedirs(self.path_cut, exist_ok=True) 
 
-        for i, cut in enumerate(self.imgs_cut):
+        for i, cut in enumerate(imgs):
             cut_scale = self.scale_pixel_val(cut)
             io.imsave(self.path_cut.joinpath("frame" + str('%(#)03d' % {'#': i}) + "_cut.png"), cut_scale)
 
@@ -450,9 +460,24 @@ class SegmentationJupyter(object):
         # select the segmentor
         self.pred.set_segmentation_method_jupyter_all_imgs(self.path_cut)
 
-        # self.segs = self.pred.segs
-
         return self.pred.segs
+    
+    def check_full_dataset(self):
+        """
+        Checks if segmentation should be perfomred on additional dataset.
+        """
+        self.check_add_data = widgets.Checkbox(
+                value=False, description='Do you want to select an additional dataset for the segmentation?', layout=widgets.Layout(width="100%")
+            )
+        
+    #def load_add_files(self):
+    #    if self.check_add_data.label == True:
+
+        
+    #def segment_all_images(self):
+
+        
+    
 
     # def display_segmentations(self):
     #     num_col = int(np.ceil(np.sqrt(len(self.segs))))
