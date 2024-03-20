@@ -57,19 +57,26 @@ class OmniSegmentation(SegmentationPredictor):
 
             self.segs = {}
             for model_name, model_path in label_dict.items():
+                print(model_name, model_path)
                 if Path(model_path).is_file():
                     model = models.CellposeModel(gpu=True, pretrained_model=str(model_path))
                 else:
                     model = models.CellposeModel(gpu=True, model_type=model_name)
+
                 # predict, we only need the mask, see omnipose tutorial for the rest of the args
-                masks, _, _ = model.eval(imgs, channels=[0, 0], rescale=None, mask_threshold=-1,
-                                        transparency=True, flow_threshold=0, omni=True, resample=True, verbose=0)
-                # omni removes axes that are just 1
-                masks = (np.array(masks) > 0.5).astype(int)
-                
-                # now we create an overlay of the image and the segmentation
-                overl = [mark_boundaries(i, s, color=(1, 0, 0)) for i,s in zip(imgs, masks)]
-                self.segs[model_name] = overl
+                try:
+                    masks, _, _ = model.eval(imgs, channels=[0, 0], rescale=None, mask_threshold=-1,
+                                            transparency=True, flow_threshold=0, omni=True, resample=True, verbose=0)
+                                    # omni removes axes that are just 1
+                    masks = (np.array(masks) > 0.5).astype(int)
+                    
+                    # now we create an overlay of the image and the segmentation
+                    overl = [mark_boundaries(i, s, color=(1, 0, 0)) for i,s in zip(imgs, masks)]
+                    self.segs[model_name] = overl
+
+                except ValueError: #in case KNN is throwing an error
+                    pass
+
 
     def set_segmentation_method_jupyter(self, path_to_cutouts):
         """
