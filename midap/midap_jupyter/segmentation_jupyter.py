@@ -14,6 +14,7 @@ import ipywidgets as widgets
 from ipywidgets import interactive
 from matplotlib.widgets import RadioButtons
 from PIL import Image
+from ipyfilechooser import FileChooser
 
 from typing import Union, List
 
@@ -37,9 +38,9 @@ class SegmentationJupyter(object):
 
         # folders created by class
         self.path_cut_base = self.path + "/cut_im/"
-        self.path_seg = self.path + "/seg_im/"
+        self.path_seg_base = self.path + "/seg_im/"
         os.makedirs(self.path_cut_base, exist_ok=True)
-        os.makedirs(self.path_seg, exist_ok=True)
+        os.makedirs(self.path_seg_base, exist_ok=True)
 
 
     def display_input_filenames(self):
@@ -54,9 +55,11 @@ class SegmentationJupyter(object):
         """
         Extracts input file names (except e.g. hidden files).
         """
-        self.input_files = [
-            f for f in os.listdir(self.path_data) if not f.startswith((".", "_"))
-        ]
+        self.fc_file = FileChooser(self.path_data)
+        
+        # self.input_files = [
+        #     f for f in os.listdir(self.path_data) if not f.startswith((".", "_"))
+        # ]
 
 
     def create_checkboxes(self):
@@ -78,50 +81,54 @@ class SegmentationJupyter(object):
         """
         Gets chosen file names for further analysis.
         """
-        self.chosen_files = []
+        chosen_files = []
         for ch in self.checkbox_output.children:
             if ch.value:
-                self.chosen_files.append(ch.description)
-        self.chosen_files = np.sort(self.chosen_files)
+                chosen_files.append(ch.description)
+        chosen_files = np.sort(chosen_files)
+
+        return chosen_files
 
 
-    def load_all_images(self):
+    def load_all_images(self, chosen_file: str):
         """
         Load all chosen image files.
         """
         self.all_imgs = [
-            io.imread(Path(self.path_data).joinpath(c)) for c in self.chosen_files
+            io.imread(Path(self.path_data).joinpath(c)) for c in chosen_file
         ]
 
 
-    def load_input_image(self):
+    def load_input_image(self, chosen_file: str):
         """
         Loads selected image and extracts image dimensions.
         """
 
         # read image
-        self.imgs = io.imread(Path(self.path_data).joinpath(self.chosen_files[0]))
-        self.get_img_dims()
-        self.get_img_dims_ix(self.imgs)
+        self.chosen_file = chosen_file
+        path_chosen_img = Path(self.path_data).joinpath(self.chosen_file)
+        self.imgs = io.imread(path_chosen_img)
+        self.get_img_dims(path_chosen_img)
+        self.get_img_dims_ix()
 
         # get indices of additional dimensions
-        self.get_ix_add_dims(self.imgs)
+        self.get_ix_add_dims()
 
 
-    def get_img_dims(self):
+    def get_img_dims(self, path_chosen_img):
         """
         Extracts height and width of an image.
         """
-        img = Image.open(Path(self.path_data).joinpath(self.chosen_files[0]))
+        img = Image.open(path_chosen_img)
         self.img_height = img.height
         self.img_width = img.width
 
 
-    def get_img_dims_ix(self, imgs: np.ndarray):
+    def get_img_dims_ix(self):
         """
         Gets indices of img width and height in img shape.
         """
-        self.img_shape = np.array(np.array(imgs).shape)
+        self.img_shape = np.array(np.array(self.imgs).shape)
 
         if self.img_height != self.img_width:
             self.ix_height = np.where(self.img_shape == self.img_height)[0][0]
@@ -131,11 +138,11 @@ class SegmentationJupyter(object):
             self.ix_width = np.where(self.img_shape == self.img_width)[0][1]
 
 
-    def get_ix_add_dims(self, imgs: np.ndarray):
+    def get_ix_add_dims(self):
         """
         Gets axis of additional dimensions (number of frames and number of channels).
         """
-        ix_dims = np.arange(len(np.array(imgs).shape))
+        ix_dims = np.arange(len(np.array(self.imgs).shape))
         self.ix_diff = list(set(ix_dims).difference(set([self.ix_height, self.ix_width])))
 
 
@@ -181,36 +188,34 @@ class SegmentationJupyter(object):
             self.axis_length_dict[md] = self.img_shape[ixd]
 
 
-    def align_img_dims(self, imgs: np.ndarray):
+    def align_img_dims(self):
         """
         Aligns image dimensions to following pattern: (num_imgs, height, width, num_channels).
         """
 
         # move axes to (num_frames, height, width, num_channels)
-        imgs_clean = imgs.copy()
-        imgs_clean = np.array(imgs_clean)
+        self.imgs_clean = self.imgs.copy()
+        self.imgs_clean = np.array(self.imgs_clean)
 
         if 'num_images' in self.dims_assign_dict.keys() and 'num_channels' in self.dims_assign_dict.keys():
             new_ax_im_len = np.where(np.array(self.img_shape) == self.axis_length_dict['num_images'])[0][0]
-            imgs_clean = np.moveaxis(imgs_clean, new_ax_im_len, 0)
+            self.imgs_clean = np.moveaxis(self.imgs_clean, new_ax_im_len, 0)
        
-            new_ax_ch_len = np.where(np.array(imgs_clean.shape) == self.axis_length_dict['num_channels'])[0][0]
-            imgs_clean = np.moveaxis(imgs_clean, new_ax_ch_len, -1)
+            new_ax_ch_len = np.where(np.array(self.imgs_clean.shape) == self.axis_length_dict['num_channels'])[0][0]
+            self.imgs_clean = np.moveaxis(self.imgs_clean, new_ax_ch_len, -1)
 
         if 'num_images' in self.dims_assign_dict.keys() and 'num_channels' not in self.dims_assign_dict.keys():
-            imgs_clean = np.moveaxis(imgs_clean, self.dims_assign_dict['num_images'], 0)
+            self.imgs_clean = np.moveaxis(self.imgs_clean, self.dims_assign_dict['num_images'], 0)
 
         if 'num_images' not in self.dims_assign_dict.keys() and 'num_channels' in self.dims_assign_dict.keys():
-            imgs_clean = np.moveaxis(imgs_clean, self.dims_assign_dict['num_channels'], -1)
+            self.imgs_clean = np.moveaxis(self.imgs_clean, self.dims_assign_dict['num_channels'], -1)
 
         # add axis in case one is missing
         if 'num_images' not in self.dims_assign_dict.keys():
-            imgs_clean = np.expand_dims(imgs_clean, axis=0)
+            self.imgs_clean = np.expand_dims(self.imgs_clean, axis=0)
 
         if 'num_channels' not in self.dims_assign_dict.keys():
-            imgs_clean = np.expand_dims(imgs_clean, axis=-1)
-
-        return imgs_clean
+            self.imgs_clean = np.expand_dims(self.imgs_clean, axis=-1)
 
 
     def show_example_image(self, img: np.ndarray):
@@ -222,14 +227,14 @@ class SegmentationJupyter(object):
         plt.show()
 
 
-    def select_channel(self, imgs: np.ndarray):
+    def select_channel(self):
         """
         Creates a figure linked to a dropdown to select channel.
         """
         def f(a, c):
 
             _, ax1 = plt.subplots()
-            ax1.imshow(imgs[int(c),:,:,int(a)])
+            ax1.imshow(self.imgs_clean[int(c),:,:,int(a)])
             ax1.set_xticks([])
             ax1.set_yticks([])
             plt.title('Channel: ' + str(a))
@@ -238,27 +243,25 @@ class SegmentationJupyter(object):
         self.output_seg_ch = interactive(
             f,
             a=widgets.Dropdown(
-                options=np.arange(imgs.shape[-1]),
+                options=np.arange(self.imgs_clean.shape[-1]),
                 layout=widgets.Layout(width="50%"),
                 description="Channel",
             ),
             c=widgets.IntSlider(
                 min=0,
-                max=imgs.shape[0] - 1,
+                max=self.imgs_clean.shape[0] - 1,
                 description="Frame",
             ),
         )
 
 
-    def set_channel(self, imgs: np.ndarray):
+    def set_channel(self):
         """
         Set selected channel based on label of dropdown.
         """
         self.selected_ch = int(self.output_seg_ch.children[0].label)
-        imgs_sel_ch = imgs[:,:,:,self.selected_ch]
-        imgs_sel_ch = np.expand_dims(imgs_sel_ch, -1)
-
-        return imgs_sel_ch
+        self.imgs_sel_ch = self.imgs_clean[:,:,:,self.selected_ch]
+        self.imgs_sel_ch = np.expand_dims(self.imgs_sel_ch, -1)
 
 
     def get_corners_cutout(self):
@@ -275,43 +278,42 @@ class SegmentationJupyter(object):
         self.y_max = np.max(ylim)
 
 
-    def make_cutouts(self, imgs: np.ndarray):
+    def make_cutouts(self):
         """
         Generates cutouts for all images.
         """
-        imgs_cut = np.array([
-            img[self.y_min : self.y_max, self.x_min : self.x_max, 0] for img in imgs
+        self.imgs_cut = np.array([
+            img[self.y_min : self.y_max, self.x_min : self.x_max, 0] for img in self.imgs_sel_ch
         ])
-        return imgs_cut
 
 
-    def show_all_cutouts(self, imgs: np.ndarray):
+    def show_all_cutouts(self):
         """
         Displays all cutouts with slider.
         """
 
         def f(i):
-            return imgs[int(i)]
+            return self.imgs_cut[int(i)]
 
-        if len(imgs) > 1:
+        if len(self.imgs_cut) > 1:
             fig, ax = plt.subplots()
-            controls = iplt.imshow(f, i=np.arange(0, len(imgs) - 1))
+            controls = iplt.imshow(f, i=np.arange(0, len(self.imgs_cut) - 1))
         else:
             fig, ax = plt.subplots()
-            plt.imshow(imgs[0])
+            plt.imshow(self.imgs_cut[0])
         plt.show()
 
 
-    def save_cutouts(self, imgs: np.ndarray):
+    def save_cutouts(self):
         """
         Saves all cutouts in new folder.
         """
 
         # update path to cutout images and create dir if necessary
-        self.path_cut = Path(self.path_cut_base).joinpath(self.chosen_files[0].split('.')[0])
+        self.path_cut = Path(self.path_cut_base).joinpath(Path(self.chosen_file).stem)
         os.makedirs(self.path_cut, exist_ok=True) 
 
-        for i, cut in enumerate(imgs):
+        for i, cut in enumerate(self.imgs_cut):
             cut_scale = self.scale_pixel_val(cut)
             io.imsave(self.path_cut.joinpath("frame" + str('%(#)03d' % {'#': i}) + "_cut.png"), cut_scale)
 
@@ -420,10 +422,7 @@ class SegmentationJupyter(object):
             layout=widgets.Layout(width="100%"),
         )
 
-    def choose_segmentation_weights(self, segmentation_class):
-        """
-        Sets the model weights per model type.
-        """
+    def select_segmentator(self, segmentation_class):
         if segmentation_class == "OmniSegmentation":
             path_model_weights = Path(self.path_midap).joinpath(
                 "model_weights", "model_weights_omni"
@@ -457,21 +456,95 @@ class SegmentationJupyter(object):
             jupyter=False,
         )
 
+    def choose_segmentation_weights(self, segmentation_class):
+        """
+        Sets the model weights per model type.
+        """
+        # if segmentation_class == "OmniSegmentation":
+        #     path_model_weights = Path(self.path_midap).joinpath(
+        #         "model_weights", "model_weights_omni"
+        #     )
+        # else:
+        #     path_model_weights = Path(self.path_midap).joinpath(
+        #         "model_weights", "model_weights_legacy"
+        #     )
+
+        # # define variables
+        # postprocessing = False
+        # network_name = None
+        # img_threshold = 255
+
+        # # get the right subclass
+        # class_instance = None
+        # for subclass in get_inheritors(base_segmentator.SegmentationPredictor):
+        #     if subclass.__name__ == segmentation_class:
+        #         class_instance = subclass
+
+        # # throw an error if we did not find anything
+        # if class_instance is None:
+        #     raise ValueError(f"Chosen class does not exist: {segmentation_class}")
+
+        # # get the Predictor
+        # self.pred = class_instance(
+        #     path_model_weights=path_model_weights,
+        #     postprocessing=postprocessing,
+        #     model_weights=network_name,
+        #     img_threshold=img_threshold,
+        #     jupyter=False,
+        # )
+        self.select_segmentator(segmentation_class)
+
         # select the segmentor
         self.pred.set_segmentation_method_jupyter_all_imgs(self.path_cut)
 
         return self.pred.segs
     
-    def check_full_dataset(self):
-        """
-        Checks if segmentation should be perfomred on additional dataset.
-        """
-        self.check_add_data = widgets.Checkbox(
-                value=False, description='Do you want to select an additional dataset for the segmentation?', layout=widgets.Layout(width="100%")
-            )
+    # def check_full_dataset(self):
+    #     """
+    #     Checks if segmentation should be performed on additional dataset.
+    #     """
+    #     self.check_add_data = widgets.Checkbox(
+    #             value=False, description='Do you want to select an additional dataset for the segmentation?', layout=widgets.Layout(width="100%")
+    #         )
         
-    #def load_add_files(self):
-    #    if self.check_add_data.label == True:
+    def load_add_files(self):
+        def f(a):
+            if a == True:
+                self.fc_add_file = FileChooser(self.path_data)
+                display(self.fc_add_file)
+
+        self.out_add_file = interactive(f, a = widgets.Checkbox(value=False, description='Do you want to select an additional dataset for the segmentation?'))
+
+    def process_images(self):
+        if self.out_add_file.children[0].value == True:
+            chosen_add_file = self.fc_add_file.selected
+            self.load_input_image(chosen_add_file)
+            self.get_img_dims_ix()
+            self.spec_img_dims()
+            self.align_img_dims()
+            self.set_channel()
+            self.make_cutouts()
+            self.save_cutouts()
+            
+        self.select_segmentator(self.out_weights.label.split('_')[0])
+        self.segment_all_images()
+        self.save_segs()
+
+
+    def save_segs(self):
+        """
+        Saves all segmentations in new folder.
+        """
+        
+        self.path_seg = Path(self.path_seg_base).joinpath(Path(self.chosen_file).stem)
+        os.makedirs(self.path_seg, exist_ok=True) 
+
+        segs = np.array(self.pred.mask)
+
+        for i, seg in enumerate(segs):
+            io.imsave(self.path_seg.joinpath("frame" + str('%(#)03d' % {'#': i}) + "_seg.png"), seg)
+
+           
 
         
     #def segment_all_images(self):
@@ -496,7 +569,7 @@ class SegmentationJupyter(object):
 
     def segment_all_images(self):
         self.pred.run_image_stack_jupyter(
-            self.imgs_cut, self.out_weights.label, clean_border=False
+            self.imgs_cut, ('_').join(self.out_weights.label.split('_')[1:]), clean_border=False
         )
 
     def show_segmentations(self):
