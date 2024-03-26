@@ -11,10 +11,11 @@ from midap.segmentation import base_segmentator
 from midap.apps import segment_cells
 
 import ipywidgets as widgets
-from ipywidgets import interactive
+from ipywidgets import interactive, Text, Password, Button, Output
 from matplotlib.widgets import RadioButtons
 from PIL import Image
 from ipyfilechooser import FileChooser
+import subprocess
 
 from typing import Union, List
 
@@ -525,7 +526,7 @@ class SegmentationJupyter(object):
             self.set_channel()
             self.make_cutouts()
             self.save_cutouts()
-            
+
         self.select_segmentator(self.out_weights.label.split('_')[0])
         self.segment_all_images()
         self.save_segs()
@@ -543,6 +544,39 @@ class SegmentationJupyter(object):
 
         for i, seg in enumerate(segs):
             io.imsave(self.path_seg.joinpath("frame" + str('%(#)03d' % {'#': i}) + "_seg.png"), seg)
+
+    def get_usern_pw(self):
+        """
+        Get username and password for upload to polybox.
+        """
+
+        self.out_usern = Text(
+            value='',
+            placeholder='',
+            description='Username:',
+            disabled=False   
+        )
+
+        self.out_passw = Password(
+            value='',
+            placeholder='',
+            description='Password:',
+            disabled=False
+        )
+
+        self.button = Button(
+            description='Confirm'
+        )
+        self.output = Output()
+
+        def on_button_clicked(b):
+            with self.output:
+                arg1 = self.out_usern.value
+                arg2 = self.out_passw.value
+                arg3 = self.path_seg.rstrip('/')
+                subprocess.call("./upload_polybox.sh " + str(arg1) + " " + str(arg2) + " " + str(arg3), shell=True)
+
+        self.button.on_click(on_button_clicked)
 
            
 
