@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import skimage.io as io
 from skimage.segmentation import mark_boundaries
+from skimage import measure
 from stardist.models import StarDist2D
 from csbdeep.utils import normalize
 
@@ -54,17 +55,33 @@ class StarDistSegmentation(SegmentationPredictor):
             # Get all the labels
             labels = ['2D_versatile_fluo', '2D_paper_dsb2018']#, '2D_versatile_he']
 
-            self.segs = {}
+            self.all_segs_label = {}
+            self.all_overl = {}
             for model_name in labels:
                 model = StarDist2D.from_pretrained(model_name)
                 # predict, we only need the mask, see omnipose tutorial for the rest of the args
                 mask = np.array([model.predict_instances(normalize(img))[0] for img in imgs])
                 # omni removes axes that are just 1
-                mask = (mask > 0.5).astype(int)
+                self.seg_bin = (mask > 0).astype(int)
+                self.seg_label = mask
                 
                 # now we create an overlay of the image and the segmentation
                 overl = [mark_boundaries(i, s, color=(1, 0, 0)) for i,s in zip(imgs, mask)]
-                self.segs[model_name] = overl
+
+                self.all_overl[model_name] = overl
+                self.all_segs_label[model_name] = self.seg_label
+
+    def segment_images_jupyter(self, imgs, model_name):
+        """
+        Sets the segmentation method according to the model_weights of the class
+        """
+        model = StarDist2D.from_pretrained(model_name)
+                
+        # predict, we only need the mask, see omnipose tutorial for the rest of the args
+        mask = np.array([model.predict_instances(normalize(img))[0] for img in imgs])
+
+        self.seg_bin = (mask > 0).astype(int)
+        self.seg_label = mask
 
     def set_segmentation_method(self, path_to_cutouts):
         """

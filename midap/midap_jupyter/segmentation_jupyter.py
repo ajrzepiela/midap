@@ -365,12 +365,17 @@ class SegmentationJupyter(object):
         Runs all pretrained models of chosen model types.
         """
         self.dict_all_models = {}
+        self.dict_all_models_label = {}
         for segmentation_class in self.chosen_models:
-            segs = self.choose_segmentation_weights(segmentation_class)
+            segs, segs_label = self.choose_segmentation_weights(segmentation_class)
             segs = dict(
                 ("{}_{}".format(segmentation_class, k), v) for k, v in segs.items()
             )
+            segs_label = dict(
+                ("{}_{}".format(segmentation_class, k), v) for k, v in segs_label.items()
+            )
             self.dict_all_models.update(segs)
+            self.dict_all_models_label.update(segs_label)
 
 
     def compare_segmentations(self):
@@ -381,15 +386,24 @@ class SegmentationJupyter(object):
         def f(a, b, c):
             fig = plt.figure(figsize=(12, 5))
 
-            ax1 = fig.add_subplot(121)
+            ax1 = fig.add_subplot(221)
             plt.imshow(self.dict_all_models[a][int(c)])
             ax1.set_xticks([])
             ax1.set_yticks([])
             plt.title(a)
 
-            ax2 = fig.add_subplot(122, sharex=ax1, sharey=ax1)
+            ax2 = fig.add_subplot(222, sharex=ax1, sharey=ax1)
             plt.imshow(self.dict_all_models[b][int(c)])
             plt.title(b)
+
+            ax3 = fig.add_subplot(223, sharex=ax1, sharey=ax1)
+            plt.imshow(self.dict_all_models_label[a][int(c)])
+            plt.title(a)
+
+            ax4 = fig.add_subplot(224, sharex=ax1, sharey=ax1)
+            plt.imshow(self.dict_all_models_label[b][int(c)])
+            plt.title(b)
+
             plt.show()
 
         self.output_seg_comp = interactive(
@@ -498,7 +512,7 @@ class SegmentationJupyter(object):
         # select the segmentor
         self.pred.set_segmentation_method_jupyter_all_imgs(self.path_cut)
 
-        return self.pred.segs
+        return self.pred.all_overl, self.pred.all_segs_label
     
     # def check_full_dataset(self):
     #     """
@@ -540,10 +554,11 @@ class SegmentationJupyter(object):
         self.path_seg = Path(self.path_seg_base).joinpath(Path(self.chosen_file).stem)
         os.makedirs(self.path_seg, exist_ok=True) 
 
-        segs = np.array(self.pred.mask)
+        segs = np.array(self.pred.seg_label)
+        print(segs.shape)
 
         for i, seg in enumerate(segs):
-            io.imsave(self.path_seg.joinpath("frame" + str('%(#)03d' % {'#': i}) + "_seg.png"), seg)
+            io.imsave(self.path_seg.joinpath("frame" + str('%(#)03d' % {'#': i}) + "_seg.tif"), seg)
 
     def get_usern_pw(self):
         """
@@ -573,7 +588,7 @@ class SegmentationJupyter(object):
             with self.output:
                 arg1 = self.out_usern.value
                 arg2 = self.out_passw.value
-                arg3 = self.path_seg.rstrip('/')
+                arg3 = str(self.path_seg).rstrip('/')
                 subprocess.call("./upload_polybox.sh " + str(arg1) + " " + str(arg2) + " " + str(arg3), shell=True)
 
         self.button.on_click(on_button_clicked)
