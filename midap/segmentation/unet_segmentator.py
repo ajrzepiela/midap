@@ -8,6 +8,7 @@ import skimage.io as io
 from skimage.filters import sobel
 from skimage.segmentation import watershed
 from skimage.segmentation import mark_boundaries
+from skimage import measure
 from tqdm import tqdm
 
 from .base_segmentator import SegmentationPredictor
@@ -57,14 +58,17 @@ class UNetSegmentation(SegmentationPredictor):
             model_weights = list(Path(self.path_model_weights).glob("*.h5"))
             labels += [mw.stem.replace("model_weights_", "") for mw in model_weights]
 
-            self.segs = {}
+            self.all_segs_label = {}
+            self.all_overl = {}
             for model_name in labels:
                 self.model_weights = model_name
                 self.segment_images_jupyter(imgs, model_name)
                 
                 # now we create an overlay of the image and the segmentation
                 overl = [mark_boundaries(i, s, color=(1, 0, 0)) for i,s in zip(imgs, self.mask)]
-                self.segs[model_name] = overl
+                
+                self.all_overl[model_name] = overl
+                self.all_segs_label[model_name] = self.seg_label
 
     def set_segmentation_method_jupyter(self, path_to_cutouts: Union[str, bytes, os.PathLike]):
         """
@@ -232,6 +236,9 @@ class UNetSegmentation(SegmentationPredictor):
         else:
             self.model_weights = os.path.join(self.path_model_weights, 'model_weights_' + model_weights + '.h5')
             self.mask = self.seg_method_unet(imgs)
+
+        self.seg_label = np.array([measure.label(m) for m in self.mask])
+        self.seg_bin = self.mask
 
     def _set_segmentation_method(self):
         """

@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import skimage.io as io
 from skimage.segmentation import mark_boundaries
+from skimage import measure
 from stardist.models import StarDist2D
 from csbdeep.utils import normalize
 
