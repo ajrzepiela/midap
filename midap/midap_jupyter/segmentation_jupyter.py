@@ -4,6 +4,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import mpl_interactions.ipyplot as iplt
 import numpy as np
+import pandas as pd
+import glob
 
 from midap.utils import get_inheritors
 from midap.segmentation import *
@@ -44,60 +46,11 @@ class SegmentationJupyter(object):
         os.makedirs(self.path_seg_base, exist_ok=True)
 
 
-    def display_input_filenames(self):
-        """
-        Creates checkboxes for of all files in given folder.
-        """
-        self.get_input_files()
-        self.create_checkboxes()
-
-
     def get_input_files(self):
         """
         Extracts input file names (except e.g. hidden files).
         """
         self.fc_file = FileChooser(self.path_data)
-        
-        # self.input_files = [
-        #     f for f in os.listdir(self.path_data) if not f.startswith((".", "_"))
-        # ]
-
-
-    def create_checkboxes(self):
-        """
-        Creates one checkbox per file in folder and groups all checkboxes.
-        """
-        self.checkbox_widgets = [
-            widgets.Checkbox(
-                value=False, description=f, layout=widgets.Layout(width="100%")
-            )
-            for f in self.input_files
-        ]
-
-        # Create observable output for the checkboxes
-        self.checkbox_output = widgets.VBox(self.checkbox_widgets)
-
-
-    def select_chosen_filenames(self):
-        """
-        Gets chosen file names for further analysis.
-        """
-        chosen_files = []
-        for ch in self.checkbox_output.children:
-            if ch.value:
-                chosen_files.append(ch.description)
-        chosen_files = np.sort(chosen_files)
-
-        return chosen_files
-
-
-    def load_all_images(self, chosen_file: str):
-        """
-        Load all chosen image files.
-        """
-        self.all_imgs = [
-            io.imread(Path(self.path_data).joinpath(c)) for c in chosen_file
-        ]
 
 
     def load_input_image(self, chosen_file: str):
@@ -317,47 +270,56 @@ class SegmentationJupyter(object):
         for i, cut in enumerate(self.imgs_cut):
             cut_scale = self.scale_pixel_val(cut)
             io.imsave(self.path_cut.joinpath("frame" + str('%(#)03d' % {'#': i}) + "_cut.png"), cut_scale)
+    
 
-
-    def get_seg_classes(self):
+    def get_segmentation_models(self):
         """
-        Gets all available segmentation models.
+        Collects all json files and combines model information in table.
         """
-        segmentation_subclasses = [
-            subclass
-            for subclass in get_inheritors(base_segmentator.SegmentationPredictor)
-        ]
-        self.jupyter_seg_cls = [
-            s.__name__
-            for s in segmentation_subclasses
-            if "Jupyter" in s.supported_setups
-        ]
+        files = glob.glob(self.path_midap + '/model_weights/**/model_weights*.json', recursive=True)
+
+        df = pd.read_json(files[0])
+
+        for f in files[1:]:
+            df_new = pd.read_json(f)
+            df = pd.concat([df, df_new], axis=1)
+
+        self.df_models = df.T
 
 
-    def display_seg_classes(self):
+    def display_segmentation_models(self):
         """
-        Creates one checkbox per model type in folder and groups all checkboxes.
-        """
-        self.get_seg_classes()
-        self.checkbox_widgets = [
-            widgets.Checkbox(
-                value=True, description=m, layout=widgets.Layout(width="100%")
-            )
-            for m in self.jupyter_seg_cls
-        ]
+        Displays availbale models in interactive table.
+        """     
+        def f(a, b):
+            self.df_models_filt = self.df_models[self.df_models['species'].isin(a)&self.df_models['marker'].isin(b)]
+                
+            display(self.df_models_filt)
 
-        # Create observable output for the checkboxes
-        self.checkbox_output_models = widgets.VBox(self.checkbox_widgets)
+        self.outp_interact_table = interactive(
+                    f,
+                    a=widgets.SelectMultiple(
+                        options=self.df_models['species'].unique(),
+                        value=list(self.df_models['species'].unique()),
+                        layout=widgets.Layout(width="50%"),
+                        description="Species",
+                    ),
+                    b=widgets.SelectMultiple(
+                        options=self.df_models['marker'].unique(),
+                        value=list(self.df_models['marker'].unique()),
+                        layout=widgets.Layout(width="50%"),
+                        description="Marker",
+                    ),
+                )
 
 
-    def select_chosen_models(self):
+    def select_segmentation_models(self):
         """
-        Gets chosen model names for segmentation.
+        Selects segmentation models based on output of interactive table.
         """
-        self.chosen_models = []
-        for ch in self.checkbox_output_models.children:
-            if ch.value:
-                self.chosen_models.append(ch.description)
+        self.all_chosen_seg_models = {}
+        for nnt in self.df_models_filt.nn_type.unique():
+            self.all_chosen_seg_models[nnt] = list(self.df_models_filt[self.df_models_filt.nn_type == nnt].index)
 
 
     def run_all_chosen_models(self):
@@ -366,16 +328,52 @@ class SegmentationJupyter(object):
         """
         self.dict_all_models = {}
         self.dict_all_models_label = {}
-        for segmentation_class in self.chosen_models:
-            segs, segs_label = self.choose_segmentation_weights(segmentation_class)
-            segs = dict(
-                ("{}_{}".format(segmentation_class, k), v) for k, v in segs.items()
+        for nnt, models in self.all_chosen_seg_models.items():
+            self.select_segmentator(nnt)
+            for model in models:
+                model_name = '_'.join((model).split('_')[2:])
+                self.pred.run_image_stack_jupyter(self.imgs_cut, model_name, clean_border=False)
+                self.dict_all_models["{}_{}".format(nnt, model)] = self.pred.seg_bin
+                self.dict_all_models_label["{}_{}".format(nnt, model)] = self.pred.seg_label
+
+
+    def select_segmentator(self, segmentation_class: str):
+        """
+        Selects segmentator based on segmentation class.
+        :param segmentation_class: Name of segmentation class.
+        """
+        if segmentation_class == "OmniSegmentation":
+            path_model_weights = Path(self.path_midap).joinpath(
+                "model_weights", "model_weights_omni"
             )
-            segs_label = dict(
-                ("{}_{}".format(segmentation_class, k), v) for k, v in segs_label.items()
+        else:
+            path_model_weights = Path(self.path_midap).joinpath(
+                "model_weights", "model_weights_legacy"
             )
-            self.dict_all_models.update(segs)
-            self.dict_all_models_label.update(segs_label)
+
+        # define variables
+        postprocessing = False
+        network_name = None
+        img_threshold = 255
+
+        # get the right subclass
+        class_instance = None
+        for subclass in get_inheritors(base_segmentator.SegmentationPredictor):
+            if subclass.__name__ == segmentation_class:
+                class_instance = subclass
+
+        # throw an error if we did not find anything
+        if class_instance is None:
+            raise ValueError(f"Chosen class does not exist: {segmentation_class}")
+
+        # get the Predictor
+        self.pred = class_instance(
+            path_model_weights=path_model_weights,
+            postprocessing=postprocessing,
+            model_weights=network_name,
+            img_threshold=img_threshold,
+            jupyter=False,
+        )
 
 
     def compare_segmentations(self):
@@ -436,93 +434,12 @@ class SegmentationJupyter(object):
             disabled=False,
             layout=widgets.Layout(width="100%"),
         )
-
-    def select_segmentator(self, segmentation_class):
-        if segmentation_class == "OmniSegmentation":
-            path_model_weights = Path(self.path_midap).joinpath(
-                "model_weights", "model_weights_omni"
-            )
-        else:
-            path_model_weights = Path(self.path_midap).joinpath(
-                "model_weights", "model_weights_legacy"
-            )
-
-        # define variables
-        postprocessing = False
-        network_name = None
-        img_threshold = 255
-
-        # get the right subclass
-        class_instance = None
-        for subclass in get_inheritors(base_segmentator.SegmentationPredictor):
-            if subclass.__name__ == segmentation_class:
-                class_instance = subclass
-
-        # throw an error if we did not find anything
-        if class_instance is None:
-            raise ValueError(f"Chosen class does not exist: {segmentation_class}")
-
-        # get the Predictor
-        self.pred = class_instance(
-            path_model_weights=path_model_weights,
-            postprocessing=postprocessing,
-            model_weights=network_name,
-            img_threshold=img_threshold,
-            jupyter=False,
-        )
-
-    def choose_segmentation_weights(self, segmentation_class):
-        """
-        Sets the model weights per model type.
-        """
-        # if segmentation_class == "OmniSegmentation":
-        #     path_model_weights = Path(self.path_midap).joinpath(
-        #         "model_weights", "model_weights_omni"
-        #     )
-        # else:
-        #     path_model_weights = Path(self.path_midap).joinpath(
-        #         "model_weights", "model_weights_legacy"
-        #     )
-
-        # # define variables
-        # postprocessing = False
-        # network_name = None
-        # img_threshold = 255
-
-        # # get the right subclass
-        # class_instance = None
-        # for subclass in get_inheritors(base_segmentator.SegmentationPredictor):
-        #     if subclass.__name__ == segmentation_class:
-        #         class_instance = subclass
-
-        # # throw an error if we did not find anything
-        # if class_instance is None:
-        #     raise ValueError(f"Chosen class does not exist: {segmentation_class}")
-
-        # # get the Predictor
-        # self.pred = class_instance(
-        #     path_model_weights=path_model_weights,
-        #     postprocessing=postprocessing,
-        #     model_weights=network_name,
-        #     img_threshold=img_threshold,
-        #     jupyter=False,
-        # )
-        self.select_segmentator(segmentation_class)
-
-        # select the segmentor
-        self.pred.set_segmentation_method_jupyter_all_imgs(self.path_cut)
-
-        return self.pred.all_overl, self.pred.all_segs_label
     
-    # def check_full_dataset(self):
-    #     """
-    #     Checks if segmentation should be performed on additional dataset.
-    #     """
-    #     self.check_add_data = widgets.Checkbox(
-    #             value=False, description='Do you want to select an additional dataset for the segmentation?', layout=widgets.Layout(width="100%")
-    #         )
         
     def load_add_files(self):
+        """
+        Loads additional (full) image stack.
+        """
         def f(a):
             if a == True:
                 self.fc_add_file = FileChooser(self.path_data)
@@ -530,7 +447,21 @@ class SegmentationJupyter(object):
 
         self.out_add_file = interactive(f, a = widgets.Checkbox(value=False, description='Do you want to select an additional dataset for the segmentation?'))
 
+
+    def segment_all_images(self, model_name: str):
+        """
+        Segments all images for given model type and selected model weights.
+        :param model_name: Name of chosen trained model.
+        """
+        self.pred.run_image_stack_jupyter(
+            self.imgs_cut, model_name, clean_border=False
+        )
+
+
     def process_images(self):
+        """
+        Processes all images after loading the full image stack.
+        """
         if self.out_add_file.children[0].value == True:
             chosen_add_file = self.fc_add_file.selected
             self.load_input_image(chosen_add_file)
@@ -542,7 +473,7 @@ class SegmentationJupyter(object):
             self.save_cutouts()
 
         self.select_segmentator(self.out_weights.label.split('_')[0])
-        self.segment_all_images()
+        self.segment_all_images(('_').join(self.out_weights.label.split('_')[3:]))
         self.save_segs()
 
 
@@ -559,6 +490,7 @@ class SegmentationJupyter(object):
 
         for i, seg in enumerate(segs):
             io.imsave(self.path_seg.joinpath("frame" + str('%(#)03d' % {'#': i}) + "_seg.tif"), seg)
+
 
     def get_usern_pw(self):
         """
@@ -593,42 +525,6 @@ class SegmentationJupyter(object):
 
         self.button.on_click(on_button_clicked)
 
-           
-
-        
-    #def segment_all_images(self):
-
-        
-    
-
-    # def display_segmentations(self):
-    #     num_col = int(np.ceil(np.sqrt(len(self.segs))))
-    #     plt.figure(figsize=(10, 10))
-    #     for i, k in enumerate(self.segs.keys()):
-    #         plt.subplot(num_col, num_col, i + 1)
-    #         plt.imshow(self.segs[k])
-    #         plt.title(k)
-    #         plt.xticks([])
-    #         plt.yticks([])
-
-    #     plt.show()
-
-
-
-
-    def segment_all_images(self):
-        self.pred.run_image_stack_jupyter(
-            self.imgs_cut, ('_').join(self.out_weights.label.split('_')[1:]), clean_border=False
-        )
-
-    def show_segmentations(self):
-        def f(i):
-            return self.pred.mask[int(i)]
-
-        fig, ax = plt.subplots()
-        controls = iplt.imshow(f, i=np.arange(0, len(self.pred.mask) - 1))
-
-        plt.show()
 
     def scale_pixel_val(self, img):
         """
