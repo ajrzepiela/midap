@@ -22,7 +22,7 @@ jobs:
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -60,7 +60,7 @@ jobs:
           echo "WEIGHTS_URL=$(cat midap/apps/download_info.json | jq -r '.model_weights.url')" >> $GITHUB_ENV
 
       - name: Cache weights
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           enableCrossOsArchive: 'true'
           path: |
@@ -99,7 +99,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       # checkout the dev branch
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       # setup the conda env
       - name: Setup Mambaforge
@@ -126,7 +126,7 @@ jobs:
           echo "WEIGHTS_URL=$(cat midap/apps/download_info.json | jq -r '.model_weights.url')" >> $GITHUB_ENV
 
       - name: Cache weights
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           enableCrossOsArchive: 'true'
           path: |
@@ -144,7 +144,7 @@ jobs:
         run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
 
       # reset cache if env file changed
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: ${{ matrix.prefix }}
           key: ${{ matrix.label }}-conda-${{ hashFiles('environment.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
