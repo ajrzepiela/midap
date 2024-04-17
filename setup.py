@@ -21,8 +21,7 @@ def get_requirements():
                         'tqdm>=4.65.0']
 
     if platform.processor() == 'arm':
-        requirements+=['tensorflow-macos',
-                       'tensorflow-metal']
+        requirements+=['tensorflow-metal']
 
     return requirements
     
