@@ -27,7 +27,7 @@ jobs:
         python-version: ["3.9", "3.10"]
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
 
     # date for the cache
     - name: Set cache date
@@ -44,7 +44,7 @@ jobs:
         echo "WEIGHTS_URL=$(cat midap/apps/download_info.json | jq -r '.model_weights.url')" >> $GITHUB_ENV
 
     - name: Cache weights
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         enableCrossOsArchive: 'true'
         path: |
@@ -73,7 +73,7 @@ jobs:
       if: ${{ steps.cache_weights.outputs.cache-hit != 'true' }}
 
     - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v3
+      uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
 
