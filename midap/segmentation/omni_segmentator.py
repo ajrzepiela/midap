@@ -6,6 +6,8 @@ import numpy as np
 import skimage.io as io
 from cellpose_omni import models
 
+import tensorflow as tf
+
 from .base_segmentator import SegmentationPredictor
 from ..utils import GUI_selector
 
@@ -26,6 +28,9 @@ class OmniSegmentation(SegmentationPredictor):
 
         # base class init
         super().__init__(*args, **kwargs)
+
+
+        self.gpu_available = tf.test.is_gpu_available()
 
     def set_segmentation_method(self, path_to_cutouts):
         """
@@ -61,9 +66,9 @@ class OmniSegmentation(SegmentationPredictor):
             figures = []
             for model_name, model_path in label_dict.items():
                 if Path(model_path).is_file():
-                    model = models.CellposeModel(gpu=True, pretrained_model=str(model_path))
+                    model = models.CellposeModel(gpu=self.gpu_available, pretrained_model=str(model_path))
                 else:
-                    model = models.CellposeModel(gpu=True, model_type=model_name)
+                    model = models.CellposeModel(gpu=self.gpu_available, model_type=model_name)
                 # predict, we only need the mask, see omnipose tutorial for the rest of the args
                 mask, _, _ = model.eval(img, channels=[0, 0], rescale=None, mask_threshold=-1,
                                         transparency=True, flow_threshold=0, omni=True, resample=True, verbose=0)
@@ -94,9 +99,9 @@ class OmniSegmentation(SegmentationPredictor):
 
         # helper function for the seg method
         if Path(self.model_weights).is_file():
-            model = models.CellposeModel(gpu=True, pretrained_model=str(self.model_weights))
+            model = models.CellposeModel(gpu=self.gpu_available, pretrained_model=str(self.model_weights))
         else:
-            model = models.CellposeModel(gpu=True, model_type=self.model_weights)
+            model = models.CellposeModel(gpu=self.gpu_available, model_type=self.model_weights)
 
         def seg_method(imgs):
             # scale all the images
