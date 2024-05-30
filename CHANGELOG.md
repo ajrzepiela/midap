@@ -19,6 +19,16 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.16]
+
+2024-05-30
+
+Feature:
+- Analysis of fluo change analysis.
+
+Fix:
+- Automatic detection of GPUs when omnipose is used.
+
 ## [0.3.15]
 
 2024-02-02

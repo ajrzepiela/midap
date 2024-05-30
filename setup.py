@@ -28,7 +28,7 @@ def get_requirements():
 
 setup(
     name="midap",
-    version="0.3.15",
+    version="0.3.16",
     description='A package for cell segmentation and tracking.',
     author='Oschmann  Franziska, Fluri Janis',
     author_email='franziska.oschmann@id.ethz.ch, janis.fluri@id.ethz.ch',
