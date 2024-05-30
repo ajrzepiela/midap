@@ -5,7 +5,7 @@ from shutil import copyfile
 
 import numpy as np
 
-from midap.apps import split_frames, cut_chamber, segment_cells, segment_analysis, track_cells, track_analysis
+from midap.apps import split_frames, cut_chamber, segment_cells, seg_fluo_change_analysis, segment_analysis, track_cells, track_analysis
 from midap.checkpoint import CheckpointManager
 
 
@@ -191,6 +191,7 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
         # read out what we need to do
         run_segmentation = config.get(identifier, "RunOption").lower() in ['both', 'segmentation']
         run_tracking = config.get(identifier, "RunOption").lower() in ['both', 'tracking']
+
         # current path of the identifier
         current_path = base_path.joinpath(identifier)
 
@@ -267,6 +268,12 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
                     segment_analysis.main(path_seg=current_path.joinpath(channel, seg_im_folder),
                                           path_result=current_path.joinpath(channel),
                                           loglevel=main_args.loglevel)
+                    
+            if config.getboolean(identifier, "FluoChange") and not run_tracking:
+                logger.info(f"Performs fluo change analysis based on segmentation images...")
+                seg_fluo_change_analysis.main(path=current_path,
+                channels=config.getlist(identifier, "Channels"),
+                )
 
         if run_tracking:
             # run tracking (we checkpoint after each channel)
