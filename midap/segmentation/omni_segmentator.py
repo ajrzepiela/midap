@@ -29,8 +29,10 @@ class OmniSegmentation(SegmentationPredictor):
         # base class init
         super().__init__(*args, **kwargs)
 
-
-        self.gpu_available = tf.test.is_gpu_available()
+        try:
+            self.gpu_available = tf.test.is_gpu_available()
+        except:
+            self.gpu_available = False
 
     def set_segmentation_method(self, path_to_cutouts):
         """
