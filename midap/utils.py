@@ -7,7 +7,7 @@ import threading
 from typing import Collection, Union, Tuple, Optional
 
 import PIL
-import PySimpleGUI as sg
+import midap.apps.PySimpleGUI as sg
 import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image

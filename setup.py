@@ -13,7 +13,7 @@ def get_requirements():
                         'opencv-python>=4.8.1',
                         'pandas>=2.0.2',
                         'psutil>=5.9.5',
-                        'PySimpleGUI==4.60.4',
+                        #'PySimpleGUI==4.60.4',
                         'pytest>=7.4.3',
                         'scikit-image>=0.19.3,<=0.20.0',
                         'stardist>=0.8.5',
