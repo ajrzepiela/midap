@@ -83,6 +83,7 @@ class SegmentationPredictor(ABC):
 
 
         self.logger.info('Postprocessing and storage...')
+        self.num_cells = []
         for seg, p in zip(segs, path_imgs):
             # postprocessing
             if self.postprocessing:
@@ -94,6 +95,8 @@ class SegmentationPredictor(ABC):
 
             # label in case no post processing or border removal
             seg = label(seg, connectivity=self.connectivity)
+
+            self.num_cells.append(len(np.unique(seg))-1)
 
             # save individual image
             os.makedirs(path_seg, exist_ok=True)
