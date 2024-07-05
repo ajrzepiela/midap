@@ -1,6 +1,6 @@
 import logging
 
-import PySimpleGUI as sg
+import midap.apps.PySimpleGUI as sg
 import numpy as np
 import re
 

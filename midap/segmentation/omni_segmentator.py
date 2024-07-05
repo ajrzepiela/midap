@@ -6,10 +6,11 @@ import numpy as np
 import skimage.io as io
 from cellpose_omni import models
 
-import tensorflow as tf
+import torch
 
 from .base_segmentator import SegmentationPredictor
 from ..utils import GUI_selector
+import platform
 
 
 class OmniSegmentation(SegmentationPredictor):
@@ -29,10 +30,11 @@ class OmniSegmentation(SegmentationPredictor):
         # base class init
         super().__init__(*args, **kwargs)
 
-        try:
-            self.gpu_available = tf.test.is_gpu_available()
-        except:
-            self.gpu_available = False
+        if platform.processor() == 'arm':
+            self.gpu_available = torch.backends.mps.is_available()
+        else:
+            self.gpu_available = torch.cuda.is_available()
+
 
     def set_segmentation_method(self, path_to_cutouts):
         """
