@@ -19,6 +19,13 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.17]
+
+2024-07-05
+
+Fix:
+- Add fixed version of PySimpleGUI as part of midap package
+
 ## [0.3.16]
 
 2024-05-30
