@@ -172,30 +172,30 @@ jobs:
           echo "COVERAGE_INT=$(coverage report -m | grep TOTAL | grep -oE '[0-9]+%' | grep -oE '[0-9]+')" >> $GITHUB_ENV
           echo "COVERAGE_FLT=$(coverage report -m --precision=2 | grep TOTAL | grep -oE '[0-9]+\.[0-9]+')" >> $GITHUB_ENV
       
-      #- name: Create Coverage Badge
+      - name: Create Coverage Badge
       #  if: ${{ always() && matrix.label == 'linux-64' && github.event_name == 'push' }}
-      #  uses: schneegans/dynamic-badges-action@v1.6.0
-      #  with:
-      #    auth: ${{ secrets.COVERAGE_SECRET }}
-      #    gistID: 9219639a376674762e7e29e2fa3cfc9e
-      #    filename: midap_coverage.json
-      #    label: Coverage
-      #    message: ${{ env.COVERAGE_FLT }}%
-      #    valColorRange: ${{ env.COVERAGE_INT }}
-      #    maxColorRange: 100
-      #    minColorRange: 0
+        uses: schneegans/dynamic-badges-action@v1.6.0
+        with:
+          auth: ${{ secrets.COVERAGE_SECRET }}
+          gistID: 9219639a376674762e7e29e2fa3cfc9e
+          filename: midap_coverage.json
+          label: Coverage
+          message: ${{ env.COVERAGE_FLT }}%
+          valColorRange: ${{ env.COVERAGE_INT }}
+          maxColorRange: 100
+          minColorRange: 0
 
-      - name: Create Coverage Badges
-        uses: jaywcjlove/coverage-badges-cli@main
-        with:
-          style: flat
-          source: midap_coverage.json 
+      #- name: Create Coverage Badges
+      #  uses: jaywcjlove/coverage-badges-cli@main
+      #  with:
+      #    style: flat
+      #    source: midap_coverage.json 
           #coverage/coverage-summary.json
-          output: coverage/badges.svg
-          jsonPath: totals.percent_covered
+      #    output: coverage/badges.svg
+      #    jsonPath: totals.percent_covered
       
-      - name: Deploy
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./build
+      #- name: Deploy
+      #  uses: peaceiris/actions-gh-pages@v3
+      #  with:
+      #    github_token: ${{ secrets.GITHUB_TOKEN }}
+      #    publish_dir: ./build
