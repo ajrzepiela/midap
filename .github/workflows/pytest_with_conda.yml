@@ -174,7 +174,7 @@ jobs:
       
       - name: Create Coverage Badge
         if: ${{ always() && matrix.label == 'linux-64' && github.event_name == 'push' }}
-        uses: jaywcjlove/coverage-badges-cli@main 
+        uses: schneegans/dynamic-badges-action@v1.7.0
         with:
           auth: ${{ secrets.COVERAGE_SECRET }}
           gistID: 9219639a376674762e7e29e2fa3cfc9e
