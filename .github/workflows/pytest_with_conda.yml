@@ -173,8 +173,8 @@ jobs:
           echo "COVERAGE_FLT=$(coverage report -m --precision=2 | grep TOTAL | grep -oE '[0-9]+\.[0-9]+')" >> $GITHUB_ENV
       
       - name: Create Coverage Badge
-      #  if: ${{ always() && matrix.label == 'linux-64' && github.event_name == 'push' }}
-        uses: schneegans/dynamic-badges-action@v1.6.0
+        if: ${{ always() && matrix.label == 'linux-64' && github.event_name == 'push' }}
+        uses: jaywcjlove/coverage-badges-cli@main 
         with:
           auth: ${{ secrets.COVERAGE_SECRET }}
           gistID: 9219639a376674762e7e29e2fa3cfc9e
@@ -187,6 +187,7 @@ jobs:
 
       #- name: Create Coverage Badges
       #  uses: jaywcjlove/coverage-badges-cli@main
+      #schneegans/dynamic-badges-action@v1.6.0
       #  with:
       #    style: flat
       #    source: midap_coverage.json 
