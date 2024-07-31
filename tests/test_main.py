@@ -50,7 +50,7 @@ def prep_settings(prep_dir):
 
     # copy the test data
     src = Path(__file__).parent.absolute().joinpath("apps", "data", "example_stack.tiff")
-    dst = data_path.joinpath("example_stack_PH_pos1.tiff")
+    dst = data_path.joinpath("example_stack_pos1_PH.tiff")
     copyfile(src=src, dst=dst)
 
     # create a config

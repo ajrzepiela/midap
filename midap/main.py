@@ -71,7 +71,7 @@ def run_module(args=None):
     # print the version
     version = pkg_resources.require("midap")[0].version
     logger.info(f"Running MIDAP version: {version}")
-
+    
     # imports
     logger.info(f"Importing all dependencies...")
     # Note, some of these dependencies are only used in the individual modules, but we import them here anyway

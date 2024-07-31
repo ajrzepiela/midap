@@ -12,7 +12,7 @@ def get_requirements():
                         'omnipose==0.4.4',
                         'opencv-python>=4.8.1',
                         'pandas>=2.0.2',
-                        'psutil>=5.9.5',
+                        'psutil>=5.9.0',
                         'pytest>=7.4.3',
                         'scikit-image>=0.19.3,<=0.20.0',
                         'stardist>=0.8.5',
