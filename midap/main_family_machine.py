@@ -78,9 +78,10 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
                 # we get all the files in the base bath that match
                 file_ext = config.get("General", "FileType")
                 if file_ext == "ome.tif":
-                    files = base_path.glob(f"*{identifier}*/**/*.ome.tif")
+                    files = base_path.glob(f"*{identifier}_*/**/*.ome.tif")
                 else:
-                    files = base_path.glob(f"*{identifier}*.{file_ext}")
+                    files = base_path.glob(f"*{identifier}_*.{file_ext}")
+
                 for fname in files:
                     for channel in config.getlist(identifier, "Channels"):
                         if channel in fname.stem:
