@@ -19,6 +19,13 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.18]
+
+2024-08-02
+
+Fix:
+- Allow batch processing of more than 9 positions
+
 ## [0.3.17]
 
 2024-07-05
