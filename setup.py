@@ -27,12 +27,12 @@ def get_requirements():
 
 setup(
     name="midap",
-    version="0.3.17",
+    version="0.3.18",
     description='A package for cell segmentation and tracking.',
     author='Oschmann  Franziska, Fluri Janis',
     author_email='franziska.oschmann@id.ethz.ch, janis.fluri@id.ethz.ch',
     python_requires='>=3.9, <4',
-    download_url = 'https://github.com/Microbial-Systems-Ecology/midap/archive/refs/tags/0.3.15.tar.gz',
+    download_url = 'https://github.com/Microbial-Systems-Ecology/midap/archive/refs/tags/0.3.18.tar.gz',
     keywords='Segmentation, Tracking, Biology',
     install_requires=get_requirements(),
     packages=find_packages(include=["midap.*"]),
