@@ -17,9 +17,13 @@ from ipywidgets import interactive, Text, Password, Button, Output
 from matplotlib.widgets import RadioButtons
 from PIL import Image
 from ipyfilechooser import FileChooser
+import IPython as ip
 import subprocess
 
 from typing import Union, List
+
+import warnings
+warnings.filterwarnings("ignore")
 
 
 class SegmentationJupyter(object):
@@ -50,7 +54,15 @@ class SegmentationJupyter(object):
         """
         Extracts input file names (except e.g. hidden files).
         """
-        self.fc_file = FileChooser(self.path_data)
+        #self.fc_file = FileChooser(self.path_data)
+        self.file_selection = widgets.SelectMultiple(
+            options=os.listdir(self.path_data),
+            #value=None,
+            #rows=10,
+            description='Files',
+            disabled=False,
+            layout={'height': '300px', 'width': '800px'}
+        )
 
 
     def load_input_image(self, chosen_file: str):
@@ -59,21 +71,34 @@ class SegmentationJupyter(object):
         """
 
         # read image
-        self.chosen_file = chosen_file
-        path_chosen_img = Path(self.path_data).joinpath(self.chosen_file)
-        self.imgs = io.imread(path_chosen_img)
-        self.get_img_dims(path_chosen_img)
-        self.get_img_dims_ix()
+        self.imgs = []
+        for f in self.file_selection.label:
+            #self.chosen_file = chosen_file
+            #path_chosen_img = Path(self.path_data).joinpath(self.chosen_file)
+            path_chosen_img = Path(self.path_data).joinpath(f)
+            print(io.imread(path_chosen_img).shape)
+            self.imgs.append(io.imread(path_chosen_img))
+        
+        if len(np.unique([i.shape for i in self.imgs])) > 1:
+            ip.display.display(ip.display.Markdown('**The image shapes do not match. Please select only images with the same image dimensions.**'))
+        else:
+            self.imgs = np.stack(self.imgs,axis=0)
+            print(self.imgs.shape)
+            self.get_img_dims(path_chosen_img)
+            self.get_img_dims_ix()
 
-        # get indices of additional dimensions
-        self.get_ix_add_dims()
+            # get indices of additional dimensions
+            self.get_ix_add_dims()
+            print(self.imgs.shape)
 
 
     def get_img_dims(self, path_chosen_img):
         """
         Extracts height and width of an image.
         """
-        img = Image.open(path_chosen_img)
+        #img = Image.open(path_chosen_img)
+        print(self.imgs.shape)
+        img = Image.fromarray(self.imgs[0])
         self.img_height = img.height
         self.img_width = img.width
 
