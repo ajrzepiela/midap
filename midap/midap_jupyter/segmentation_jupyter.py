@@ -55,6 +55,7 @@ class SegmentationJupyter(object):
         """
         self.fc_file = FileChooser(self.path)
         self.fc_file.show_only_dirs = True
+        self.fc_file.layout ={"width": "600px"}
 
     def get_input_files(self, path):
         """
@@ -438,25 +439,25 @@ class SegmentationJupyter(object):
         """
 
         def f(a, b, c):
-            fig = plt.figure(figsize=(12, 5))
+            fig = plt.figure(figsize=(12, 12))
 
             ax1 = fig.add_subplot(221)
             plt.imshow(self.dict_all_models[a][int(c)])
             ax1.set_xticks([])
             ax1.set_yticks([])
-            plt.title(a)
+            plt.title('Model 1 (semantic segmentation)')
 
             ax2 = fig.add_subplot(222, sharex=ax1, sharey=ax1)
             plt.imshow(self.dict_all_models[b][int(c)])
-            plt.title(b)
+            plt.title('Model 2 (semantic segmentation)')
 
             ax3 = fig.add_subplot(223, sharex=ax1, sharey=ax1)
             plt.imshow(self.dict_all_models_label[a][int(c)])
-            plt.title(a)
+            plt.title('Model 1 (instance segmentation)')
 
             ax4 = fig.add_subplot(224, sharex=ax1, sharey=ax1)
             plt.imshow(self.dict_all_models_label[b][int(c)])
-            plt.title(b)
+            plt.title('Model 2 (instance segmentation)')
 
             plt.show()
 
@@ -475,7 +476,7 @@ class SegmentationJupyter(object):
             c=widgets.IntSlider(
                 min=0,
                 max=(len(list(self.dict_all_models.values())[0]) - 1),
-                description="Frame",
+                description="Image ID",
             ),
         )
 
@@ -499,6 +500,7 @@ class SegmentationJupyter(object):
             if a == True:
                 self.fc_add_file = FileChooser(self.path)
                 self.fc_add_file.show_only_dirs = True
+                self.fc_add_file.layout ={"width": "600px"}
                 ip.display.display(self.fc_add_file)
 
         self.out_add_file = interactive(
