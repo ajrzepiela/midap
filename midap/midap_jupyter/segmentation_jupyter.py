@@ -37,7 +37,7 @@ class SegmentationJupyter(object):
         :path: path to folder containing images
         """
         self.path = path
-        self.path_midap = "/Users/franziskaoschmann/Documents/midap"  #'/cluster/project/sis/cdss/oschmanf/segmentation_training/midap'
+        self.path_midap = "/Users/franziskaoschmann/Documents/midap"  #"/cluster/software/others/services/jupyterhub/environments/segmentation_training/midap"
 
         # existing folders
         self.path_data_input = self.path + "/input_data/"
