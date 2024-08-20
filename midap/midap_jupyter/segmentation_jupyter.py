@@ -22,9 +22,6 @@ import subprocess
 
 from typing import Union, List
 
-import warnings
-warnings.filterwarnings("ignore")
-
 
 class SegmentationJupyter(object):
     """
@@ -321,7 +318,7 @@ class SegmentationJupyter(object):
 
         for f, cut in zip(self.chosen_files, self.imgs_cut):
             cut_scale = self.scale_pixel_val(cut)
-            io.imsave(self.path_cut.joinpath(Path(f).stem + "_cut.png"), cut_scale)
+            io.imsave(self.path_cut.joinpath(Path(f).stem + "_cut.png"), cut_scale, check_contrast=False)
 
     def get_segmentation_models(self):
         """
@@ -550,7 +547,7 @@ class SegmentationJupyter(object):
         segs = np.array(self.pred.seg_label)
 
         for f, seg in zip(self.chosen_files, segs):
-            io.imsave(self.path_seg.joinpath(Path(f).stem + "_seg.tif"), seg)
+            io.imsave(self.path_seg.joinpath(Path(f).stem + "_seg.tif"), seg, check_contrast=False)
 
     def get_usern_pw(self):
         """
