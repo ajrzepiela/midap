@@ -28,7 +28,7 @@ class SegmentationPredictor(ABC):
     logger = logger
 
     def __init__(self, path_model_weights: Union[str, bytes, os.PathLike], postprocessing: bool, div=16, connectivity=1,
-                 model_weights: Union[str, bytes, os.PathLike, None]=None, img_threshold=1.0, jupyter=False):
+                 model_weights: Union[str, bytes, os.PathLike, None]=None, img_threshold=1.0):
         """
         Initializes the SegmentationPredictor instance
         :param path_model_weights: Path to the model weights
@@ -54,8 +54,6 @@ class SegmentationPredictor(ABC):
         # params that will be set later
         self.model_weights = model_weights
         self.segmentation_method = None
-
-        self.jupyter = jupyter
 
     def run_image_stack_jupyter(self, imgs, model_weights, clean_border: bool):
         """

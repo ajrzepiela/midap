@@ -435,7 +435,6 @@ class SegmentationJupyter(object):
             postprocessing=postprocessing,
             model_weights=network_name,
             img_threshold=img_threshold,
-            jupyter=False,
         )
 
     def compare_segmentations(self):
