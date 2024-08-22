@@ -14,7 +14,7 @@ from midap.utils import get_inheritors
 
 def main(path_model_weights: Union[str,bytes,os.PathLike], path_pos: Union[str,bytes,os.PathLike], path_channel: str,
          segmentation_class: str, postprocessing: bool, clean_border: bool, network_name: Union[str,bytes,os.PathLike,None]=None,
-         just_select=False, img_threshold=1.0, jupyter=False):
+         just_select=False, img_threshold=1.0):
     """
     Performs cell segmentation on all images in a given directory
     :param path_model_weights: The path to the pretrained model weights
@@ -43,7 +43,7 @@ def main(path_model_weights: Union[str,bytes,os.PathLike], path_pos: Union[str,b
 
     # get the Predictor
     pred = class_instance(path_model_weights=path_model_weights, postprocessing=postprocessing,
-                          model_weights=network_name, img_threshold=img_threshold, jupyter=jupyter)
+                          model_weights=network_name, img_threshold=img_threshold)
 
     # set the paths
     path_channel = Path(path_pos).joinpath(path_channel)
