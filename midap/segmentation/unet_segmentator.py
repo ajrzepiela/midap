@@ -7,8 +7,6 @@ import numpy as np
 import skimage.io as io
 from skimage.filters import sobel
 from skimage.segmentation import watershed
-from skimage.segmentation import mark_boundaries
-from skimage import measure
 from tqdm import tqdm
 
 from .base_segmentator import SegmentationPredictor
@@ -32,7 +30,6 @@ class UNetSegmentation(SegmentationPredictor):
 
         # base class init
         super().__init__(*args, **kwargs)
-
 
     def set_segmentation_method(self, path_to_cutouts: Union[str, bytes, os.PathLike]):
         """
@@ -103,32 +100,6 @@ class UNetSegmentation(SegmentationPredictor):
         # set the method via private function
         self._set_segmentation_method()
 
-    def _segs_for_selection_all_imgs(self, model_weights: List[Union[str, bytes, os.PathLike]], imgs: np.ndarray):
-        """
-        Given the model weights, returns a selection of segmentation to use for the GUI selector
-        :param model_weights: A list of model weights
-        :param img: The image to segment
-        :return: A list of segmentations starting with the watershed segmentation, i.e. 1 longer than model_weights
-        """
-
-        imgs_pad = [self.pad_image(img) for img in imgs]
-        imgs_pad = np.squeeze(np.array(imgs_pad), 1)
-        watershed_seg = [self.segment_region_based(img, 0.16, 0.19) for img in imgs]
-        segs = [watershed_seg]
-        print(np.array(imgs_pad).shape)
-        print(imgs_pad[0].shape[:2])
-
-        self.segs = {}
-        for m in model_weights:
-            model_pred = UNetv1(input_size=imgs_pad[0].shape[:2] + (1,), inference=True)
-            model_pred.load_weights(m)
-            y_pred = model_pred.predict(imgs_pad)
-            seg = (self.undo_padding(y_pred) > 0.5).astype(int)
-            self.segs[m] = seg
-            #segs.append(seg)
-
-        #return np.array(segs)
-
     def _segs_for_selection(self, model_weights: List[Union[str, bytes, os.PathLike]], img: np.ndarray):
         """
         Given the model weights, returns a selection of segmentation to use for the GUI selector
@@ -148,7 +119,6 @@ class UNetSegmentation(SegmentationPredictor):
             segs.append(seg)
 
         return segs
-    
 
     def _set_segmentation_method(self):
         """

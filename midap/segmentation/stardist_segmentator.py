@@ -5,8 +5,6 @@ from typing import Collection, Union, List
 import matplotlib.pyplot as plt
 import numpy as np
 import skimage.io as io
-from skimage.segmentation import mark_boundaries
-from skimage import measure
 from stardist.models import StarDist2D
 from csbdeep.utils import normalize
 
@@ -23,7 +21,7 @@ class StarDistSegmentation(SegmentationPredictor):
 
     def __init__(self, *args, **kwargs):
         """
-        Initializes the StarDistSegmentation using the base class init
+        Initializes the UNetSegmentation using the base class init
         :*args: Arguments used for the base class init
         :**kwargs: Keyword arguments used for the basecalss init
         """
@@ -31,8 +29,36 @@ class StarDistSegmentation(SegmentationPredictor):
         # base class init
         super().__init__(*args, **kwargs)
 
+        self.labels = ['2D_versatile_fluo', '2D_paper_dsb2018']#, '2D_versatile_he']
 
-    def set_segmentation_method(self, path_to_cutouts):
+    def _segs_for_selection(self, model_weights: List[Union[str, bytes, os.PathLike]], img: np.ndarray):
+        """
+        Given the model weights, returns a selection of segmentation to use for the GUI selector
+        :param model_weights: A list of folders containing pretrained StarDist models
+        :param img: The image to segment
+        :return: A list of segmentations and corresponding labels
+        """
+
+        segs_labels = []
+        for l in self.labels:
+            model = StarDist2D.from_pretrained(l)
+            mask, _ = model.predict_instances(normalize(img))
+            seg = (mask > 0.5).astype(int)
+            segs_labels.append(seg)
+
+        segs_weights = []
+        for m in model_weights:
+            model = StarDist2D(None, name=str(m))
+            mask, _ = model.predict_instances(normalize(img))
+            seg = (mask > 0.5).astype(int)
+            segs_weights.append(seg)
+
+        segs_all = segs_labels + segs_weights
+        labels_all = self.labels.copy()
+        labels_all += [mw.stem.replace("model_weights_", "") for mw in model_weights]
+        return segs_all, labels_all
+
+    def set_segmentation_method(self, path_to_cutouts: Union[str, bytes, os.PathLike]):
         """
         Performs the weight selection for the segmentation network. A custom method should use this function to set
         self.segmentation_method to a function that takes an input images and returns a segmentation of the image,
@@ -57,15 +83,9 @@ class StarDistSegmentation(SegmentationPredictor):
             img = self.scale_pixel_vals(io.imread(os.path.join(path_to_cutouts, path_img)))
             self.logger.info(f'The shape of the image is: {img.shape}')
 
-            # display different segmentation models
-            labels = ['2D_versatile_fluo', '2D_paper_dsb2018']#, '2D_versatile_he']
-            figures = []
-            for model_name in labels:
-                model = StarDist2D.from_pretrained(model_name)
-                # predict, we only need the mask, see omnipose tutorial for the rest of the args
-                mask, _ = model.predict_instances(normalize(img))
-                # omni removes axes that are just 1
-                seg = (mask > 0.5).astype(int)
+            # get all trained models
+            model_weights = [path for path in Path(self.path_model_weights).iterdir() if path.is_dir()]
+            #labels = ['2D_versatile_fluo', '2D_paper_dsb2018', '2D_versatile_he']
 
             # create the segmentations
             segs, model_names = self._segs_for_selection(model_weights, img)
