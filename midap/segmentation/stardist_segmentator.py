@@ -19,11 +19,11 @@ class StarDistSegmentation(SegmentationPredictor):
     A class that performs the image segmentation of the cells using a UNet
     """
 
-    supported_setups = ["Family_Machine", "Mother_Machine", "Jupyter"]
+    supported_setups = ["Family_Machine", "Mother_Machine"]
 
     def __init__(self, *args, **kwargs):
         """
-        Initializes the UNetSegmentation using the base class init
+        Initializes the StarDistSegmentation using the base class init
         :*args: Arguments used for the base class init
         :**kwargs: Keyword arguments used for the basecalss init
         """
@@ -31,36 +31,8 @@ class StarDistSegmentation(SegmentationPredictor):
         # base class init
         super().__init__(*args, **kwargs)
 
-        self.labels = ['2D_versatile_fluo', '2D_paper_dsb2018']#, '2D_versatile_he']
 
-    def _segs_for_selection(self, model_weights: List[Union[str, bytes, os.PathLike]], img: np.ndarray):
-        """
-        Given the model weights, returns a selection of segmentation to use for the GUI selector
-        :param model_weights: A list of folders containing pretrained StarDist models
-        :param img: The image to segment
-        :return: A list of segmentations and corresponding labels
-        """
-
-        segs_labels = []
-        for l in self.labels:
-            model = StarDist2D.from_pretrained(l)
-            mask, _ = model.predict_instances(normalize(img))
-            seg = (mask > 0.5).astype(int)
-            segs_labels.append(seg)
-
-        segs_weights = []
-        for m in model_weights:
-            model = StarDist2D(None, name=str(m))
-            mask, _ = model.predict_instances(normalize(img))
-            seg = (mask > 0.5).astype(int)
-            segs_weights.append(seg)
-
-        segs_all = segs_labels + segs_weights
-        labels_all = self.labels.copy()
-        labels_all += [mw.stem.replace("model_weights_", "") for mw in model_weights]
-        return segs_all, labels_all
-
-    def set_segmentation_method(self, path_to_cutouts: Union[str, bytes, os.PathLike]):
+    def set_segmentation_method(self, path_to_cutouts):
         """
         Performs the weight selection for the segmentation network. A custom method should use this function to set
         self.segmentation_method to a function that takes an input images and returns a segmentation of the image,
