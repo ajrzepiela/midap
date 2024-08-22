@@ -336,6 +336,7 @@ class SegmentationJupyter(object):
 
         self.df_models = df.T
 
+
     def display_segmentation_models(self):
         """
         Displays availbale models in interactive table.
@@ -346,7 +347,8 @@ class SegmentationJupyter(object):
                 self.df_models["species"].isin(a) & self.df_models["marker"].isin(b)
             ]
 
-            display(self.df_models_filt)
+            self.df_models_filt2 = self.df_models_filt.drop(columns=['nn_type_alias'])
+            display(self.df_models_filt2)
 
         self.outp_interact_table = interactive(
             f,
@@ -369,9 +371,9 @@ class SegmentationJupyter(object):
         Selects segmentation models based on output of interactive table.
         """
         self.all_chosen_seg_models = {}
-        for nnt in self.df_models_filt.nn_type.unique():
+        for nnt in self.df_models_filt.nn_type_alias.unique():
             self.all_chosen_seg_models[nnt] = list(
-                self.df_models_filt[self.df_models_filt.nn_type == nnt].index
+                self.df_models_filt[self.df_models_filt.nn_type_alias == nnt].index
             )
 
     def run_all_chosen_models(self):
@@ -397,7 +399,7 @@ class SegmentationJupyter(object):
         Selects segmentator based on segmentation class.
         :param segmentation_class: Name of segmentation class.
         """
-        if segmentation_class == "OmniSegmentation":
+        if segmentation_class == "OmniSegmentationJupyter":
             path_model_weights = Path(self.path_midap).joinpath(
                 "model_weights", "model_weights_omni"
             )
@@ -411,9 +413,15 @@ class SegmentationJupyter(object):
         network_name = None
         img_threshold = 255
 
+
         # get the right subclass
         class_instance = None
-        for subclass in get_inheritors(base_segmentator.SegmentationPredictor):
+
+        segmentation_subclasses = get_inheritors(base_segmentator.SegmentationPredictor)
+        jupyter_seg_cls = [s for s in segmentation_subclasses if "Jupyter" in s.supported_setups]
+        
+        #for subclass in get_inheritors(base_segmentator.SegmentationPredictor):
+        for subclass in jupyter_seg_cls:
             if subclass.__name__ == segmentation_class:
                 class_instance = subclass
 
