@@ -90,7 +90,7 @@ class SegmentationJupyter(object):
             self.imgs.append(io.imread(path_chosen_img))
 
         # check if image dimensions align
-        if len(np.unique([i.shape for i in self.imgs])) > 1:
+        if len(list(set([i.shape for i in self.imgs]))) > 1:
             ip.display.display(
                 ip.display.Markdown(
                     "**The image shapes do not match. Please select only images with the same image dimensions.**"
@@ -362,7 +362,7 @@ class SegmentationJupyter(object):
                 options=self.df_models["marker"].unique(),
                 value=list(self.df_models["marker"].unique()),
                 layout=widgets.Layout(width="50%"),
-                description="Marker",
+                description="Marker/Type",
             ),
         )
 
