@@ -243,7 +243,7 @@ class SegmentationJupyter(object):
             plt.title("Channel: " + str(a))
             plt.show()
 
-        self.output_seg_ch = interactive(
+        self.output_sel_ch = interactive(
             f,
             a=widgets.Dropdown(
                 options=np.arange(self.imgs_clean.shape[-1]),
@@ -261,7 +261,7 @@ class SegmentationJupyter(object):
         """
         Set selected channel based on label of dropdown.
         """
-        self.selected_ch = int(self.output_seg_ch.children[0].label)
+        self.selected_ch = int(self.output_sel_ch.children[0].label)
         self.imgs_sel_ch = self.imgs_clean[:, :, :, self.selected_ch]
         self.imgs_sel_ch = np.expand_dims(self.imgs_sel_ch, -1)
 
@@ -295,15 +295,31 @@ class SegmentationJupyter(object):
         """
 
         def f(i):
-            return self.imgs_cut[int(i)]
+            _, ax1 = plt.subplots()
+            ax1.imshow(self.imgs_cut[int(i)])
+            ax1.set_xticks([])
+            ax1.set_yticks([])
+            plt.show()
 
-        if len(self.imgs_cut) > 1:
-            fig, ax = plt.subplots()
-            controls = iplt.imshow(f, i=np.arange(0, len(self.imgs_cut) - 1))
-        else:
-            fig, ax = plt.subplots()
-            plt.imshow(self.imgs_cut[0])
-        plt.show()
+        self.output_all_cuts = interactive(
+            f,
+            i=widgets.IntSlider(
+                min=0,
+                max=self.imgs_cut.shape[0] - 1,
+                description="Image ID",
+            ),
+        )
+
+        # def f(i):
+        #     return self.imgs_cut[int(i)]
+
+        # if len(self.imgs_cut) > 1:
+        #     fig, ax = plt.subplots()
+        #     controls = iplt.imshow(f, i=np.arange(0, int(len(self.imgs_cut) - 1)))
+        # else:
+        #     fig, ax = plt.subplots()
+        #     plt.imshow(self.imgs_cut[0])
+        # plt.show()
 
     def save_cutouts(self):
         """
