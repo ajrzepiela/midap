@@ -461,22 +461,35 @@ class SegmentationJupyter(object):
         def f(a, b, c):
             fig = plt.figure(figsize=(12, 12))
 
+            sem_seg_a = self.dict_all_models[a][int(c)]
+            sem_seg_a = np.ma.masked_where(sem_seg_a == 0, sem_seg_a)
+
+            sem_seg_b = self.dict_all_models[b][int(c)]
+            sem_seg_b = np.ma.masked_where(sem_seg_b == 0, sem_seg_b)
+
+            inst_seg_a = self.dict_all_models_label[a][int(c)]
+            inst_seg_a = np.ma.masked_where(inst_seg_a == 0, inst_seg_a)
+
+            inst_seg_b = self.dict_all_models_label[b][int(c)]
+            inst_seg_b = np.ma.masked_where(inst_seg_b == 0, inst_seg_b)
+
+
             ax1 = fig.add_subplot(221)
-            plt.imshow(self.dict_all_models[a][int(c)])
+            plt.imshow(sem_seg_a, cmap='tab20')
             ax1.set_xticks([])
             ax1.set_yticks([])
             plt.title('Model 1 (semantic segmentation)')
 
             ax2 = fig.add_subplot(222, sharex=ax1, sharey=ax1)
-            plt.imshow(self.dict_all_models[b][int(c)])
+            plt.imshow(sem_seg_b, cmap='tab20')
             plt.title('Model 2 (semantic segmentation)')
 
             ax3 = fig.add_subplot(223, sharex=ax1, sharey=ax1)
-            plt.imshow(self.dict_all_models_label[a][int(c)])
+            plt.imshow(inst_seg_a, cmap='tab20')
             plt.title('Model 1 (instance segmentation)')
 
             ax4 = fig.add_subplot(224, sharex=ax1, sharey=ax1)
-            plt.imshow(self.dict_all_models_label[b][int(c)])
+            plt.imshow(inst_seg_b, cmap='tab20')
             plt.title('Model 2 (instance segmentation)')
 
             plt.show()
