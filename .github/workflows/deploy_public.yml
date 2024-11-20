@@ -16,7 +16,7 @@ jobs:
 
       - name: Push to public repository
         run: |
-          git remote add public-repo https://github.com/Microbial-Systems-Ecology/midap_public
+          git remote add public-repo https://github.com/Microbial-Systems-Ecology/midap_public.git
           git push public-repo main:main --force
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
