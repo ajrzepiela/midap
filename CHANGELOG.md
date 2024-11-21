@@ -19,6 +19,20 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.21]
+
+2024-11-21
+
+Feature:
+- Fixed tensorflow version.
+
+## [0.3.19 and 0.3.20]
+
+2024-11-21
+
+Feature:
+- Refactor code for packaging and upload to pypi.
+
 ## [0.3.18]
 
 2024-08-02
