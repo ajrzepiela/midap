@@ -17,7 +17,7 @@ def get_requirements():
         "pytest>=7.4.3",
         "scikit-image>=0.19.3,<=0.20.0",
         "stardist>=0.8.5",
-        "tensorflow==2.15.0",
+        "tensorflow==2.13.0",
         "tqdm>=4.65.0",
         "build",
         "twine",
@@ -31,7 +31,7 @@ def get_requirements():
 
 setup(
     name="midap",
-    version="0.3.20",
+    version="0.3.21",
     description="A package for cell segmentation and tracking.",
     long_description="""# MIDAP: Automated image segmentation and tracking for time-lapse microscopy of bacterial cells.
 
@@ -49,6 +49,7 @@ segmentation and tracking.
 
 Documentation at https://github.com/Microbial-Systems-Ecology/midap/wiki
     """,
+    long_description_content_type="text/markdown",
     author="Oschmann  Franziska, Fluri Janis",
     author_email="franziska.oschmann@id.ethz.ch, janis.fluri@id.ethz.ch",
     python_requires=">=3.9, <4",

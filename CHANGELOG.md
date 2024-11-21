@@ -19,6 +19,13 @@ Efficiency:
 Fix:
 - ...
 
+## [0.3.21]
+
+2024-11-21
+
+Feature:
+- Fixed tensorflow version.
+
 ## [0.3.19 and 0.3.20]
 
 2024-11-21
