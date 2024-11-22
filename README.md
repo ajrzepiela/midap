@@ -10,10 +10,24 @@ MIDAP is a flexible and user-friendly software for the automated analysis of liv
 
 ## Standard Installation
 
-The installation was tested on macOS Big Sur (11.6.7), Ubuntu 22.04 and WSL II on Win 11. Note that the standard installation does **not** support GPUs. If you want to run the pipeline with GPU support, please have a look at the relevant sections below.
+The installation was tested on macOS Sequoia (15.1) and Ubuntu 22.04.
 
-1. For the download, either:
+MIDAP requires Python 3.10. To create an environemnt with the right Python version, please use conda. Further instructions for the download of miniconda can be found [here](https://docs.anaconda.com/miniconda/install/).
 
+### Installation with pip
+
+Create a conda environment and install midap with pip within the conda environment:
+```
+conda create --name midap python=3.10
+conda activate midap
+pip install midap
+```
+
+### Clone of GitHub repository and installation with pip
+
+In case you want to download the source code, you can also clone the repository and then install MIDAP using pip:
+
+1. Clone of GitHub repository:
 - Clone the repo, navigate to the directory containing the pipeline `cd midap`.
 - Download the [latest release](https://github.com/Microbial-Systems-Ecology/midap/releases) and unpack the tar.gz-file. Then navigate to the unpacked directory using the command line `cd midap-VERSION` (and add your version number).
 
@@ -22,7 +36,7 @@ The installation was tested on macOS Big Sur (11.6.7), Ubuntu 22.04 and WSL II o
 ```
 conda create --name midap python=3.10
 conda activate midap
-pip install midap
+pip install -e .
 ```
 
 3. Once the conda environment is activated, you can run the module from anywhere via `midap`. If you run the pipeline for the first time, it will download all the required files (~3 GB). You can also manually (re)download the files using the command `midap_download`. The module accepts arguments and has the following signature:
