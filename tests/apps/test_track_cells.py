@@ -12,6 +12,7 @@ from midap.apps.track_cells import main
 # Fixtures
 ##########
 
+
 @pytest.fixture()
 @mark.usefixtures("setup_dir")
 def prep_dirs(setup_dir):
@@ -43,6 +44,7 @@ def prep_dirs(setup_dir):
 
 # Tests
 #######
+
 
 def test_main(prep_dirs):
     """
@@ -79,9 +81,8 @@ def test_main(prep_dirs):
     # bayes tracking
     main(path=prep_dirs, tracking_class="BayesianCellTracking")
 
-    #Check bayes tracking results
+    # Check bayes tracking results
     bayes_track_file = track_output.joinpath("track_output_bayesian.csv")
     res_df = pd.read_csv(bayes_track_file)
     assert np.unique(res_df["frame"]).size == 2
     assert len(res_df) == 58
-

@@ -3,6 +3,7 @@ from midap.networks import deltav2
 from skimage.measure import label
 from pathlib import Path
 
+
 def test_unet_track():
     """
     Tests the unet_track routine of deltav2
@@ -10,7 +11,9 @@ def test_unet_track():
 
     # weight path
     weight_path = Path(__file__).absolute().parent.parent.parent
-    weight_path = weight_path.joinpath("model_weights", "model_weights_tracking", "unet_pads_track.hdf5")
+    weight_path = weight_path.joinpath(
+        "model_weights", "model_weights_tracking", "unet_pads_track.hdf5"
+    )
 
     # load the model
     model = deltav2.unet_track(pretrained_weights=weight_path, input_size=(128, 128, 4))
@@ -20,7 +23,7 @@ def test_unet_track():
     inp = np.zeros((1, 128, 128, 4))
 
     # we create a large rectangular cell
-    inp[:,25:100,75:100,:] = 1
+    inp[:, 25:100, 75:100, :] = 1
 
     # call the model
     out = model(inp).numpy()

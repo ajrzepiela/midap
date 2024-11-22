@@ -11,7 +11,7 @@ class ToggleMetrics(tf.keras.callbacks.Callback):
     On test begin (i.e. when evaluate() is called or validation data is run during fit()) toggle metric flag
     """
 
-    def __init__(self, toggle_metrics: Optional[List[str]]=None):
+    def __init__(self, toggle_metrics: Optional[List[str]] = None):
         """
         Inits the callback
         :param toggle_metrics: A list of metrics to toggle (can be None), all metrics in the list need a "on" variable
@@ -38,7 +38,7 @@ class ToggleMetrics(tf.keras.callbacks.Callback):
                 if custom_metric in metric.name:
                     metric.on.assign(True)
 
-    def on_test_end(self,  logs):
+    def on_test_end(self, logs):
         """
         A function called at the end of the test, toggles the metrics of
         :param logs: The logs
@@ -65,8 +65,8 @@ class ROIAccuracy(tf.keras.metrics.Metric):
 
         # base class init
         super().__init__(**kwargs)
-        self.tp = self.add_weight(name=f'true_positive', initializer='zeros')
-        self.total_roi = self.add_weight(name=f'total_roi', initializer='zeros')
+        self.tp = self.add_weight(name=f"true_positive", initializer="zeros")
+        self.total_roi = self.add_weight(name=f"total_roi", initializer="zeros")
         self.on = tf.Variable(on_start)
 
     def update_state(self, y_true, y_pred, sample_weight=None):
@@ -78,7 +78,9 @@ class ROIAccuracy(tf.keras.metrics.Metric):
         """
         # Use conditional to determine if computation is done
         if self.on:
-            tp = tf.reduce_sum(tf.cast(y_pred > 0.5, tf.int32)*tf.cast(y_true > 0.5, tf.int32))
+            tp = tf.reduce_sum(
+                tf.cast(y_pred > 0.5, tf.int32) * tf.cast(y_true > 0.5, tf.int32)
+            )
             self.tp.assign_add(tf.cast(tp, tf.float32))
             total_roi = tf.reduce_sum(tf.cast(y_true > 0.5, tf.int32))
             self.total_roi.assign_add(tf.cast(total_roi, tf.float32))
@@ -88,13 +90,13 @@ class ROIAccuracy(tf.keras.metrics.Metric):
         Calculates the current result of the metric
         :return: The current result
         """
-        return self.tp/self.total_roi
+        return self.tp / self.total_roi
 
     def reset_state(self):
         """
         Resets the metric to default state
         """
-        self.tp.assign(0.)
+        self.tp.assign(0.0)
         self.total_roi.assign(0.0)
 
 
@@ -118,9 +120,9 @@ class AveragePrecision(tf.keras.metrics.Metric):
             name = f"average_precision_{threshold}"
         super().__init__(name=name, **kwargs)
         self.threshold = threshold
-        self.tp = self.add_weight(name=f'true_positive', initializer='zeros')
-        self.fp = self.add_weight(name=f'false_positive', initializer='zeros')
-        self.fn = self.add_weight(name=f'false_negative', initializer='zeros')
+        self.tp = self.add_weight(name=f"true_positive", initializer="zeros")
+        self.fp = self.add_weight(name=f"false_positive", initializer="zeros")
+        self.fn = self.add_weight(name=f"false_negative", initializer="zeros")
         self.on = tf.Variable(on_start)
 
     def update_state(self, y_true, y_pred, sample_weight=None):
@@ -133,13 +135,17 @@ class AveragePrecision(tf.keras.metrics.Metric):
         # Use conditional to determine if computation is done
         if self.on:
             # run computation
-            ap, tp, fp, fn = tf.numpy_function(lambda true, pred, thres: metrics.average_precision(label(true),
-                                                                                                   label(pred),
-                                                                                                   thres),
-                                               [tf.cast(y_true[...,0] > 0.5, tf.int32),
-                                                tf.cast(y_pred[...,0] > 0.5, tf.int32),
-                                                [self.threshold]],
-                                               Tout=(tf.float32, tf.float32, tf.float32, tf.float32))
+            ap, tp, fp, fn = tf.numpy_function(
+                lambda true, pred, thres: metrics.average_precision(
+                    label(true), label(pred), thres
+                ),
+                [
+                    tf.cast(y_true[..., 0] > 0.5, tf.int32),
+                    tf.cast(y_pred[..., 0] > 0.5, tf.int32),
+                    [self.threshold],
+                ],
+                Tout=(tf.float32, tf.float32, tf.float32, tf.float32),
+            )
             self.tp.assign_add(tf.reduce_sum(tp))
             self.fp.assign_add(tf.reduce_sum(fp))
             self.fn.assign_add(tf.reduce_sum(fn))
@@ -149,13 +155,12 @@ class AveragePrecision(tf.keras.metrics.Metric):
         Calculates the current result of the metric
         :return: The current result
         """
-        return self.tp/(self.tp + self.fp + self.fn)
+        return self.tp / (self.tp + self.fp + self.fn)
 
     def reset_state(self):
         """
         Resets the metric to default state
         """
-        self.tp.assign(0.)
-        self.fp.assign(0.)
-        self.fn.assign(0.)
-
+        self.tp.assign(0.0)
+        self.fp.assign(0.0)
+        self.fn.assign(0.0)

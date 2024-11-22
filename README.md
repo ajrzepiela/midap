@@ -34,6 +34,7 @@ In case you want to download the source code, you can also clone the repository 
 2. Create and activate the conda environment:
 
 ```
+cd midap
 conda create --name midap python=3.10
 conda activate midap
 pip install -e .

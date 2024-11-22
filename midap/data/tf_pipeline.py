@@ -14,13 +14,32 @@ class TFPipeFamilyMachine(DataProcessor):
     This class can be used to createa datasets for TF model training
     """
 
-    def __init__(self, paths: Union[str, bytes, os.PathLike, List[Union[str, bytes, os.PathLike]]],
-                 n_grid=4, test_size=0.15, val_size=0.2, sigma=2.0, w_0=2.0, w_c0=1.0, w_c1=1.1, loglevel=7,
-                 np_random_seed: Optional[int] = None, batch_size=32, shuffle_buffer=128, image_size=(128, 128, 1),
-                 delta_gamma: Optional[float] = 0.1, delta_gain: Optional[float] = 0.1,
-                 delta_brightness: Optional[float] = 0.4, lower_contrast: Optional[float] = 0.2,
-                 upper_contrast: Optional[float] = 0.5, rescale=False, n_repeats: Optional[int] = 50,
-                 train_seed: Optional[tuple] = None, val_seed=(11, 12), test_seed=(13, 14)):
+    def __init__(
+        self,
+        paths: Union[str, bytes, os.PathLike, List[Union[str, bytes, os.PathLike]]],
+        n_grid=4,
+        test_size=0.15,
+        val_size=0.2,
+        sigma=2.0,
+        w_0=2.0,
+        w_c0=1.0,
+        w_c1=1.1,
+        loglevel=7,
+        np_random_seed: Optional[int] = None,
+        batch_size=32,
+        shuffle_buffer=128,
+        image_size=(128, 128, 1),
+        delta_gamma: Optional[float] = 0.1,
+        delta_gain: Optional[float] = 0.1,
+        delta_brightness: Optional[float] = 0.4,
+        lower_contrast: Optional[float] = 0.2,
+        upper_contrast: Optional[float] = 0.5,
+        rescale=False,
+        n_repeats: Optional[int] = 50,
+        train_seed: Optional[tuple] = None,
+        val_seed=(11, 12),
+        test_seed=(13, 14),
+    ):
         """
         Initializes the TFPipe instance. Note that a lot parameters are used to implement the weight map
         generation according to [1] (https://arxiv.org/abs/1505.04597)
@@ -68,9 +87,19 @@ class TFPipeFamilyMachine(DataProcessor):
         locals_copy = locals()
 
         # init the base class
-        super().__init__(paths=paths, n_grid=n_grid, test_size=test_size, val_size=val_size, sigma=sigma,
-                         w_0=w_0, w_c0=w_c0, w_c1=w_c1, loglevel=loglevel, np_random_seed=np_random_seed)
-        
+        super().__init__(
+            paths=paths,
+            n_grid=n_grid,
+            test_size=test_size,
+            val_size=val_size,
+            sigma=sigma,
+            w_0=w_0,
+            w_c0=w_c0,
+            w_c1=w_c1,
+            loglevel=loglevel,
+            np_random_seed=np_random_seed,
+        )
+
         # get the datasets
         self.data_dict = self.get_dset()
 
@@ -79,28 +108,46 @@ class TFPipeFamilyMachine(DataProcessor):
         min_shape = np.min(np.array(shapes), axis=0)
         for i in range(3):
             if min_shape[i] < image_size[i]:
-                raise ValueError(f"The image_size of {image_size} is not compatible with the training data, "
-                                 f"max possible shape is {tuple(min_shape)}!")
+                raise ValueError(
+                    f"The image_size of {image_size} is not compatible with the training data, "
+                    f"max possible shape is {tuple(min_shape)}!"
+                )
 
         # set the TF datasets
-        self.set_tf_dsets(batch_size=batch_size, shuffle_buffer=shuffle_buffer, image_size=image_size,
-                          delta_gamma=delta_gamma, delta_gain=delta_gain, delta_brightness=delta_brightness,
-                          lower_contrast=lower_contrast, upper_contrast=upper_contrast, rescale=rescale,
-                          n_repeats=n_repeats, train_seed=train_seed, val_seed=val_seed, test_seed=test_seed)
+        self.set_tf_dsets(
+            batch_size=batch_size,
+            shuffle_buffer=shuffle_buffer,
+            image_size=image_size,
+            delta_gamma=delta_gamma,
+            delta_gain=delta_gain,
+            delta_brightness=delta_brightness,
+            lower_contrast=lower_contrast,
+            upper_contrast=upper_contrast,
+            rescale=rescale,
+            n_repeats=n_repeats,
+            train_seed=train_seed,
+            val_seed=val_seed,
+            test_seed=test_seed,
+        )
 
         # create the config for the meta data
         self.config = ConfigParser()
         self.config.add_section("TFPipe")
-        self.config.set("TFPipe", "train_files", " \n".join([f"{p}" for p in self.img_paths]))
+        self.config.set(
+            "TFPipe", "train_files", " \n".join([f"{p}" for p in self.img_paths])
+        )
         for key, val in locals_copy.items():
             # Fun fact: python adds the __class__ key to the locals because "super" is mentioned in this function
             if key not in ["paths", "self", "__class__"]:
                 self.config.set("TFPipe", key, f"{val}")
 
-
     @staticmethod
-    def _map_crop(num: tf.Tensor, imgs: Tuple[tf.Tensor], target_size: tuple,
-                  stateless_seed: Optional[tuple]=None):
+    def _map_crop(
+        num: tf.Tensor,
+        imgs: Tuple[tf.Tensor],
+        target_size: tuple,
+        stateless_seed: Optional[tuple] = None,
+    ):
         """
         Performs a crop operation on image, weight and label map
         :param num: A Tensor with the number of the sample used to increase the stateless seed (if provided)
@@ -116,16 +163,24 @@ class TFPipeFamilyMachine(DataProcessor):
         stack = tf.stack([i, w, l], axis=-1)
 
         if stateless_seed is None:
-            out = tf.image.random_crop(value=stack, size=target_size + (3, ))
+            out = tf.image.random_crop(value=stack, size=target_size + (3,))
         else:
-            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(num, dtype=tf.int32)
-            out = tf.image.stateless_random_crop(value=stack, size=target_size + (3,), seed=seed)
+            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(
+                num, dtype=tf.int32
+            )
+            out = tf.image.stateless_random_crop(
+                value=stack, size=target_size + (3,), seed=seed
+            )
 
-        return num, tuple(out[...,i] for i in range(3))
+        return num, tuple(out[..., i] for i in range(3))
 
     @staticmethod
-    def _map_brightness(num: tf.Tensor, imgs: Tuple[tf.Tensor], max_delta: float,
-                        stateless_seed: Optional[tuple]=None):
+    def _map_brightness(
+        num: tf.Tensor,
+        imgs: Tuple[tf.Tensor],
+        max_delta: float,
+        stateless_seed: Optional[tuple] = None,
+    ):
         """
         Performs a brightness adjust operation on image, leaves weight and label map
         :param num: A Tensor with the number of the sample used to increase the stateless seed (if provided)
@@ -140,14 +195,23 @@ class TFPipeFamilyMachine(DataProcessor):
         if stateless_seed is None:
             i = tf.image.random_brightness(image=i, max_delta=max_delta)
         else:
-            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(num, dtype=tf.int32)
-            i = tf.image.stateless_random_brightness(image=i, max_delta=max_delta, seed=seed)
+            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(
+                num, dtype=tf.int32
+            )
+            i = tf.image.stateless_random_brightness(
+                image=i, max_delta=max_delta, seed=seed
+            )
 
         return num, (i, w, l)
 
     @staticmethod
-    def _map_gamma(num: tf.Tensor, imgs: Tuple[tf.Tensor], delta_gamma: float, delta_gain: float,
-                      stateless_seed: Optional[tuple]=None):
+    def _map_gamma(
+        num: tf.Tensor,
+        imgs: Tuple[tf.Tensor],
+        delta_gamma: float,
+        delta_gain: float,
+        stateless_seed: Optional[tuple] = None,
+    ):
         """
         Performs a gamma adjust operation on image, leaves weight and label map
         :param num: A Tensor with the number of the sample used to increase the stateless seed (if provided)
@@ -161,21 +225,40 @@ class TFPipeFamilyMachine(DataProcessor):
 
         i, w, l = imgs
         if stateless_seed is None:
-            gamma = tf.random.uniform(shape=(), minval=1.0-delta_gamma, maxval=1.0+delta_gamma)
-            gain = tf.random.uniform(shape=(), minval=1.0+-delta_gain, maxval=1.0+delta_gain)
+            gamma = tf.random.uniform(
+                shape=(), minval=1.0 - delta_gamma, maxval=1.0 + delta_gamma
+            )
+            gain = tf.random.uniform(
+                shape=(), minval=1.0 + -delta_gain, maxval=1.0 + delta_gain
+            )
             i = tf.image.adjust_gamma(image=i, gamma=gamma, gain=gain)
         else:
-            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(num, dtype=tf.int32)
-            gamma = tf.random.stateless_uniform(shape=(), minval=1.0-delta_gamma, maxval=1.0+delta_gamma, seed=seed)
-            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(num, dtype=tf.int32) + 1234
-            gain = tf.random.stateless_uniform(shape=(), minval=1.0-delta_gain, maxval=1.0+delta_gain, seed=seed)
+            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(
+                num, dtype=tf.int32
+            )
+            gamma = tf.random.stateless_uniform(
+                shape=(), minval=1.0 - delta_gamma, maxval=1.0 + delta_gamma, seed=seed
+            )
+            seed = (
+                tf.convert_to_tensor(stateless_seed, dtype=tf.int32)
+                + tf.cast(num, dtype=tf.int32)
+                + 1234
+            )
+            gain = tf.random.stateless_uniform(
+                shape=(), minval=1.0 - delta_gain, maxval=1.0 + delta_gain, seed=seed
+            )
             i = tf.image.adjust_gamma(image=i, gamma=gamma, gain=gain)
 
         return num, (i, w, l)
 
     @staticmethod
-    def _map_contrast(num: tf.Tensor, imgs: Tuple[tf.Tensor], lower: float, upper: float,
-                      stateless_seed: Optional[tuple]=None):
+    def _map_contrast(
+        num: tf.Tensor,
+        imgs: Tuple[tf.Tensor],
+        lower: float,
+        upper: float,
+        stateless_seed: Optional[tuple] = None,
+    ):
         """
         Performs a contrast adjust operation on image, leaves weight and label map
         :param num: A Tensor with the number of the sample used to increase the stateless seed (if provided)
@@ -191,13 +274,19 @@ class TFPipeFamilyMachine(DataProcessor):
         if stateless_seed is None:
             i = tf.image.random_contrast(image=i, lower=lower, upper=upper)
         else:
-            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(num, dtype=tf.int32)
-            i = tf.image.stateless_random_contrast(image=i, lower=lower, upper=upper, seed=seed)
+            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(
+                num, dtype=tf.int32
+            )
+            i = tf.image.stateless_random_contrast(
+                image=i, lower=lower, upper=upper, seed=seed
+            )
 
         return num, (i, w, l)
 
     @staticmethod
-    def _map_ud_flip(num: tf.Tensor, imgs: Tuple[tf.Tensor], stateless_seed: Optional[tuple] = None):
+    def _map_ud_flip(
+        num: tf.Tensor, imgs: Tuple[tf.Tensor], stateless_seed: Optional[tuple] = None
+    ):
         """
         Performs a random flip along the first dimension (up down)
         :param num: A Tensor with the number of the sample used to increase the stateless seed (if provided)
@@ -215,13 +304,17 @@ class TFPipeFamilyMachine(DataProcessor):
         if stateless_seed is None:
             out = tf.image.random_flip_up_down(image=stack)
         else:
-            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(num, dtype=tf.int32)
+            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(
+                num, dtype=tf.int32
+            )
             out = tf.image.stateless_random_flip_up_down(image=stack, seed=seed)
 
-        return num, tuple(out[..., i:i+1] for i in range(3))
+        return num, tuple(out[..., i : i + 1] for i in range(3))
 
     @staticmethod
-    def _map_lr_flip(num: tf.Tensor, imgs: Tuple[tf.Tensor], stateless_seed: Optional[tuple] = None):
+    def _map_lr_flip(
+        num: tf.Tensor, imgs: Tuple[tf.Tensor], stateless_seed: Optional[tuple] = None
+    ):
         """
         Performs a random flip along the second dimension (left right)
         :param num: A Tensor with the number of the sample used to increase the stateless seed (if provided)
@@ -239,10 +332,12 @@ class TFPipeFamilyMachine(DataProcessor):
         if stateless_seed is None:
             out = tf.image.random_flip_left_right(image=stack)
         else:
-            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(num, dtype=tf.int32)
+            seed = tf.convert_to_tensor(stateless_seed, dtype=tf.int32) + tf.cast(
+                num, dtype=tf.int32
+            )
             out = tf.image.stateless_random_flip_left_right(image=stack, seed=seed)
 
-        return num, tuple(out[..., i:i+1] for i in range(3))
+        return num, tuple(out[..., i : i + 1] for i in range(3))
 
     @staticmethod
     def _rescale(num: tf.Tensor, imgs: Tuple[tf.Tensor, tf.Tensor, tf.Tensor]):
@@ -257,7 +352,7 @@ class TFPipeFamilyMachine(DataProcessor):
         i, w, l = imgs
 
         # rescale
-        i = (i - tf.reduce_min(i))/(tf.reduce_max(i) - tf.reduce_min(i))
+        i = (i - tf.reduce_min(i)) / (tf.reduce_max(i) - tf.reduce_min(i))
 
         return num, (i, w, l)
 
@@ -277,11 +372,22 @@ class TFPipeFamilyMachine(DataProcessor):
 
         return tf.data.Dataset.zip((img_dset, w_dset, seg_dset))
 
-    def set_tf_dsets(self, batch_size, shuffle_buffer=128, image_size=(128, 128, 1),  delta_gamma: Optional[float] = 0.1,
-                     delta_gain: Optional[float] = 0.1, delta_brightness: Optional[float] = 0.4,
-                     lower_contrast: Optional[float] = 0.2, upper_contrast: Optional[float] = 0.5, rescale=False,
-                     n_repeats: Optional[int] = 50, train_seed: Optional[tuple] = None, val_seed=(11, 12),
-                     test_seed=(13, 14)):
+    def set_tf_dsets(
+        self,
+        batch_size,
+        shuffle_buffer=128,
+        image_size=(128, 128, 1),
+        delta_gamma: Optional[float] = 0.1,
+        delta_gain: Optional[float] = 0.1,
+        delta_brightness: Optional[float] = 0.4,
+        lower_contrast: Optional[float] = 0.2,
+        upper_contrast: Optional[float] = 0.5,
+        rescale=False,
+        n_repeats: Optional[int] = 50,
+        train_seed: Optional[tuple] = None,
+        val_seed=(11, 12),
+        test_seed=(13, 14),
+    ):
         """
         Creates train, test and validation TF datasets.
         :param batch_size: The batch size of the data sets
@@ -291,33 +397,48 @@ class TFPipeFamilyMachine(DataProcessor):
                             Note gamma and gain need both be present to make a gamma adjustment
         :param delta_gain: The random gain correction, can be None -> no adjustments
                            Note gamma and gain need both be present to make a gamma adjustment
-        :param delta_brightness: The max delta_brightness for random brightness adjustments, 
+        :param delta_brightness: The max delta_brightness for random brightness adjustments,
                                  can be None -> no adjustments
         :param lower_contrast: The lower limit for random contrast adjustments, can be None -> no adjustments
         :param upper_contrast: The upper limit for random contrast adjustments, can be None -> no adjustments
         :param rescale: If True, all images are rescales between 0 and 1, note this will undo the brightness and
                         contrast adjustments
-        :param n_repeats: The number of repeats of random operations per original image, i.e. number of data 
-                          augmentations 
-        :param train_seed: A tuple of two seed used to seed the stateless random operations of the training dataset. 
-                           If set to None (default) each iteration through the training set will have different 
-                           random augmentations, if set the same augmentations will be used every iteration. Note that 
-                           even if this seed is set, the shuffling operation will still be truly random if the 
+        :param n_repeats: The number of repeats of random operations per original image, i.e. number of data
+                          augmentations
+        :param train_seed: A tuple of two seed used to seed the stateless random operations of the training dataset.
+                           If set to None (default) each iteration through the training set will have different
+                           random augmentations, if set the same augmentations will be used every iteration. Note that
+                           even if this seed is set, the shuffling operation will still be truly random if the
                            shuffle_buffer > 1
         :param val_seed: The seed for the validation set (see train_seed), defaults to (11, 12) for reproducibility
-        :param test_seed: The seed for the test set (see train_seed), defaults to (13, 14) for reproducibility 
+        :param test_seed: The seed for the test set (see train_seed), defaults to (13, 14) for reproducibility
         """
 
         # stack imgs, weights and labels together
-        self.dsets_train = [self.zip_inputs(i, w, l) for i, w, l in zip(self.data_dict["X_train"],
-                                                                        self.data_dict["weight_maps_train"],
-                                                                        self.data_dict["y_train"])]
-        self.dsets_test = [self.zip_inputs(i, w, l) for i, w, l in zip(self.data_dict["X_test"],
-                                                                       self.data_dict["weight_maps_test"],
-                                                                       self.data_dict["y_test"])]
-        self.dsets_val = [self.zip_inputs(i, w, l) for i, w, l in zip(self.data_dict["X_val"],
-                                                                      self.data_dict["weight_maps_val"],
-                                                                      self.data_dict["y_val"])]
+        self.dsets_train = [
+            self.zip_inputs(i, w, l)
+            for i, w, l in zip(
+                self.data_dict["X_train"],
+                self.data_dict["weight_maps_train"],
+                self.data_dict["y_train"],
+            )
+        ]
+        self.dsets_test = [
+            self.zip_inputs(i, w, l)
+            for i, w, l in zip(
+                self.data_dict["X_test"],
+                self.data_dict["weight_maps_test"],
+                self.data_dict["y_test"],
+            )
+        ]
+        self.dsets_val = [
+            self.zip_inputs(i, w, l)
+            for i, w, l in zip(
+                self.data_dict["X_val"],
+                self.data_dict["weight_maps_val"],
+                self.data_dict["y_val"],
+            )
+        ]
 
         # now we repeat each dataset, such that we can have multple different crops etc.
         self.dsets_train = [d.repeat(n_repeats).enumerate() for d in self.dsets_train]
@@ -326,70 +447,170 @@ class TFPipeFamilyMachine(DataProcessor):
 
         # crop
         self.dsets_train = [
-            d.map(lambda num, imgs: self._map_crop(num, imgs, target_size=image_size, stateless_seed=train_seed))
-            for d in self.dsets_train]
+            d.map(
+                lambda num, imgs: self._map_crop(
+                    num, imgs, target_size=image_size, stateless_seed=train_seed
+                )
+            )
+            for d in self.dsets_train
+        ]
         self.dsets_test = [
-            d.map(lambda num, imgs: self._map_crop(num, imgs, target_size=image_size, stateless_seed=test_seed))
-            for d in self.dsets_test]
+            d.map(
+                lambda num, imgs: self._map_crop(
+                    num, imgs, target_size=image_size, stateless_seed=test_seed
+                )
+            )
+            for d in self.dsets_test
+        ]
         self.dsets_val = [
-            d.map(lambda num, imgs: self._map_crop(num, imgs, target_size=image_size, stateless_seed=val_seed))
-            for d in self.dsets_val]
+            d.map(
+                lambda num, imgs: self._map_crop(
+                    num, imgs, target_size=image_size, stateless_seed=val_seed
+                )
+            )
+            for d in self.dsets_val
+        ]
         # up and lr flips
         self.dsets_train = [
-            d.map(lambda num, imgs: self._map_ud_flip(num, imgs, stateless_seed=train_seed))
-            for d in self.dsets_train]
+            d.map(
+                lambda num, imgs: self._map_ud_flip(
+                    num, imgs, stateless_seed=train_seed
+                )
+            )
+            for d in self.dsets_train
+        ]
         self.dsets_test = [
-            d.map(lambda num, imgs: self._map_ud_flip(num, imgs, stateless_seed=test_seed))
-            for d in self.dsets_test]
+            d.map(
+                lambda num, imgs: self._map_ud_flip(num, imgs, stateless_seed=test_seed)
+            )
+            for d in self.dsets_test
+        ]
         self.dsets_val = [
-            d.map(lambda num, imgs: self._map_ud_flip(num, imgs, stateless_seed=val_seed))
-            for d in self.dsets_val]
+            d.map(
+                lambda num, imgs: self._map_ud_flip(num, imgs, stateless_seed=val_seed)
+            )
+            for d in self.dsets_val
+        ]
         self.dsets_train = [
-            d.map(lambda num, imgs: self._map_lr_flip(num, imgs, stateless_seed=train_seed))
-            for d in self.dsets_train]
+            d.map(
+                lambda num, imgs: self._map_lr_flip(
+                    num, imgs, stateless_seed=train_seed
+                )
+            )
+            for d in self.dsets_train
+        ]
         self.dsets_test = [
-            d.map(lambda num, imgs: self._map_lr_flip(num, imgs, stateless_seed=test_seed))
-            for d in self.dsets_test]
+            d.map(
+                lambda num, imgs: self._map_lr_flip(num, imgs, stateless_seed=test_seed)
+            )
+            for d in self.dsets_test
+        ]
         self.dsets_val = [
-            d.map(lambda num, imgs: self._map_lr_flip(num, imgs, stateless_seed=val_seed))
-            for d in self.dsets_val]
+            d.map(
+                lambda num, imgs: self._map_lr_flip(num, imgs, stateless_seed=val_seed)
+            )
+            for d in self.dsets_val
+        ]
         # perform the augmentations
         if delta_gamma is not None and delta_gain is not None:
             self.dsets_train = [
-                d.map(lambda num, imgs: self._map_gamma(num, imgs, delta_gamma=delta_gamma, delta_gain=delta_gain,
-                                                        stateless_seed=train_seed))
-                for d in self.dsets_train]
+                d.map(
+                    lambda num, imgs: self._map_gamma(
+                        num,
+                        imgs,
+                        delta_gamma=delta_gamma,
+                        delta_gain=delta_gain,
+                        stateless_seed=train_seed,
+                    )
+                )
+                for d in self.dsets_train
+            ]
             self.dsets_test = [
-                d.map(lambda num, imgs: self._map_gamma(num, imgs, delta_gamma=delta_gamma, delta_gain=delta_gain,
-                                                        stateless_seed=test_seed))
-                for d in self.dsets_test]
+                d.map(
+                    lambda num, imgs: self._map_gamma(
+                        num,
+                        imgs,
+                        delta_gamma=delta_gamma,
+                        delta_gain=delta_gain,
+                        stateless_seed=test_seed,
+                    )
+                )
+                for d in self.dsets_test
+            ]
             self.dsets_val = [
-                d.map(lambda num, imgs: self._map_gamma(num, imgs, delta_gamma=delta_gamma, delta_gain=delta_gain,
-                                                        stateless_seed=val_seed))
-                for d in self.dsets_val]
+                d.map(
+                    lambda num, imgs: self._map_gamma(
+                        num,
+                        imgs,
+                        delta_gamma=delta_gamma,
+                        delta_gain=delta_gain,
+                        stateless_seed=val_seed,
+                    )
+                )
+                for d in self.dsets_val
+            ]
         if not rescale and delta_brightness is not None:
-            self.dsets_train = [d.map(
-                lambda num, imgs: self._map_brightness(num, imgs, max_delta=delta_brightness, stateless_seed=train_seed))
-                for d in self.dsets_train]
-            self.dsets_test = [d.map(
-                lambda num, imgs: self._map_brightness(num, imgs, max_delta=delta_brightness, stateless_seed=test_seed))
-                for d in self.dsets_test]
-            self.dsets_val = [d.map(
-                lambda num, imgs: self._map_brightness(num, imgs, max_delta=delta_brightness, stateless_seed=val_seed))
-                for d in self.dsets_val]
+            self.dsets_train = [
+                d.map(
+                    lambda num, imgs: self._map_brightness(
+                        num, imgs, max_delta=delta_brightness, stateless_seed=train_seed
+                    )
+                )
+                for d in self.dsets_train
+            ]
+            self.dsets_test = [
+                d.map(
+                    lambda num, imgs: self._map_brightness(
+                        num, imgs, max_delta=delta_brightness, stateless_seed=test_seed
+                    )
+                )
+                for d in self.dsets_test
+            ]
+            self.dsets_val = [
+                d.map(
+                    lambda num, imgs: self._map_brightness(
+                        num, imgs, max_delta=delta_brightness, stateless_seed=val_seed
+                    )
+                )
+                for d in self.dsets_val
+            ]
         if not rescale and lower_contrast is not None and upper_contrast is not None:
             self.dsets_train = [
-                d.map(lambda num, imgs: self._map_contrast(num, imgs, lower=lower_contrast, upper=upper_contrast,
-                                                           stateless_seed=train_seed))
-                for d in self.dsets_train]
+                d.map(
+                    lambda num, imgs: self._map_contrast(
+                        num,
+                        imgs,
+                        lower=lower_contrast,
+                        upper=upper_contrast,
+                        stateless_seed=train_seed,
+                    )
+                )
+                for d in self.dsets_train
+            ]
             self.dsets_test = [
-                d.map(lambda num, imgs: self._map_contrast(num, imgs, lower=lower_contrast, upper=upper_contrast,
-                                                           stateless_seed=test_seed))
-                for d in self.dsets_test]
+                d.map(
+                    lambda num, imgs: self._map_contrast(
+                        num,
+                        imgs,
+                        lower=lower_contrast,
+                        upper=upper_contrast,
+                        stateless_seed=test_seed,
+                    )
+                )
+                for d in self.dsets_test
+            ]
             self.dsets_val = [
-                d.map(lambda num, imgs: self._map_contrast(num, imgs, lower=lower_contrast, upper=upper_contrast,
-                                                           stateless_seed=val_seed))
-                for d in self.dsets_val]
+                d.map(
+                    lambda num, imgs: self._map_contrast(
+                        num,
+                        imgs,
+                        lower=lower_contrast,
+                        upper=upper_contrast,
+                        stateless_seed=val_seed,
+                    )
+                )
+                for d in self.dsets_val
+            ]
 
         # rescale all images
         if rescale:
@@ -410,9 +631,15 @@ class TFPipeFamilyMachine(DataProcessor):
             self.dset_val.concatenate(d)
 
         # batch remap all the datasets such that they are compatible with the fit function
-        self.dset_train = self.dset_train.batch(batch_size).map(lambda num, imgs: (imgs, imgs[2]))
-        self.dset_test = self.dset_test.batch(batch_size).map(lambda num, imgs: (imgs, imgs[2]))
-        self.dset_val = self.dset_val.batch(batch_size).map(lambda num, imgs: (imgs, imgs[2]))
+        self.dset_train = self.dset_train.batch(batch_size).map(
+            lambda num, imgs: (imgs, imgs[2])
+        )
+        self.dset_test = self.dset_test.batch(batch_size).map(
+            lambda num, imgs: (imgs, imgs[2])
+        )
+        self.dset_val = self.dset_val.batch(batch_size).map(
+            lambda num, imgs: (imgs, imgs[2])
+        )
 
 
 class TFPipeMotherMachine(object):
@@ -420,9 +647,19 @@ class TFPipeMotherMachine(object):
     This is a data pipeline for the Mother Machine training, it uses the Delta style format
     """
 
-    def __init__(self, img_dir: Union[str, bytes, os.PathLike], seg_dir: Union[str, bytes, os.PathLike],
-                weight_dir: Union[str, bytes, os.PathLike], test_size=0.15, val_size=0.2,  loglevel=7,
-                np_random_seed: Optional[int] = None, batch_size=32, shuffle_buffer=128, image_size=(256, 32, 1)):
+    def __init__(
+        self,
+        img_dir: Union[str, bytes, os.PathLike],
+        seg_dir: Union[str, bytes, os.PathLike],
+        weight_dir: Union[str, bytes, os.PathLike],
+        test_size=0.15,
+        val_size=0.2,
+        loglevel=7,
+        np_random_seed: Optional[int] = None,
+        batch_size=32,
+        shuffle_buffer=128,
+        image_size=(256, 32, 1),
+    ):
         """
         Initializes the TFPipe instance for the mother machine
         :param img_dir: The directory containing the images
@@ -469,9 +706,11 @@ class TFPipeMotherMachine(object):
         """
 
         img = np.array(img)
-        return ((img - img.min()) / (img.max() - img.min()))
+        return (img - img.min()) / (img.max() - img.min())
 
-    def _read_img(self, img_path: tf.Tensor, weight_path: tf.Tensor, seg_path: tf.Tensor):
+    def _read_img(
+        self, img_path: tf.Tensor, weight_path: tf.Tensor, seg_path: tf.Tensor
+    ):
         """
         Reads the image, segmentation and weight map from the paths, all images are rescaled to [0, 1] and
         resizes to the image_size set in the constructor
@@ -487,9 +726,9 @@ class TFPipeMotherMachine(object):
         seg = tf.io.decode_png(tf.io.read_file(seg_path))
 
         # rescale
-        img = tf.cast(img, tf.float32)/255.0
+        img = tf.cast(img, tf.float32) / 255.0
         weight = tf.cast(weight, tf.float32) / 255.0
-        seg = tf.cast(seg, tf.float32)/255.0
+        seg = tf.cast(seg, tf.float32) / 255.0
 
         # resize
         img = tf.image.resize(img, self.image_size[:2])
@@ -507,9 +746,15 @@ class TFPipeMotherMachine(object):
         """
 
         # list the files for the three directories
-        img_files_ds = tf.data.Dataset.list_files(os.path.join(self.img_dir, "*"), shuffle=False)
-        seg_files_ds = tf.data.Dataset.list_files(os.path.join(self.seg_dir, "*"), shuffle=False)
-        weight_files_ds = tf.data.Dataset.list_files(os.path.join(self.weight_dir, "*"), shuffle=False)
+        img_files_ds = tf.data.Dataset.list_files(
+            os.path.join(self.img_dir, "*"), shuffle=False
+        )
+        seg_files_ds = tf.data.Dataset.list_files(
+            os.path.join(self.seg_dir, "*"), shuffle=False
+        )
+        weight_files_ds = tf.data.Dataset.list_files(
+            os.path.join(self.weight_dir, "*"), shuffle=False
+        )
 
         # zip all files together
         files_ds = tf.data.Dataset.zip((img_files_ds, weight_files_ds, seg_files_ds))
@@ -532,6 +777,12 @@ class TFPipeMotherMachine(object):
         val_ds = files_ds_val.map(self._read_img)
 
         # batch remap all the datasets such that they are compatible with the fit function
-        self.dset_train = train_ds.batch(self.batch_size).map(lambda imgs, weight, seg: ((imgs, weight, seg), seg))
-        self.dset_test = test_ds.batch(self.batch_size).map(lambda imgs, weight, seg: ((imgs, weight, seg), seg))
-        self.dset_val = val_ds.batch(self.batch_size).map(lambda imgs, weight, seg: ((imgs, weight, seg), seg))
+        self.dset_train = train_ds.batch(self.batch_size).map(
+            lambda imgs, weight, seg: ((imgs, weight, seg), seg)
+        )
+        self.dset_test = test_ds.batch(self.batch_size).map(
+            lambda imgs, weight, seg: ((imgs, weight, seg), seg)
+        )
+        self.dset_val = val_ds.batch(self.batch_size).map(
+            lambda imgs, weight, seg: ((imgs, weight, seg), seg)
+        )

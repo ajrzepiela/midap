@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def evaluate_accuracy(prediction: np.ndarray, label: np.ndarray, roi_only=False):
     """
     Evaluates the accuracy of the prediction
@@ -15,8 +16,8 @@ def evaluate_accuracy(prediction: np.ndarray, label: np.ndarray, roi_only=False)
     if prediction.ndim != 3 and prediction.ndim != 4:
         raise ValueError("prediction and segmentation should have shape BWHC or WHC!")
     if prediction.ndim == 3:
-        prediction = prediction[None,...]
-        label = label[None,...]
+        prediction = prediction[None, ...]
+        label = label[None, ...]
 
     # calculate the accuracy
     accuracy = np.zeros(len(prediction))
@@ -30,7 +31,9 @@ def evaluate_accuracy(prediction: np.ndarray, label: np.ndarray, roi_only=False)
         # filter
         p_masked = p[mask]
         if p_masked.size > 0:
-            accuracy[i] = np.sum((p_masked > 0.5) == l[mask].astype(bool)) / p[mask].size
+            accuracy[i] = (
+                np.sum((p_masked > 0.5) == l[mask].astype(bool)) / p[mask].size
+            )
         else:
             # set the accuracy to 1 since there is no roi
             accuracy[i] = 1.0
@@ -72,8 +75,7 @@ def evaluate_bayes_stats(prediction: np.ndarray, label: np.ndarray):
         tn[i] = np.sum(~p_bool[negative_mask])
         fn[i] = np.sum(~p_bool[positive_mask])
 
-
     # convert to rate (some can be undefined)
-    tpr = np.where(tp + fn > 0, tp/(tp + fn), 1)
-    tnr = np.where(tn + fp > 0, tn/(tn + fp), 1)
+    tpr = np.where(tp + fn > 0, tp / (tp + fn), 1)
+    tnr = np.where(tn + fp > 0, tn / (tn + fp), 1)
     return tpr, 1 - tnr, tnr, 1 - tpr

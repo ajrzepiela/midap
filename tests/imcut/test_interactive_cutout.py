@@ -12,6 +12,7 @@ from os import listdir
 # Fixtures
 ##########
 
+
 @fixture()
 def img1():
     """
@@ -19,16 +20,23 @@ def img1():
     :return: A test image used as base image
     """
     # define the images
-    img = np.array([[0.0, 0.0, 0.0, 0.0],
-                    [0.0, 1.0, 1.0, 0.0],
-                    [0.0, 1.0, 1.0, 0.0],
-                    [0.0, 0.0, 0.0, 0.0],
-                    [0.0, 0.0, 0.0, 0.0]])
+    img = np.array(
+        [
+            [0.0, 0.0, 0.0, 0.0],
+            [0.0, 1.0, 1.0, 0.0],
+            [0.0, 1.0, 1.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0],
+        ]
+    )
 
     # we pad the image with 0s on all sides to deal with the offset of the cutout
-    pad_img = np.pad(img, pad_width=[[10, 10], [10, 10]], mode="constant", constant_values=0.0)
+    pad_img = np.pad(
+        img, pad_width=[[10, 10], [10, 10]], mode="constant", constant_values=0.0
+    )
 
     return pad_img
+
 
 @fixture()
 def img2():
@@ -37,16 +45,23 @@ def img2():
     :return: A test image used as base image
     """
     # define the images
-    img = np.array([[0.0, 0.0, 0.0, 0.0],
-                    [0.0, 0.0, 0.0, 0.0],
-                    [0.0, 0.0, 0.0, 0.0],
-                    [0.0, 0.0, 1.0, 1.0],
-                    [0.0, 0.0, 1.0, 1.0]])
+    img = np.array(
+        [
+            [0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 1.0, 1.0],
+            [0.0, 0.0, 1.0, 1.0],
+        ]
+    )
 
     # we pad the image with 0s on all sides to deal with the offset of the cutout
-    pad_img = np.pad(img, pad_width=[[10, 10], [10, 10]], mode="constant", constant_values=0.0)
+    pad_img = np.pad(
+        img, pad_width=[[10, 10], [10, 10]], mode="constant", constant_values=0.0
+    )
 
     return pad_img
+
 
 @fixture()
 def cutout_instance(monkeypatch, img1, img2):
@@ -114,6 +129,7 @@ def cutout_instance(monkeypatch, img1, img2):
 # Tests
 #######
 
+
 def test_align_two_images(cutout_instance, img1, img2):
     """
     Tests the align_two_images of the InteractiveCutout class
@@ -126,6 +142,7 @@ def test_align_two_images(cutout_instance, img1, img2):
     alignment = cutout_instance.align_two_images(img1, img2)
     assert np.all(alignment == np.array([-2, -1]))
 
+
 def test_align_all_images(cutout_instance):
     """
     Tests the align_all_images of the InteractiveCutout class
@@ -136,7 +153,13 @@ def test_align_all_images(cutout_instance):
 
     # check all shifts
     assert len(cutout_instance.shifts) == 2
-    assert np.all([np.all(alignment == np.array([-2, -1])) for alignment in cutout_instance.shifts])
+    assert np.all(
+        [
+            np.all(alignment == np.array([-2, -1]))
+            for alignment in cutout_instance.shifts
+        ]
+    )
+
 
 def test_run_align_cutout(monkeypatch, cutout_instance):
     """
@@ -151,7 +174,9 @@ def test_run_align_cutout(monkeypatch, cutout_instance):
         """
 
         # set the corners
-        monkeypatch.setattr(cutout_instance, "corners_cut", (10, 15, 10, 15), raising=False)
+        monkeypatch.setattr(
+            cutout_instance, "corners_cut", (10, 15, 10, 15), raising=False
+        )
 
     # monkey patch
     monkeypatch.setattr(cutout_instance, "cut_corners", dummy_cutout)
@@ -171,4 +196,4 @@ def test_run_align_cutout(monkeypatch, cutout_instance):
 
     # test if all are equal
     assert len(imgs) == 3
-    assert np.allclose(np.array(imgs), imgs[0][None,...])
+    assert np.allclose(np.array(imgs), imgs[0][None, ...])

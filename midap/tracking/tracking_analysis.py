@@ -8,6 +8,7 @@ from typing import Tuple, Union, List
 from skimage.measure import regionprops_table
 from skimage import io
 
+
 class FluoChangeAnalysis:
     def __init__(self, path, channels, tracking_class) -> None:
         """

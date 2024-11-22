@@ -4,11 +4,17 @@ import tempfile
 import pytest
 
 from midap.config import Config
-from midap.checkpoint import Checkpoint, AlreadyDoneError, CheckpointChecker, CheckpointManager
+from midap.checkpoint import (
+    Checkpoint,
+    AlreadyDoneError,
+    CheckpointChecker,
+    CheckpointManager,
+)
 from pathlib import Path
 
 # Fixtures
 ##########
+
 
 @pytest.fixture()
 def tmp_dir():
@@ -35,6 +41,7 @@ def tmp_dir():
 
 # Tests
 #######
+
 
 def test_Checkpoint(tmp_dir):
     """
@@ -80,16 +87,22 @@ def test_CheckpointChecker():
     identifier = "identifier"
 
     # If we are not in restart mode, we run everything always
-    checker = CheckpointChecker(restart=False, checkpoint=checkpoint, state=state, identifier=identifier)
+    checker = CheckpointChecker(
+        restart=False, checkpoint=checkpoint, state=state, identifier=identifier
+    )
     assert checker.check() is None
 
     # if we are in restart mode and the state is None we run the thing as well
-    checker = CheckpointChecker(restart=True, checkpoint=checkpoint, state=state, identifier=identifier)
+    checker = CheckpointChecker(
+        restart=True, checkpoint=checkpoint, state=state, identifier=identifier
+    )
     assert checker.check() is None
 
     # Restart mode and non-matching states that are not None should throw an error
     checkpoint.set_state(state="not state", identifier="not identifier", flush=False)
-    checker = CheckpointChecker(restart=True, checkpoint=checkpoint, state=state, identifier=identifier)
+    checker = CheckpointChecker(
+        restart=True, checkpoint=checkpoint, state=state, identifier=identifier
+    )
     with pytest.raises(AlreadyDoneError):
         checker.check()
 
@@ -108,31 +121,51 @@ def test_CheckpointManager(tmp_dir):
 
     # if we enter without restart, the checkpoint should reset to None in any case
     checkpoint.set_state(state=state, identifier=identifier)
-    with CheckpointManager(restart=False, checkpoint=checkpoint, config=config, state=state,
-                           identifier=identifier) as checker:
+    with CheckpointManager(
+        restart=False,
+        checkpoint=checkpoint,
+        config=config,
+        state=state,
+        identifier=identifier,
+    ) as checker:
         checker.check()
     assert checkpoint.get_state(identifier=True) == ("None", "None")
 
     # if restart is set and the states match it should also reset
     checkpoint.set_state(state=state, identifier=identifier)
-    with CheckpointManager(restart=True, checkpoint=checkpoint, config=config, state=state,
-                           identifier=identifier) as checker:
+    with CheckpointManager(
+        restart=True,
+        checkpoint=checkpoint,
+        config=config,
+        state=state,
+        identifier=identifier,
+    ) as checker:
         checker.check()
     assert checkpoint.get_state(identifier=True) == ("None", "None")
 
     # if there is an exception in the execution the checkpoint should stay
     with pytest.raises(ValueError):
         checkpoint.set_state(state=state, identifier=identifier)
-        with CheckpointManager(restart=True, checkpoint=checkpoint, config=config, state=state,
-                               identifier=identifier) as checker:
+        with CheckpointManager(
+            restart=True,
+            checkpoint=checkpoint,
+            config=config,
+            state=state,
+            identifier=identifier,
+        ) as checker:
             checker.check()
             raise ValueError("Ooops")
     assert checkpoint.get_state(identifier=True) == (state, identifier)
 
     # if restart is set and the states do not match it should stay
     checkpoint.set_state(state="not state", identifier="not identifier")
-    with CheckpointManager(restart=True, checkpoint=checkpoint, config=config, state=state,
-                           identifier=identifier) as checker:
+    with CheckpointManager(
+        restart=True,
+        checkpoint=checkpoint,
+        config=config,
+        state=state,
+        identifier=identifier,
+    ) as checker:
         checker.check()
         # This code should never execute, because we already did this
         assert False
@@ -143,8 +176,14 @@ def test_CheckpointManager(tmp_dir):
     copy_path = current_path.joinpath("copy_path")
     copy_path.mkdir()
     checkpoint.set_state(state="not state", identifier="not identifier")
-    with CheckpointManager(restart=True, checkpoint=checkpoint, config=config, state=state,
-                           identifier=identifier, copy_path=copy_path) as checker:
+    with CheckpointManager(
+        restart=True,
+        checkpoint=checkpoint,
+        config=config,
+        state=state,
+        identifier=identifier,
+        copy_path=copy_path,
+    ) as checker:
         checker.check()
     assert current_path.joinpath("checkpoint.log").is_file()
     assert current_path.joinpath("settings.ini").is_file()

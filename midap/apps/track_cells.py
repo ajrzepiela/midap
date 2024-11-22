@@ -33,16 +33,20 @@ def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel=7):
 
     # Load data
     path = Path(path)
-    images_folder = path.joinpath('cut_im')
-    segmentation_folder = path.joinpath('seg_im')
-    output_folder = path.joinpath('track_output')
-    model_file = Path(__file__).absolute().parent.parent.parent.joinpath("model_weights",
-                                                                         "model_weights_tracking",
-                                                                         "unet_pads_track.hdf5")
+    images_folder = path.joinpath("cut_im")
+    segmentation_folder = path.joinpath("seg_im")
+    output_folder = path.joinpath("track_output")
+    model_file = (
+        Path(__file__)
+        .absolute()
+        .parent.parent.parent.joinpath(
+            "model_weights", "model_weights_tracking", "unet_pads_track.hdf5"
+        )
+    )
 
     # glob all the cut images and segmented images
-    img_names_sort = sorted(images_folder.glob('*frame*.png'))
-    seg_names_sort = sorted(segmentation_folder.glob('*frame*.tif'))
+    img_names_sort = sorted(images_folder.glob("*frame*.png"))
+    seg_names_sort = sorted(segmentation_folder.glob("*frame*.tif"))
 
     # Parameters:
     connectivity = 1
@@ -50,8 +54,14 @@ def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel=7):
     input_size = None
 
     # Process
-    tr = class_instance(imgs=img_names_sort, segs=seg_names_sort, model_weights=model_file, input_size=input_size,
-                        target_size=target_size, connectivity=connectivity)
+    tr = class_instance(
+        imgs=img_names_sort,
+        segs=seg_names_sort,
+        model_weights=model_file,
+        input_size=input_size,
+        target_size=target_size,
+        connectivity=connectivity,
+    )
     data_file, csv_file = tr.track_all_frames(output_folder)
 
     # add the region props
@@ -63,11 +73,22 @@ def main(path: Union[str, bytes, os.PathLike], tracking_class: str, loglevel=7):
 if __name__ == "__main__":
     # arg parsing
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path', type=str, required=True, help='path to folder for one with specific channel')
-    parser.add_argument("--tracking_class", type=str, required=True,
-                        help="Name of the class used for the cell tracking. Must be defined in a file of "
-                             "midap.tracking and a subclass of midap.tracking.Tracking")
-    parser.add_argument("--loglevel", type=int, default=7, help="Loglevel of the script.")
+    parser.add_argument(
+        "--path",
+        type=str,
+        required=True,
+        help="path to folder for one with specific channel",
+    )
+    parser.add_argument(
+        "--tracking_class",
+        type=str,
+        required=True,
+        help="Name of the class used for the cell tracking. Must be defined in a file of "
+        "midap.tracking and a subclass of midap.tracking.Tracking",
+    )
+    parser.add_argument(
+        "--loglevel", type=int, default=7, help="Loglevel of the script."
+    )
     args = parser.parse_args()
 
     # call the main

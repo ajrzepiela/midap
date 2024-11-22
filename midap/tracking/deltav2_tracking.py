@@ -1,6 +1,7 @@
 from ..networks.deltav2 import unet_track
 from .base_tracking import DeltaTypeTracking
 
+
 class DeltaV2Tracking(DeltaTypeTracking):
     """
     A class for cell tracking using the U-Net Delta V2 model

@@ -136,9 +136,4 @@ def main(path: Union[str, os.PathLike], channels: List[str]):
 
 
 if __name__ == "__main__":
-    path = Path(
-        "/Users/franziskaoschmann/Documents/midap-datasets/fluo_change_giulia/Image_Analysis/pos0/"
-    )
-    channels = ["phase", "mcherry"]
-    tracking_class = "STrack"
-    main(path, channels)
+    main()

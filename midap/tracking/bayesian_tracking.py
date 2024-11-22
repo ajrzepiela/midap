@@ -73,7 +73,9 @@ class BayesianCellTracking(Tracking):
 
         tracks = self.run_model()
         df, label_stack = self.generate_midap_output(tracks=tracks)
-        data_file, csv_file = self.store_lineages(output_folder=output_folder, df=df, label_stack=label_stack)
+        data_file, csv_file = self.store_lineages(
+            output_folder=output_folder, df=df, label_stack=label_stack
+        )
 
         return data_file, csv_file
 
@@ -83,8 +85,11 @@ class BayesianCellTracking(Tracking):
         """
 
         # gen the inputs
-        objects = btrack.utils.segmentation_to_objects(segmentation=(self.seg_imgs).astype(int), intensity_image=self.raw_imgs,
-                                                       assign_class_ID=True)
+        objects = btrack.utils.segmentation_to_objects(
+            segmentation=(self.seg_imgs).astype(int),
+            intensity_image=self.raw_imgs,
+            assign_class_ID=True,
+        )
         config_file = Path(__file__).parent.joinpath("btrack_conf.json")
 
         # choose update method depending on number of cells
@@ -130,8 +135,18 @@ class BayesianCellTracking(Tracking):
 
         self.logger.info("Creating data frame...")
         # init the dataframe
-        columns = ['frame', 'labelID', 'trackID', 'lineageID', 'trackID_d1', 'trackID_d2', 'split',
-                   'trackID_mother', 'first_frame', 'last_frame']
+        columns = [
+            "frame",
+            "labelID",
+            "trackID",
+            "lineageID",
+            "trackID_d1",
+            "trackID_d2",
+            "split",
+            "trackID_mother",
+            "first_frame",
+            "last_frame",
+        ]
         df = pd.DataFrame(columns=columns)
 
         # list to transform the labels later
@@ -159,8 +174,12 @@ class BayesianCellTracking(Tracking):
                 # check if there is a parent
                 if track["parent"] != track["ID"]:
                     parent_id = track["parent"]
-                    df.loc[global_id, "lineageID"] = df.loc[df["trackID"] == parent_id, "lineageID"].max()
-                    df.loc[global_id, "trackID_mother"] = df.loc[df["trackID"] == parent_id, "trackID"].max()
+                    df.loc[global_id, "lineageID"] = df.loc[
+                        df["trackID"] == parent_id, "lineageID"
+                    ].max()
+                    df.loc[global_id, "trackID_mother"] = df.loc[
+                        df["trackID"] == parent_id, "trackID"
+                    ].max()
                 else:
                     df.loc[global_id, "lineageID"] = lineage_id
 
@@ -174,14 +193,18 @@ class BayesianCellTracking(Tracking):
             if parent_id is not None:
                 # set the split event
                 last_frame = df.loc[df["trackID"] == parent_id, "last_frame"].max()
-                df.loc[(df["trackID"] == parent_id) & (df["frame"] == last_frame), "split"] = 1
+                df.loc[
+                    (df["trackID"] == parent_id) & (df["frame"] == last_frame), "split"
+                ] = 1
                 # assign kids
                 if df.loc[(df["trackID"] == parent_id), "trackID_d1"].isna().all():
                     df.loc[(df["trackID"] == parent_id), "trackID_d1"] = track["ID"]
                 elif df.loc[(df["trackID"] == parent_id), "trackID_d2"].isna().all():
                     df.loc[(df["trackID"] == parent_id), "trackID_d2"] = track["ID"]
                 else:
-                    raise ValueError(f"Cell with trackID {parent_id} splits into more than 2 cells!")
+                    raise ValueError(
+                        f"Cell with trackID {parent_id} splits into more than 2 cells!"
+                    )
 
             # increment lineage
             else:
@@ -191,11 +214,16 @@ class BayesianCellTracking(Tracking):
         # Note: There is the function btrack.utils.update_segmentation that deos this as well, however, this function
         # removes all segmentations whose centroid is not inside the cell, so we use the class_id work around
         label_stack = self.seg_imgs.copy().astype(np.int32)
-        label_transform(labels=label_stack, transformations=np.array(label_transforms, dtype=np.int32))
+        label_transform(
+            labels=label_stack,
+            transformations=np.array(label_transforms, dtype=np.int32),
+        )
 
         return df, label_stack
 
-    def store_lineages(self, output_folder: str, df: pd.DataFrame, label_stack: np.ndarray):
+    def store_lineages(
+        self, output_folder: str, df: pd.DataFrame, label_stack: np.ndarray
+    ):
         """
         Store tracking output files: labeled stack, tracking output, input files.
         :param output_folder: Folder where to store the data

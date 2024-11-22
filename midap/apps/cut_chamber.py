@@ -8,8 +8,14 @@ from midap.imcut import base_cutout
 from typing import Optional, Union, Iterable
 
 
-def main(channel: Union[str, Iterable[str], bytes, Iterable[bytes], os.PathLike, Iterable[os.PathLike]],
-         cutout_class: str, corners: Optional[tuple]=None, offsets: Optional[list]=None):
+def main(
+    channel: Union[
+        str, Iterable[str], bytes, Iterable[bytes], os.PathLike, Iterable[os.PathLike]
+    ],
+    cutout_class: str,
+    corners: Optional[tuple] = None,
+    offsets: Optional[list] = None,
+):
     """
     Performs the image cutout and alignment on all images in the paths
     :param channel: A single directory or a list of directories with the images to cut and align
@@ -28,7 +34,9 @@ def main(channel: Union[str, Iterable[str], bytes, Iterable[bytes], os.PathLike,
 
     # cutout classes can only support one type of machine
     if len(class_instance.supported_setups) > 1:
-        raise ValueError(f"Cutout class {cutout_class} supports more than one machine type!")
+        raise ValueError(
+            f"Cutout class {cutout_class} supports more than one machine type!"
+        )
     if "Family_Machine" in class_instance.supported_setups:
         cut = class_instance(channel)
         if corners is not None:
@@ -49,11 +57,20 @@ def main(channel: Union[str, Iterable[str], bytes, Iterable[bytes], os.PathLike,
 # run as main
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--channel", type=str, nargs="+", required=True,
-                        help="The channels used for to cut out the images.")
-    parser.add_argument("--cutout_class", type=str, required=True,
-                        help="Name of the class used to perform the chamber cutout. Must be defined in a file of "
-                             "midap.imcut and a subclass of midap.imcut.base_cutout.CutoutImage")
+    parser.add_argument(
+        "--channel",
+        type=str,
+        nargs="+",
+        required=True,
+        help="The channels used for to cut out the images.",
+    )
+    parser.add_argument(
+        "--cutout_class",
+        type=str,
+        required=True,
+        help="Name of the class used to perform the chamber cutout. Must be defined in a file of "
+        "midap.imcut and a subclass of midap.imcut.base_cutout.CutoutImage",
+    )
     args = parser.parse_args()
 
     # unpack the namespace
