@@ -10,6 +10,7 @@ from midap.config import Config
 # Fixtures
 ##########
 
+
 @pytest.fixture()
 def tmp_dir():
     """
@@ -29,6 +30,7 @@ def tmp_dir():
 
 # Tests
 #######
+
 
 def test_Config(tmp_dir):
     """
@@ -78,13 +80,16 @@ def test_Config(tmp_dir):
         # if omni pose is supported we test it
         import omnipose
         from cellpose import models
+
         config.set("pos1", "SegmentationClass", "OmniSegmentation")
         config.set("pos1", "ModelWeights_None", "bact_phase_omni")
     except ImportError:
         # otherwise we use the standard but add existing model weights
-        path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
-                                                                   "model_weights_legacy",
-                                                                   "model_weights_C-crescentus-CB15_mKate2_v01.h5")
+        path_model_weights = Path(__file__).parent.parent.joinpath(
+            "model_weights",
+            "model_weights_legacy",
+            "model_weights_C-crescentus-CB15_mKate2_v01.h5",
+        )
         config.set("pos1", "ModelWeights_None", f"{path_model_weights}")
 
     config.validate_id_section("pos1", basic=False)
@@ -120,4 +125,3 @@ def test_Config(tmp_dir):
     config.validate_id_section("pos1", basic=True)
 
     assert config.get("pos1", "RemoveBorder", fallback=None) is None
-    

@@ -11,6 +11,7 @@ from midap.data import DataProcessor
 # Tests
 #######
 
+
 @mark.usefixtures("tmpdir")
 def test_init(tmpdir):
     """
@@ -46,7 +47,7 @@ def test_tile_img():
     np.random.seed(11)
 
     # tile a 4x4 image into 1x1
-    img_1 = np.random.normal(size=(4,4))
+    img_1 = np.random.normal(size=(4, 4))
     tiles = DataProcessor.tile_img(img_1, n_grid=4, divisor=1)
 
     # check for shape
@@ -64,9 +65,9 @@ def test_tile_img():
     tiles = DataProcessor.tile_img(img_2, n_grid=8, divisor=2)
 
     # check for shape
-    expected_x = n//8
-    expected_y = (m//(2*8))*2
-    assert tiles.shape == (8*8, expected_x, expected_y)
+    expected_x = n // 8
+    expected_y = (m // (2 * 8)) * 2
+    assert tiles.shape == (8 * 8, expected_x, expected_y)
 
 
 def test_scale_pixel_vals():
@@ -104,12 +105,12 @@ def test_generate_weight_map(dir_setup):
     w_0 = 2.0
     w_c0 = 1.0
     w_c1 = 1.1
-    data_processor = DataProcessor(paths=paths, sigma=sigma, w_0=w_0, w_c0=w_c0, w_c1=w_c1)
+    data_processor = DataProcessor(
+        paths=paths, sigma=sigma, w_0=w_0, w_c0=w_c0, w_c1=w_c1
+    )
 
     # create a test_mask
-    test_mask = np.array([[1, 0, 0, 0, 0, 0],
-                          [0, 0, 0, 0, 0, 0],
-                          [1, 0, 0, 1, 0, 0]])
+    test_mask = np.array([[1, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [1, 0, 0, 1, 0, 0]])
 
     # get the weights
     weights = data_processor.generate_weight_map(test_mask)
@@ -119,12 +120,12 @@ def test_generate_weight_map(dir_setup):
     # check that the cells have a weight of w_c1
     assert np.allclose(weights[test_mask == 1], w_c1)
     # far away empty pixels should have a weight very close to of w_c0
-    assert np.isclose(weights[0,-1], w_c0, atol=0.001)
+    assert np.isclose(weights[0, -1], w_c0, atol=0.001)
     # cells things that are very close to cells have a large weight
-    expected = w_c0 + w_0*np.exp(-2**2/(2*sigma**2))
+    expected = w_c0 + w_0 * np.exp(-(2**2) / (2 * sigma**2))
     assert np.isclose(weights[1, 0], expected)
     # this cell has two different distances
-    expected = w_c0 + w_0 * np.exp(-3 ** 2 / (2 * sigma ** 2))
+    expected = w_c0 + w_0 * np.exp(-(3**2) / (2 * sigma**2))
     assert np.isclose(weights[2, 1], expected)
 
 
@@ -145,9 +146,9 @@ def test_compute_pixel_ratio():
     # calculate the ratio
     ratio = DataProcessor.compute_pixel_ratio(test_mask)
     # check the ratio shape
-    assert ratio.shape == (2, )
+    assert ratio.shape == (2,)
     # check the ratio
-    assert np.allclose(ratio, np.array([4.0/(n*m), 0.0]))
+    assert np.allclose(ratio, np.array([4.0 / (n * m), 0.0]))
 
 
 def test_get_quantile_classes():
@@ -198,28 +199,35 @@ def test_split_data(dir_setup):
 
     # test data
     n = 16
-    imgs = np.arange(n)[:,None,None]
-    masks = np.arange(n)[:,None,None]
-    weight_maps = np.arange(n)[:,None,None]
+    imgs = np.arange(n)[:, None, None]
+    masks = np.arange(n)[:, None, None]
+    weight_maps = np.arange(n)[:, None, None]
 
     # the ratios are sorted
     ratio = np.linspace(0.0, 1.0, n)
 
     # get the splits
-    splits = data_processor.split_data(imgs=imgs, masks=masks, weight_maps=weight_maps, ratio=ratio)
+    splits = data_processor.split_data(
+        imgs=imgs, masks=masks, weight_maps=weight_maps, ratio=ratio
+    )
 
     # check the number of entries
     assert len(splits) == 9
 
     # check the length of the sets
-    expected_test = int(n*test_size) + 1
+    expected_test = int(n * test_size) + 1
     assert len(splits["X_test"]) == expected_test
-    expected_val = int((n - expected_test)*val_size) + 1
+    expected_val = int((n - expected_test) * val_size) + 1
     assert len(splits["X_val"]) == expected_val
     assert len(splits["X_train"]) == n - expected_test - expected_val
 
     # checl that everything is there only once
-    assert np.unique(np.concatenate([splits["X_train"], splits["X_val"], splits["X_test"]])).size == n
+    assert (
+        np.unique(
+            np.concatenate([splits["X_train"], splits["X_val"], splits["X_test"]])
+        ).size
+        == n
+    )
 
 
 @mark.usefixtures("dir_setup")
@@ -240,8 +248,9 @@ def test_get_dset(dir_setup, monkeypatch):
     n_grid = 4
     test_size = 0.2
     val_size = 0.1
-    data_processor = DataProcessor(paths=paths, n_grid=n_grid, test_size=test_size,
-                                   val_size=val_size)
+    data_processor = DataProcessor(
+        paths=paths, n_grid=n_grid, test_size=test_size, val_size=val_size
+    )
 
     # This is a helper function
     def data_loader(name: Path, *args, **kwargs):
@@ -265,15 +274,15 @@ def test_get_dset(dir_setup, monkeypatch):
             raise ValueError(f"Unkown name: {name}")
 
     # run the data_processor
-    monkeypatch.setattr(io, 'imread', data_loader)
+    monkeypatch.setattr(io, "imread", data_loader)
     data_out = data_processor.get_dset()
 
     # check the length
     assert len(data_out) == 9
     # check a random dimension, the dimension can calculated from the test set and n_grid etc
     # we get the test size
-    n_test = int(n_grid*n_grid*test_size) + 1
-    n_val = int((n_grid*n_grid - n_test)*val_size) + 1
-    n_train = n_grid*n_grid - n_test - n_val
+    n_test = int(n_grid * n_grid * test_size) + 1
+    n_val = int((n_grid * n_grid - n_test) * val_size) + 1
+    n_train = n_grid * n_grid - n_test - n_val
     # multiy with the random patch gen
     assert data_out["X_train"][0].shape[0] == n_train

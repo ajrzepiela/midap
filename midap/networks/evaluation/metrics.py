@@ -7,7 +7,7 @@ from scipy.optimize import linear_sum_assignment
 #############################################################################
 @njit
 def _label_overlap(x, y):
-    """ fast function to get pixel overlaps between masks in x and y
+    """fast function to get pixel overlaps between masks in x and y
 
     Parameters
     ------------
@@ -41,7 +41,7 @@ def _label_overlap(x, y):
 
 
 def _intersection_over_union(masks_true, masks_pred):
-    """ intersection over union of all mask pairs
+    """intersection over union of all mask pairs
 
     Parameters
     ------------
@@ -83,7 +83,7 @@ def _intersection_over_union(masks_true, masks_pred):
 
 
 def _true_positive(iou, th):
-    """ true positive at threshold th
+    """true positive at threshold th
 
     Parameters
     ------------
@@ -123,7 +123,7 @@ def _true_positive(iou, th):
 
 
 def average_precision(masks_true, masks_pred, threshold=[0.5, 0.75, 0.9]):
-    """ average precision estimation: AP = TP / (TP + FP + FN)
+    """average precision estimation: AP = TP / (TP + FP + FN)
 
     This function is based heavily on the *fast* stardist matching functions
     (https://github.com/mpicbg-csbd/stardist/blob/master/stardist/matching.py)
@@ -172,7 +172,9 @@ def average_precision(masks_true, masks_pred, threshold=[0.5, 0.75, 0.9]):
                 tp[n, k] = _true_positive(iou, th)
         fp[n] = n_pred[n] - tp[n]
         fn[n] = n_true[n] - tp[n]
-        ap[n] = tp[n] / (tp[n] + fp[n] + fn[n])  # this is the jaccard index, not precision, right?
+        ap[n] = tp[n] / (
+            tp[n] + fp[n] + fn[n]
+        )  # this is the jaccard index, not precision, right?
         # this is tp[n] / (tp[n] + n_pred[n] - tp[n] + n_true[n] - tp[n]) = tp[n] / ( n_pred[n] + n_true[n] - tp[n])
 
     if not_list:

@@ -29,9 +29,11 @@ class StarDistSegmentation(SegmentationPredictor):
         # base class init
         super().__init__(*args, **kwargs)
 
-        self.labels = ['2D_versatile_fluo', '2D_paper_dsb2018']#, '2D_versatile_he']
+        self.labels = ["2D_versatile_fluo", "2D_paper_dsb2018"]
 
-    def _segs_for_selection(self, model_weights: List[Union[str, bytes, os.PathLike]], img: np.ndarray):
+    def _segs_for_selection(
+        self, model_weights: List[Union[str, bytes, os.PathLike]], img: np.ndarray
+    ):
         """
         Given the model weights, returns a selection of segmentation to use for the GUI selector
         :param model_weights: A list of folders containing pretrained StarDist models
@@ -67,7 +69,7 @@ class StarDistSegmentation(SegmentationPredictor):
         """
 
         if self.model_weights is None:
-            self.logger.info('Selecting weights...')
+            self.logger.info("Selecting weights...")
 
             # get the image that is roughly in the middle of the stack
             list_files = np.sort(os.listdir(path_to_cutouts))
@@ -80,12 +82,18 @@ class StarDistSegmentation(SegmentationPredictor):
             path_img = list_files[ix_half]
 
             # scale the image and pad
-            img = self.scale_pixel_vals(io.imread(os.path.join(path_to_cutouts, path_img)))
-            self.logger.info(f'The shape of the image is: {img.shape}')
+            img = self.scale_pixel_vals(
+                io.imread(os.path.join(path_to_cutouts, path_img))
+            )
+            self.logger.info(f"The shape of the image is: {img.shape}")
 
             # get all trained models
-            model_weights = [path for path in Path(self.path_model_weights).iterdir() if path.is_dir()]
-            #labels = ['2D_versatile_fluo', '2D_paper_dsb2018', '2D_versatile_he']
+            model_weights = [
+                path
+                for path in Path(self.path_model_weights).iterdir()
+                if path.is_dir()
+            ]
+            # labels = ['2D_versatile_fluo', '2D_paper_dsb2018', '2D_versatile_he']
 
             # create the segmentations
             segs, model_names = self._segs_for_selection(model_weights, img)
@@ -93,9 +101,9 @@ class StarDistSegmentation(SegmentationPredictor):
             figures = []
             for s, l in zip(segs, model_names):
                 # now we create a plot that can be used as a button image
-                fig, ax = plt.subplots(figsize=(3,3))
+                fig, ax = plt.subplots(figsize=(3, 3))
                 ax.imshow(img)
-                ax.contour(s, [0.5], colors='r', linewidths=0.5)
+                ax.contour(s, [0.5], colors="r", linewidths=0.5)
                 ax.set_xticks([])
                 ax.set_yticks([])
                 ax.set_title(l)
@@ -104,9 +112,11 @@ class StarDistSegmentation(SegmentationPredictor):
             # Title for the GUI
             channel = os.path.basename(os.path.dirname(path_to_cutouts))
             # if we just got the chamber folder, we need to go one more up
-            if channel.startswith('chamber'):
-                channel = os.path.basename(os.path.dirname(os.path.dirname(path_to_cutouts)))
-            title = f'Segmentation Selection for channel: {channel}'
+            if channel.startswith("chamber"):
+                channel = os.path.basename(
+                    os.path.dirname(os.path.dirname(path_to_cutouts))
+                )
+            title = f"Segmentation Selection for channel: {channel}"
 
             # start the gui
             marked = GUI_selector(figures=figures, labels=model_names, title=title)
@@ -127,7 +137,7 @@ class StarDistSegmentation(SegmentationPredictor):
                 mask, _ = model.predict_instances(normalize(img))
                 masks.append(mask)
             return np.stack(masks, axis=0)
-                
+
         def seg_method_dir(imgs: Collection[np.ndarray]):
             """
             Performs the segmentation given a a path to a model directory
@@ -139,12 +149,14 @@ class StarDistSegmentation(SegmentationPredictor):
                 model = StarDist2D(None, name=str(self.model_weights))
                 mask, _ = model.predict_instances(normalize(img))
                 masks.append(mask)
-            
+
             return np.stack(masks, axis=0)
 
         # set the segmentations method
         if self.model_weights in self.labels:
             self.segmentation_method = seg_method_name
         else:
-            self.model_weights = os.path.join(self.path_model_weights, self.model_weights)
+            self.model_weights = os.path.join(
+                self.path_model_weights, self.model_weights
+            )
             self.segmentation_method = seg_method_dir

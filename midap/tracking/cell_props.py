@@ -17,6 +17,7 @@ else:
     loglevel = 7
 logger = get_logger(__file__, loglevel)
 
+
 class CellProps:
     """
     A class that load the label stack and csv files and adds the cell properties
@@ -25,7 +26,11 @@ class CellProps:
     # this logger will be shared by all instances and subclasses
     logger = logger
 
-    def __init__(self, data_file: Union[str, bytes, os.PathLike], csv_file: Union[str, bytes, os.PathLike]):
+    def __init__(
+        self,
+        data_file: Union[str, bytes, os.PathLike],
+        csv_file: Union[str, bytes, os.PathLike],
+    ):
         """
         Inits the class with the file names, checks the existence
         :param data_file: The path to the h5 data file
@@ -50,8 +55,18 @@ class CellProps:
         df = pd.read_csv(self.csv_file)
 
         # init the new columns
-        new_cols = ['area', 'edges_min_row', 'edges_min_col', 'edges_max_row', 'edges_max_col', 'intensity_max',
-                    'intensity_mean', 'intensity_min', 'minor_axis_length', 'major_axis_length']
+        new_cols = [
+            "area",
+            "edges_min_row",
+            "edges_min_col",
+            "edges_max_row",
+            "edges_max_col",
+            "intensity_max",
+            "intensity_mean",
+            "intensity_min",
+            "minor_axis_length",
+            "major_axis_length",
+        ]
         for new_col in new_cols:
             df[new_col] = np.nan
 
@@ -61,26 +76,30 @@ class CellProps:
             images = f["images"]
 
             self.logger.info("Calculating cell properties...")
-            for frame_num, (l, i) in tqdm(enumerate(zip(labels, images)), total=len(labels)):
+            for frame_num, (l, i) in tqdm(
+                enumerate(zip(labels, images)), total=len(labels)
+            ):
                 cell_props = regionprops(l, intensity_image=i)
                 for prop in cell_props:
                     # select current cell and check
-                    row_selector = (df["frame"] == frame_num) & (df["trackID"] == prop.label)
+                    row_selector = (df["frame"] == frame_num) & (
+                        df["trackID"] == prop.label
+                    )
                     assert np.sum(row_selector) == 1
 
                     # set all attributes
-                    df.loc[row_selector, 'x'] = prop.centroid[0]
-                    df.loc[row_selector, 'y'] = prop.centroid[1]
-                    df.loc[row_selector, 'edges_min_row'] = prop.bbox[0]
-                    df.loc[row_selector, 'area'] = prop.area
-                    df.loc[row_selector, 'edges_min_col'] = prop.bbox[1]
-                    df.loc[row_selector, 'edges_max_row'] = prop.bbox[2]
-                    df.loc[row_selector, 'edges_max_col'] = prop.bbox[3]
-                    df.loc[row_selector, 'intensity_max'] = prop.intensity_max
-                    df.loc[row_selector, 'intensity_mean'] = prop.intensity_mean
-                    df.loc[row_selector, 'intensity_min'] = prop.intensity_min
-                    df.loc[row_selector, 'minor_axis_length'] = prop.minor_axis_length
-                    df.loc[row_selector, 'major_axis_length'] = prop.major_axis_length
+                    df.loc[row_selector, "x"] = prop.centroid[0]
+                    df.loc[row_selector, "y"] = prop.centroid[1]
+                    df.loc[row_selector, "edges_min_row"] = prop.bbox[0]
+                    df.loc[row_selector, "area"] = prop.area
+                    df.loc[row_selector, "edges_min_col"] = prop.bbox[1]
+                    df.loc[row_selector, "edges_max_row"] = prop.bbox[2]
+                    df.loc[row_selector, "edges_max_col"] = prop.bbox[3]
+                    df.loc[row_selector, "intensity_max"] = prop.intensity_max
+                    df.loc[row_selector, "intensity_mean"] = prop.intensity_mean
+                    df.loc[row_selector, "intensity_min"] = prop.intensity_min
+                    df.loc[row_selector, "minor_axis_length"] = prop.minor_axis_length
+                    df.loc[row_selector, "major_axis_length"] = prop.major_axis_length
 
         # check if all properties are set
         for col in new_cols:

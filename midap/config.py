@@ -17,30 +17,47 @@ from midap.imcut import *
 from midap.imcut import base_cutout
 
 imcut_subclasses = [subclass for subclass in get_inheritors(base_cutout.CutoutImage)]
-family_imcut_cls = [s.__name__ for s in imcut_subclasses if "Family_Machine" in s.supported_setups]
-mother_imcut_cls = [s.__name__ for s in imcut_subclasses if "Mother_Machine" in s.supported_setups]
+family_imcut_cls = [
+    s.__name__ for s in imcut_subclasses if "Family_Machine" in s.supported_setups
+]
+mother_imcut_cls = [
+    s.__name__ for s in imcut_subclasses if "Mother_Machine" in s.supported_setups
+]
 
 # get all subclasses from the segmentations
 from midap.segmentation import *
 from midap.segmentation import base_segmentator
 
-segmentation_subclasses = [subclass for subclass in get_inheritors(base_segmentator.SegmentationPredictor)]
-family_seg_cls = [s.__name__ for s in segmentation_subclasses if "Family_Machine" in s.supported_setups]
-mother_seg_cls = [s.__name__ for s in segmentation_subclasses if "Mother_Machine" in s.supported_setups]
+segmentation_subclasses = [
+    subclass for subclass in get_inheritors(base_segmentator.SegmentationPredictor)
+]
+family_seg_cls = [
+    s.__name__
+    for s in segmentation_subclasses
+    if "Family_Machine" in s.supported_setups
+]
+mother_seg_cls = [
+    s.__name__
+    for s in segmentation_subclasses
+    if "Mother_Machine" in s.supported_setups
+]
 
 # get all subclasses from the tracking
 from midap.tracking import *
 from midap.tracking import base_tracking
 
-tracking_subclasses = [subclass.__name__ for subclass in get_inheritors(base_tracking.Tracking)]
+tracking_subclasses = [
+    subclass.__name__ for subclass in get_inheritors(base_tracking.Tracking)
+]
 tracking_subclasses.remove("DeltaTypeTracking")
+
 
 class Config(ConfigParser):
     """
     A subclass of the ConfigParser defining all values of the MIDAP pipeline.
     """
 
-    def __init__(self, fname: str, general: Optional[dict]=None):
+    def __init__(self, fname: str, general: Optional[dict] = None):
         """
         Initializes the Config of the pipeline, the default values of the sections are updated with the entries
         provided in the dictionary
@@ -75,17 +92,22 @@ class Config(ConfigParser):
             repo = git.Repo(path=Path(__file__).parent, search_parent_directories=True)
             sha = repo.head.object.hexsha
         except git.InvalidGitRepositoryError:
-            sha = 'None'
+            sha = "None"
 
         # set defaults
-        self.read_dict({"General": {"Timestamp": datetime.now().strftime("%Y-%m-%d, %H:%M:%S"),
-                                    "Git hash": sha,
-                                    "DataType": "Family_Machine",
-                                    "FolderPath": "None",
-                                    "FileType": "tif",
-                                    "IdentifierName": "pos",
-                                    "IdentifierFound": "None",
-                                    }})
+        self.read_dict(
+            {
+                "General": {
+                    "Timestamp": datetime.now().strftime("%Y-%m-%d, %H:%M:%S"),
+                    "Git hash": sha,
+                    "DataType": "Family_Machine",
+                    "FolderPath": "None",
+                    "FileType": "tif",
+                    "IdentifierName": "pos",
+                    "IdentifierFound": "None",
+                }
+            }
+        )
 
     def validate_general(self):
         """
@@ -100,12 +122,16 @@ class Config(ConfigParser):
 
         # check the paths
         if not (folder_path := Path(self.get("General", "FolderPath"))).exists():
-            raise FileNotFoundError(f"'FolderPath' not an existing directory: {folder_path}")
+            raise FileNotFoundError(
+                f"'FolderPath' not an existing directory: {folder_path}"
+            )
 
         # check if we all Found identifiers are valid
         for identifier in (ids := self.getlist("General", "IdentifierFound")):
             if (id_name := self.get("General", "IdentifierName")) not in identifier:
-                raise ValueError(f"Identifier '{id_name}' not in found identifiers: {ids}")
+                raise ValueError(
+                    f"Identifier '{id_name}' not in found identifiers: {ids}"
+                )
 
     def set_id_section(self, id_name: str):
         """
@@ -114,48 +140,60 @@ class Config(ConfigParser):
         """
 
         if self.get("General", "DataType") == "Family_Machine":
-            self.read_dict({id_name: {"RunOption": "both",
-                                      "Deconvolution": "no_deconv",
-                                      "StartFrame": 0,
-                                      "EndFrame": 10,
-                                      "PhaseSegmentation": False,
-                                      "Channels": 'None',
-                                      "CutImgClass": "InteractiveCutout",
-                                      "Corners": "None",
-                                      "SegmentationClass": "UNetSegmentation",
-                                      "TrackingClass": "DeltaV2Tracking",
-                                      "KeepCopyOriginal": True,
-                                      "KeepRawImages": True,
-                                      "KeepCutoutImages": True,
-                                      "KeepCutoutImagesRaw": True,
-                                      "KeepSegImagesLabel": True,
-                                      "KeepSegImagesBin": True,
-                                      "KeepSegImagesTrack": True,
-                                      "ImgThreshold": 1.0,
-                                      "RemoveBorder": False,
-                                      "FluoChange": False,}})
+            self.read_dict(
+                {
+                    id_name: {
+                        "RunOption": "both",
+                        "Deconvolution": "no_deconv",
+                        "StartFrame": 0,
+                        "EndFrame": 10,
+                        "PhaseSegmentation": False,
+                        "Channels": "None",
+                        "CutImgClass": "InteractiveCutout",
+                        "Corners": "None",
+                        "SegmentationClass": "UNetSegmentation",
+                        "TrackingClass": "DeltaV2Tracking",
+                        "KeepCopyOriginal": True,
+                        "KeepRawImages": True,
+                        "KeepCutoutImages": True,
+                        "KeepCutoutImagesRaw": True,
+                        "KeepSegImagesLabel": True,
+                        "KeepSegImagesBin": True,
+                        "KeepSegImagesTrack": True,
+                        "ImgThreshold": 1.0,
+                        "RemoveBorder": False,
+                        "FluoChange": False,
+                    }
+                }
+            )
 
         elif self.get("General", "DataType") == "Mother_Machine":
-            self.read_dict({id_name: {"RunOption": "both",
-                                      "Deconvolution": "no_deconv",
-                                      "StartFrame": 0,
-                                      "EndFrame": 10,
-                                      "PhaseSegmentation": False,
-                                      "Channels": 'None',
-                                      "CutImgClass": "SemiAutomatedCutout",
-                                      "Corners": "None",
-                                      "Offsets": "None",
-                                      "SegmentationClass": "OmniSegmentation",
-                                      "TrackingClass": "STrack",
-                                      "KeepCopyOriginal": True,
-                                      "KeepRawImages": True,
-                                      "KeepCutoutImages": True,
-                                      "KeepCutoutImagesRaw": True,
-                                      "KeepSegImagesLabel": True,
-                                      "KeepSegImagesBin": True,
-                                      "KeepSegImagesTrack": True,
-                                      "ImgThreshold": 1.0,
-                                      "FluoChange": False,}})
+            self.read_dict(
+                {
+                    id_name: {
+                        "RunOption": "both",
+                        "Deconvolution": "no_deconv",
+                        "StartFrame": 0,
+                        "EndFrame": 10,
+                        "PhaseSegmentation": False,
+                        "Channels": "None",
+                        "CutImgClass": "SemiAutomatedCutout",
+                        "Corners": "None",
+                        "Offsets": "None",
+                        "SegmentationClass": "OmniSegmentation",
+                        "TrackingClass": "STrack",
+                        "KeepCopyOriginal": True,
+                        "KeepRawImages": True,
+                        "KeepCutoutImages": True,
+                        "KeepCutoutImagesRaw": True,
+                        "KeepSegImagesLabel": True,
+                        "KeepSegImagesBin": True,
+                        "KeepSegImagesTrack": True,
+                        "ImgThreshold": 1.0,
+                        "FluoChange": False,
+                    }
+                }
+            )
         else:
             raise ValueError(f"Unknown DataType: {self.get('General', 'DataType')}")
 
@@ -171,7 +209,7 @@ class Config(ConfigParser):
         machine_type = self.get("General", "DataType")
 
         # run option choices
-        allowed_run_options = ['both', 'segmentation', 'tracking']
+        allowed_run_options = ["both", "segmentation", "tracking"]
         if self.get(id_name, "RunOption").lower() not in allowed_run_options:
             raise ValueError(f"'RunOption' not in {allowed_run_options}")
 
@@ -186,9 +224,15 @@ class Config(ConfigParser):
 
         # check the ints
         if (start_frame := self.getint(id_name, "StartFrame")) < 0:
-            raise ValueError(f"'StartFrame' has to be a positive integer, is: {start_frame}")
-        if (end_frame := self.getint(id_name, "EndFrame")) < 0 or end_frame <= start_frame:
-            raise ValueError(f"'EndFrame' has to be a positive integer and larger than 'StartFrame', is: {start_frame}")
+            raise ValueError(
+                f"'StartFrame' has to be a positive integer, is: {start_frame}"
+            )
+        if (
+            end_frame := self.getint(id_name, "EndFrame")
+        ) < 0 or end_frame <= start_frame:
+            raise ValueError(
+                f"'EndFrame' has to be a positive integer and larger than 'StartFrame', is: {start_frame}"
+            )
 
         # check the booleans
         _ = self.getboolean(id_name, "PhaseSegmentation")
@@ -203,8 +247,12 @@ class Config(ConfigParser):
             _ = self.getboolean(id_name, "RemoveBorder")
 
         # check the threshold
-        if (threshold := self.getfloat(id_name, "ImgThreshold")) <= 0.0 or threshold > 1.0:
-            raise ValueError(f"'ImgThreshold' has to be a float between 0.0 and 1.0, is: {threshold}")
+        if (
+            threshold := self.getfloat(id_name, "ImgThreshold")
+        ) <= 0.0 or threshold > 1.0:
+            raise ValueError(
+                f"'ImgThreshold' has to be a float between 0.0 and 1.0, is: {threshold}"
+            )
 
         # check all the classes
         if machine_type == "Family_Machine":
@@ -242,15 +290,30 @@ class Config(ConfigParser):
 
             # check the model weights
             for channel in self.getlist(id_name, "Channels"):
-                if self.get(id_name, "SegmentationClass") in ["UNetSegmentation", "HybridSegmentation"]:
+                if self.get(id_name, "SegmentationClass") in [
+                    "UNetSegmentation",
+                    "HybridSegmentation",
+                ]:
                     model_weights = self.get(id_name, f"ModelWeights_{channel}")
                     model_path = Path(model_weights)
-                    if not (model_path.exists() and model_path.suffix == ".h5") and model_weights != "watershed":
-                        raise ValueError(f"Invalid 'ModelWeights' for method 'UNetSegmentation': {model_weights}")
+                    if (
+                        not (model_path.exists() and model_path.suffix == ".h5")
+                        and model_weights != "watershed"
+                    ):
+                        raise ValueError(
+                            f"Invalid 'ModelWeights' for method 'UNetSegmentation': {model_weights}"
+                        )
                 elif self.get(id_name, "SegmentationClass") == "OmniSegmentation":
                     model_weights = self.get(id_name, f"ModelWeights_{channel}")
-                    if model_weights not in ['bact_phase_cp', 'bact_fluor_cp', 'bact_phase_omni', 'bact_fluor_omni']:
-                        raise ValueError(f"Invalid 'ModelWeights' for method 'OmniSegmentation': {model_weights}")
+                    if model_weights not in [
+                        "bact_phase_cp",
+                        "bact_fluor_cp",
+                        "bact_phase_omni",
+                        "bact_fluor_omni",
+                    ]:
+                        raise ValueError(
+                            f"Invalid 'ModelWeights' for method 'OmniSegmentation': {model_weights}"
+                        )
 
     def getlist(self, section, option):
         """
@@ -262,7 +325,9 @@ class Config(ConfigParser):
 
         return self.get(section=section, option=option).split(",")
 
-    def to_file(self, fname: Union[str,bytes,os.PathLike,None]=None, overwrite=True):
+    def to_file(
+        self, fname: Union[str, bytes, os.PathLike, None] = None, overwrite=True
+    ):
         """
         Write the config into a file
         :param fname: Name of the file to write, defaults to fname attribute. If a directory is specified, the file
@@ -283,14 +348,16 @@ class Config(ConfigParser):
 
         # check
         if not overwrite and fname.exists():
-            raise FileExistsError(f"File already exists, set overwrite to True to overwrite: {fname}")
+            raise FileExistsError(
+                f"File already exists, set overwrite to True to overwrite: {fname}"
+            )
 
         # now we can open a w+ without worrying
         with open(fname, "w+") as f:
             self.write(f)
 
     @classmethod
-    def from_file(cls, fname:  Union[str,bytes,os.PathLike], full_check=False):
+    def from_file(cls, fname: Union[str, bytes, os.PathLike], full_check=False):
         """
         Initiates a new instance of the class and overwrites the defaults with contents from a file. The contents read
         from the file will be checked for validity.

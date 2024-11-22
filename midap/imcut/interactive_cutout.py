@@ -1,10 +1,11 @@
 import numpy as np
 
 import matplotlib.pyplot as plt
-from matplotlib.widgets  import RectangleSelector
+from matplotlib.widgets import RectangleSelector
 
 
 from .base_cutout import CutoutImage
+
 
 class InteractiveCutout(CutoutImage):
     """
@@ -62,11 +63,23 @@ class InteractiveCutout(CutoutImage):
         self.ax[0].set_xticks([])
         self.ax[0].set_yticks([])
         self.ax[0].set_title("Select Region here:")
-        rs = RectangleSelector(self.ax[0], self.line_select_callback,
-                       drawtype='box', useblit=True, button=[1],
-                       minspanx=5, minspany=5, spancoords='pixels',
-                       interactive=True)
-        x1, x2, y1, y2 = img.shape[0]//4, 3*img.shape[0]//4, img.shape[1]//4, 3*img.shape[1]//4
+        rs = RectangleSelector(
+            self.ax[0],
+            self.line_select_callback,
+            drawtype="box",
+            useblit=True,
+            button=[1],
+            minspanx=5,
+            minspany=5,
+            spancoords="pixels",
+            interactive=True,
+        )
+        x1, x2, y1, y2 = (
+            img.shape[0] // 4,
+            3 * img.shape[0] // 4,
+            img.shape[1] // 4,
+            3 * img.shape[1] // 4,
+        )
         rs.extents = (x1, x2, y1, y2)
 
         # show the zoom

@@ -19,6 +19,13 @@ Efficiency:
 Fix:
 - ...
 
+## [1.0]
+
+2024-11-22
+
+Feature:
+- Clean repo and remove unsued files.
+
 ## [0.3.21]
 
 2024-11-21

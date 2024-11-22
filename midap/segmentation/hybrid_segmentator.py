@@ -29,12 +29,14 @@ class HybridSegmentation(UNetSegmentation):
         Sets the segmentation method according to the model_weights of the class
         """
 
-        if self.model_weights == 'watershed':
+        if self.model_weights == "watershed":
             self.segmentation_method = self.seg_method_watershed
         else:
             self.segmentation_method = self.seg_method_hybrid
 
-    def _segs_for_selection(self, model_weights: List[Union[str, bytes, os.PathLike]], img: np.ndarray):
+    def _segs_for_selection(
+        self, model_weights: List[Union[str, bytes, os.PathLike]], img: np.ndarray
+    ):
         """
         Given the model weights, returns a selection of segmentation to use for the GUI selector
         :param model_weights: A list of model weights
@@ -49,7 +51,9 @@ class HybridSegmentation(UNetSegmentation):
         for m in model_weights:
             model_pred = UNetv1(input_size=img_pad.shape[1:3] + (2,), inference=True)
             model_pred.load_weights(m)
-            y_pred = model_pred.predict(np.concatenate([img_pad, watershed_seg_pad], axis=-1))
+            y_pred = model_pred.predict(
+                np.concatenate([img_pad, watershed_seg_pad], axis=-1)
+            )
             seg = (self.undo_padding(y_pred) > 0.5).astype(int)
             segs.append(seg)
 
@@ -77,7 +81,9 @@ class HybridSegmentation(UNetSegmentation):
         # segments
         model_pred = UNetv1(input_size=imgs_pad.shape[1:3] + (2,), inference=True)
         model_pred.load_weights(self.model_weights)
-        y_preds = model_pred.predict(np.concatenate([imgs_pad, imgs_seg], axis=-1), batch_size=1, verbose=1)
+        y_preds = model_pred.predict(
+            np.concatenate([imgs_pad, imgs_seg], axis=-1), batch_size=1, verbose=1
+        )
 
         # remove tha padding and transform to segmentation
         segs = []
