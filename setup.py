@@ -31,7 +31,7 @@ def get_requirements():
 
 setup(
     name="midap",
-    version="0.3.21",
+    version="1.0",
     description="A package for cell segmentation and tracking.",
     long_description="""# MIDAP: Automated image segmentation and tracking for time-lapse microscopy of bacterial cells.
 
