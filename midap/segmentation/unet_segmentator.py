@@ -41,8 +41,7 @@ class UNetSegmentation(SegmentationPredictor):
 
         # check if we even need to select
         if self.model_weights is None:
-
-            self.logger.info('Selecting weights...')
+            self.logger.info("Selecting weights...")
 
             # get the image that is roughly in the middle of the stack
             list_files = np.sort(os.listdir(path_to_cutouts))
@@ -55,10 +54,12 @@ class UNetSegmentation(SegmentationPredictor):
             path_img = list_files[ix_half]
 
             # scale the image and pad
-            img = self.scale_pixel_vals(io.imread(os.path.join(path_to_cutouts, path_img)))
+            img = self.scale_pixel_vals(
+                io.imread(os.path.join(path_to_cutouts, path_img))
+            )
 
             # Get all the labels
-            labels = ['watershed']
+            labels = ["watershed"]
             model_weights = list(Path(self.path_model_weights).glob("*.h5"))
             labels += [mw.stem.replace("model_weights_", "") for mw in model_weights]
 
@@ -68,9 +69,9 @@ class UNetSegmentation(SegmentationPredictor):
             # now we create a figures for the GUI
             figures = []
             for seg, model_name in zip(segs, labels):
-                fig, ax = plt.subplots(figsize=(2.5,2.5))
+                fig, ax = plt.subplots(figsize=(2.5, 2.5))
                 ax.imshow(img)
-                ax.contour(seg, [0.5], colors='r', linewidths=0.5)
+                ax.contour(seg, [0.5], colors="r", linewidths=0.5)
                 ax.set_xticks([])
                 ax.set_yticks([])
                 if len(model_name) > 20:
@@ -82,25 +83,31 @@ class UNetSegmentation(SegmentationPredictor):
             # Title for the GUI
             channel = os.path.basename(os.path.dirname(path_to_cutouts))
             # if we just got the chamber folder, we need to go one more up
-            if channel.startswith('chamber'):
-                channel = os.path.basename(os.path.dirname(os.path.dirname(path_to_cutouts)))
-            title = f'Segmentation Selection for channel: {channel}'
+            if channel.startswith("chamber"):
+                channel = os.path.basename(
+                    os.path.dirname(os.path.dirname(path_to_cutouts))
+                )
+            title = f"Segmentation Selection for channel: {channel}"
 
             # start the gui
             marked = GUI_selector(figures=figures, labels=labels, title=title)
 
             # set the model weights
-            if marked == 'watershed':
-                self.model_weights = 'watershed'
+            if marked == "watershed":
+                self.model_weights = "watershed"
             else:
                 ix_model_weights = np.where([marked == l for l in labels])[0][0]
                 sel_model_weights = model_weights[ix_model_weights - 1]
-                self.model_weights = os.path.join(self.path_model_weights, sel_model_weights)
+                self.model_weights = os.path.join(
+                    self.path_model_weights, sel_model_weights
+                )
 
         # set the method via private function
         self._set_segmentation_method()
 
-    def _segs_for_selection(self, model_weights: List[Union[str, bytes, os.PathLike]], img: np.ndarray):
+    def _segs_for_selection(
+        self, model_weights: List[Union[str, bytes, os.PathLike]], img: np.ndarray
+    ):
         """
         Given the model weights, returns a selection of segmentation to use for the GUI selector
         :param model_weights: A list of model weights
@@ -125,7 +132,7 @@ class UNetSegmentation(SegmentationPredictor):
         Sets the segmentation method according to the model_weights of the class
         """
 
-        if self.model_weights == 'watershed':
+        if self.model_weights == "watershed":
             self.segmentation_method = self.seg_method_watershed
         else:
             self.segmentation_method = self.seg_method_unet
@@ -158,7 +165,9 @@ class UNetSegmentation(SegmentationPredictor):
 
         return segs
 
-    def seg_method_watershed(self, imgs_in: Collection[np.ndarray], min_val=0.16, max_val=0.19):
+    def seg_method_watershed(
+        self, imgs_in: Collection[np.ndarray], min_val=0.16, max_val=0.19
+    ):
         """
         Performs watershed segmentation with scaling
         :param imgs_in: List of input images
@@ -175,7 +184,7 @@ class UNetSegmentation(SegmentationPredictor):
 
         return segs
 
-    def segment_region_based(self, img, min_val=40., max_val=50.):
+    def segment_region_based(self, img, min_val=40.0, max_val=50.0):
         """
         Performs skimage's watershed segmentation on an image
         :param img: input image as an array
@@ -198,18 +207,24 @@ class UNetSegmentation(SegmentationPredictor):
         """
 
         # get the new shape
-        new_shape = (int(np.ceil(img.shape[0] / self.div) * self.div),
-                     int(np.ceil(img.shape[1] / self.div) * self.div))
+        new_shape = (
+            int(np.ceil(img.shape[0] / self.div) * self.div),
+            int(np.ceil(img.shape[1] / self.div) * self.div),
+        )
 
         # store values to remove padding later
         self.row_shape = img.shape[0]
         self.col_shape = img.shape[1]
 
         # get the padded image
-        img_pad = np.pad(img, [[0, new_shape[0] - self.row_shape], [0, new_shape[1] - self.col_shape]], mode="reflect")
+        img_pad = np.pad(
+            img,
+            [[0, new_shape[0] - self.row_shape], [0, new_shape[1] - self.col_shape]],
+            mode="reflect",
+        )
 
         # add batch and channel dim
-        return img_pad[None,...,None]
+        return img_pad[None, ..., None]
 
     def undo_padding(self, img_pad: np.ndarray):
         """
@@ -217,5 +232,5 @@ class UNetSegmentation(SegmentationPredictor):
         :param img_pad: padded image as array
         :returns: The image without padding
         """
-        img_unpad = img_pad[0, :self.row_shape, :self.col_shape, 0]
+        img_unpad = img_pad[0, : self.row_shape, : self.col_shape, 0]
         return img_unpad

@@ -19,6 +19,34 @@ Efficiency:
 Fix:
 - ...
 
+## [1.0.1]
+
+2024-11-26
+
+Feature:
+- Add functionality to run notebooks on JupyterHub.
+
+## [1.0]
+
+2024-11-22
+
+Feature:
+- Clean repo and remove unsued files.
+
+## [0.3.21]
+
+2024-11-21
+
+Feature:
+- Fixed tensorflow version.
+
+## [0.3.19 and 0.3.20]
+
+2024-11-21
+
+Feature:
+- Refactor code for packaging and upload to pypi.
+
 ## [0.3.18]
 
 2024-08-02

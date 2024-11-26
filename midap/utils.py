@@ -24,8 +24,11 @@ def get_logger(filepath, logging_level=7):
     logger = logging.getLogger(os.path.basename(filepath))
 
     if len(logger.handlers) == 0:
-        log_formatter = logging.Formatter(fmt="%(asctime)s %(name)10s %(levelname).3s   %(message)s ",
-                                          datefmt="%y-%m-%d %H:%M:%S", style='%')
+        log_formatter = logging.Formatter(
+            fmt="%(asctime)s %(name)10s %(levelname).3s   %(message)s ",
+            datefmt="%y-%m-%d %H:%M:%S",
+            style="%",
+        )
         stream_handler = logging.StreamHandler(sys.stdout)
         stream_handler.setFormatter(log_formatter)
         logger.addHandler(stream_handler)
@@ -74,7 +77,9 @@ def get_inheritors(klass):
     return subclasses
 
 
-def convert_to_bytes(file_or_bytes: Union[str, bytes], resize: Optional[Tuple[int, int]]=None):
+def convert_to_bytes(
+    file_or_bytes: Union[str, bytes], resize: Optional[Tuple[int, int]] = None
+):
     """
     Will convert into bytes and optionally resize an image that is a file or a base64 bytes object.
     Turns into  PNG format in the process so that can be displayed by tkinter
@@ -96,13 +101,18 @@ def convert_to_bytes(file_or_bytes: Union[str, bytes], resize: Optional[Tuple[in
     if resize:
         new_width, new_height = resize
         scale = min(new_height / cur_height, new_width / cur_width)
-        img = img.resize((int(cur_width * scale), int(cur_height * scale)), PIL.Image.ANTIALIAS)
+        img = img.resize(
+            (int(cur_width * scale), int(cur_height * scale)), PIL.Image.ANTIALIAS
+        )
     with io.BytesIO() as bio:
         img.save(bio, format="GIF")
         del img
         return bio.getvalue()
 
-def GUI_selector(figures: Collection[plt.Figure], labels: Collection[str], title="", close_figs=True):
+
+def GUI_selector(
+    figures: Collection[plt.Figure], labels: Collection[str], title="", close_figs=True
+):
     """
     Starts up a GUI selector for imgs and labels
     :param figures: A list of figures that will presented in the GUI as buttons that the user can select
@@ -126,22 +136,35 @@ def GUI_selector(figures: Collection[plt.Figure], labels: Collection[str], title
     for i, (fig, label) in enumerate(zip(figures, labels)):
         # figure to buffer
         buf = io.BytesIO()
-        fig.savefig(buf, format='png')
+        fig.savefig(buf, format="png")
         buf.seek(0)
         buf = convert_to_bytes(buf.read())
         buffers.append(buf)
         # the first button starts as selected
         if i == 0:
-            new_line.append(sg.Button('', image_data=buf,
-                                      button_color=('black', 'yellow'),
-                                      border_width=5,
-                                      key=label))
+            new_line.append(
+                sg.Button(
+                    "",
+                    image_data=buf,
+                    button_color=("black", "yellow"),
+                    border_width=5,
+                    key=label,
+                )
+            )
             marked = label
         else:
-            new_line.append(sg.Button('', image_data=buf,
-                                      button_color=(sg.theme_background_color(), sg.theme_background_color()),
-                                      border_width=5,
-                                      key=label))
+            new_line.append(
+                sg.Button(
+                    "",
+                    image_data=buf,
+                    button_color=(
+                        sg.theme_background_color(),
+                        sg.theme_background_color(),
+                    ),
+                    border_width=5,
+                    key=label,
+                )
+            )
         if len(new_line) == num_cols:
             buttons.append(new_line)
             new_line = []
@@ -160,9 +183,11 @@ def GUI_selector(figures: Collection[plt.Figure], labels: Collection[str], title
     # The GUI
     layout = buttons
     layout += [[sg.Column([[sg.OK(), sg.Cancel()]], key="col_final")]]
-    window = sg.Window(title, layout, element_justification='c', resizable=True, finalize=True)
+    window = sg.Window(
+        title, layout, element_justification="c", resizable=True, finalize=True
+    )
     old_window_size = window.size
-    window.bind('<Configure>', '-CONFIG-')
+    window.bind("<Configure>", "-CONFIG-")
 
     # Time to wait before resizing windows
     THREADWAIT = 0.1
@@ -180,7 +205,11 @@ def GUI_selector(figures: Collection[plt.Figure], labels: Collection[str], title
         win_w -= 120
         # resize the imgage
         for buf, label in zip(buffers, labels):
-            window[label].update(image_data=convert_to_bytes(buf, ((win_h / num_rows), (win_w / num_cols))))
+            window[label].update(
+                image_data=convert_to_bytes(
+                    buf, ((win_h / num_rows), (win_w / num_cols))
+                )
+            )
 
     # timer for the resize
     timer_windowResize = threading.Timer(THREADWAIT, resize_buttons)
@@ -190,7 +219,7 @@ def GUI_selector(figures: Collection[plt.Figure], labels: Collection[str], title
         # Read event
         event, values = window.read()
         # break if we have one of these
-        if event in (sg.WIN_CLOSED, 'Exit', 'Cancel', 'OK'):
+        if event in (sg.WIN_CLOSED, "Exit", "Cancel", "OK"):
             break
 
         # get the last event
@@ -202,18 +231,24 @@ def GUI_selector(figures: Collection[plt.Figure], labels: Collection[str], title
         # maked button is highlighted
         for l in labels:
             if marked == l:
-                window[l].update(button_color=('black', 'yellow'))
+                window[l].update(button_color=("black", "yellow"))
             else:
-                window[l].update(button_color=(sg.theme_background_color(), sg.theme_background_color()))
+                window[l].update(
+                    button_color=(
+                        sg.theme_background_color(),
+                        sg.theme_background_color(),
+                    )
+                )
 
         # config event
-        if event == '-CONFIG-':
+        if event == "-CONFIG-":
             # check if the size change was enough to trigger a resize
-            if (((old_window_size[0] + INCWIN) < window.size[0]) or
-                    ((old_window_size[0] - REDWIN) > window.size[0]) or
-                    ((old_window_size[1] + INCWIN) < window.size[1]) or
-                    ((old_window_size[1] - REDWIN) > window.size[1])):
-
+            if (
+                ((old_window_size[0] + INCWIN) < window.size[0])
+                or ((old_window_size[0] - REDWIN) > window.size[0])
+                or ((old_window_size[1] + INCWIN) < window.size[1])
+                or ((old_window_size[1] - REDWIN) > window.size[1])
+            ):
                 # The idea behind the logic below is that we cancel a time each time the size threshold is reached
                 # and then restart it. This means we only resize the element after the user is done with his
                 # resize action because during the resize action the timer is constantly cancelled
@@ -230,7 +265,7 @@ def GUI_selector(figures: Collection[plt.Figure], labels: Collection[str], title
 
     window.close()
 
-    if event != 'OK':
+    if event != "OK":
         raise InterruptedError("GUI was cancelled or unexpectedly closed, exiting...")
 
     return marked

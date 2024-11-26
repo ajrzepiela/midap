@@ -7,9 +7,11 @@ import cv2
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
 # scipy package to compute distance between matrices of cell centroid coordinates
 from scipy.spatial.distance import cdist
 from skimage import io
+
 # skimage package to identify objects, export region properties
 from skimage.measure import regionprops
 
@@ -19,8 +21,14 @@ from midap.utils import get_logger
 # This file is taken from the following repository:
 # https://github.com/Helena-todd/STrack/blob/master/Docker_structure/strack_script_v4.py
 
-def run_strack(files_list: List[Union[str, bytes, os.PathLike]], output_dir: Union[str, bytes, os.PathLike],
-               max_dist: float, max_angle: float, loglevel=7):
+
+def run_strack(
+    files_list: List[Union[str, bytes, os.PathLike]],
+    output_dir: Union[str, bytes, os.PathLike],
+    max_dist: float,
+    max_angle: float,
+    loglevel=7,
+):
     """
     Run the STrack algorithm
     :param files_list: List of files to process, sorted and tif format
@@ -59,19 +67,21 @@ def run_strack(files_list: List[Union[str, bytes, os.PathLike]], output_dir: Uni
 
             # compute cell centroid
             M = cv2.moments(img_tmp)
-            cx = int(M['m10'] / M['m00'])
-            cy = int(M['m01'] / M['m00'])
+            cx = int(M["m10"] / M["m00"])
+            cy = int(M["m01"] / M["m00"])
             my_array0 = np.append(my_array0, [[cx, cy]], axis=0)
 
         my_array1 = np.empty((0, 2), int)
-        for mask_tmp in unique1[1:]:  # [:1] because I'm not interested in pixels with a value of 0: the background
+        for mask_tmp in unique1[
+            1:
+        ]:  # [:1] because I'm not interested in pixels with a value of 0: the background
             # Keep only current mask, replace all other values by 0
             img_tmp = np.where(img1 != mask_tmp, 0, img1)
 
             # compute cell centroid
             M = cv2.moments(img_tmp)
-            cx = int(M['m10'] / M['m00'])
-            cy = int(M['m01'] / M['m00'])
+            cx = int(M["m10"] / M["m00"])
+            cy = int(M["m01"] / M["m00"])
             my_array1 = np.append(my_array1, [[cx, cy]], axis=0)
 
         ########################################################################################
@@ -86,13 +96,15 @@ def run_strack(files_list: List[Union[str, bytes, os.PathLike]], output_dir: Uni
         matching_pctgs = np.empty((0, len(unique1) - 1), int)
 
         # Loop over masks in img0
-        for idx0 in unique01[:len(unique01) - 1]:
+        for idx0 in unique01[: len(unique01) - 1]:
             # Keep only current mask, replace all other values by 0
             img_tmp0 = np.where(img0 != unique0[1:][idx0], 0, img0)
 
             # Loop over masks in img1 that are close enough to the current cell in img0
             distances_to_mother = dist_mat[idx0, :]
-            line_tmp = np.zeros(len(distances_to_mother))  # create an empty array that will store final percentages
+            line_tmp = np.zeros(
+                len(distances_to_mother)
+            )  # create an empty array that will store final percentages
             indices1 = np.where(distances_to_mother <= int(max_dist))
 
             for idx1 in indices1[0]:
@@ -105,15 +117,18 @@ def run_strack(files_list: List[Union[str, bytes, os.PathLike]], output_dir: Uni
                 img_flattened1 = img_tmp1.flatten()
                 img_flattened1[img_flattened1 != 0] = 1
                 # change integers to floats
-                img_flattened0 = img_flattened0.astype('float')
-                img_flattened1 = img_flattened1.astype('float')
+                img_flattened0 = img_flattened0.astype("float")
+                img_flattened1 = img_flattened1.astype("float")
                 # replace 0 in previous frame by NaN so that they don't correpond to 0 in current frame
-                img_flattened0[img_flattened0 == 0] = 'nan'
+                img_flattened0[img_flattened0 == 0] = "nan"
                 # compute difference between mask in current frame and mask in previous frame
-                img_differences = (img_flattened0 == img_flattened1)
+                img_differences = img_flattened0 == img_flattened1
                 # compute percentage of pixels in current masks that match with mask in previous frame
-                pctg_matching = (len(img_differences[img_differences == True])) / (
-                    len(img_flattened1[img_flattened1 != 0])) * 100
+                pctg_matching = (
+                    (len(img_differences[img_differences == True]))
+                    / (len(img_flattened1[img_flattened1 != 0]))
+                    * 100
+                )
                 # add current pctg matching value to the line for current mask in img0 and in img1
                 line_tmp[idx1] = pctg_matching
 
@@ -139,17 +154,28 @@ def run_strack(files_list: List[Union[str, bytes, os.PathLike]], output_dir: Uni
             # ranging from `-pi/2` to `pi/2` counter-clockwise
 
             # Fill in orientations vector
-            orientations = np.append(orientations, math.degrees(
-                regions[0].orientation))  # math.degrees allows to change radiants into degrees
+            orientations = np.append(
+                orientations, math.degrees(regions[0].orientation)
+            )  # math.degrees allows to change radiants into degrees
 
         ###########################################################################################
         # Identify mother-daughter links according to highest pixel matching or distance matching #
         ###########################################################################################
 
         # Create empty result table
-        complete_table = pd.DataFrame(columns=['Timepoint', 'Mask_nb', 'Centroid_x', 'Centroid_y',
-                                               'Mother_mask', 'Pctg_matching', 'Centroid_x_mother',
-                                               'Centroid_y_mother', 'Distance_to_mother'])
+        complete_table = pd.DataFrame(
+            columns=[
+                "Timepoint",
+                "Mask_nb",
+                "Centroid_x",
+                "Centroid_y",
+                "Mother_mask",
+                "Pctg_matching",
+                "Centroid_x_mother",
+                "Centroid_y_mother",
+                "Distance_to_mother",
+            ]
+        )
 
         # create vectors with cell indices to keep track of who's still in the tables as rows and columns are being removed
         daughters_still_in_table = unique11[1:]
@@ -160,7 +186,7 @@ def run_strack(files_list: List[Union[str, bytes, os.PathLike]], output_dir: Uni
             # print("daughters still in tables: ", daughters_still_in_table)
             # print("mothers still in tables: ", mothers_still_in_table)
             # if there are still overlapping cells in tp-1 and current tp
-            if (np.amax(matching_pctgs) != 0):
+            if np.amax(matching_pctgs) != 0:
                 # find best match: the maximum overlap in the pctgs array
                 tmp_match = np.where(matching_pctgs == np.amax(matching_pctgs))
                 # print("tmp match [0][0] is ", tmp_match[0][0], " and tmp match [1][0] is ", tmp_match[1][0])
@@ -171,31 +197,45 @@ def run_strack(files_list: List[Union[str, bytes, os.PathLike]], output_dir: Uni
                 daughter_tmp = daughters_still_in_table[tmp_match[1][0]]
                 # print("daughter tmp is ", daughter_tmp)
                 # If the mother cell does not have daughters yet
-                if (mother_tmp not in complete_table["Mother_mask"].values):
+                if mother_tmp not in complete_table["Mother_mask"].values:
                     # create link
-                    complete_table.loc[daughter_tmp] = [tp,  # timepoint
-                                                        daughter_tmp,  # mask number
-                                                        my_array1[daughter_tmp - 1][0],  # = cx
-                                                        my_array1[daughter_tmp - 1][1],  # = cy
-                                                        mother_tmp,  # mother mask
-                                                        np.amax(matching_pctgs),  # pctg matching
-                                                        my_array0[mother_tmp - 1][0],  # cx mother
-                                                        my_array0[mother_tmp - 1][1],  # cy mother
-                                                        dist_mat[tmp_match[0][0], tmp_match[1][
-                                                            0]]]  # distance btw mother and daughter cell
+                    complete_table.loc[daughter_tmp] = [
+                        tp,  # timepoint
+                        daughter_tmp,  # mask number
+                        my_array1[daughter_tmp - 1][0],  # = cx
+                        my_array1[daughter_tmp - 1][1],  # = cy
+                        mother_tmp,  # mother mask
+                        np.amax(matching_pctgs),  # pctg matching
+                        my_array0[mother_tmp - 1][0],  # cx mother
+                        my_array0[mother_tmp - 1][1],  # cy mother
+                        dist_mat[tmp_match[0][0], tmp_match[1][0]],
+                    ]  # distance btw mother and daughter cell
                     # remove daughter cell from matching_pctgs and dist_mat tables
                     matching_pctgs = np.delete(matching_pctgs, tmp_match[1][0], 1)
                     dist_mat = np.delete(dist_mat, tmp_match[1][0], 1)
                     # also remove daughter cell from daughters_still_in_table array
-                    daughters_still_in_table = np.delete(daughters_still_in_table, tmp_match[1][0])
+                    daughters_still_in_table = np.delete(
+                        daughters_still_in_table, tmp_match[1][0]
+                    )
 
                 # else, if the mother cell already has one daughter cell
-                elif np.count_nonzero(complete_table["Mother_mask"].values == mother_tmp) == 1:
+                elif (
+                    np.count_nonzero(complete_table["Mother_mask"].values == mother_tmp)
+                    == 1
+                ):
                     # recover info on the cell that has already been asigned to the same mother
-                    other_daughter_line = complete_table.loc[complete_table['Mother_mask'] == mother_tmp]
+                    other_daughter_line = complete_table.loc[
+                        complete_table["Mother_mask"] == mother_tmp
+                    ]
                     # compute angle between current cell's centroid and its hypothetic sister's centroid
-                    cell1_centroid = (other_daughter_line["Centroid_x"], other_daughter_line["Centroid_y"])
-                    cell2_centroid = (my_array1[daughter_tmp - 1][0], my_array1[daughter_tmp - 1][1])
+                    cell1_centroid = (
+                        other_daughter_line["Centroid_x"],
+                        other_daughter_line["Centroid_y"],
+                    )
+                    cell2_centroid = (
+                        my_array1[daughter_tmp - 1][0],
+                        my_array1[daughter_tmp - 1][1],
+                    )
                     # Difference in x coordinates
                     dx = cell2_centroid[0] - cell1_centroid[0]
                     # print(" cell1 centroids are ", cell1_centroid)
@@ -209,14 +249,18 @@ def run_strack(files_list: List[Union[str, bytes, os.PathLike]], output_dir: Uni
 
                     # Re-scale daughters orientation so that it matches the scale of the mother orientation,
                     # which allows to make the angles comparable
-                    if ((orientation_daughters >= -180) and (orientation_daughters <= -90)):
+                    if (orientation_daughters >= -180) and (
+                        orientation_daughters <= -90
+                    ):
                         orientation_daughters = -orientation_daughters - 90
-                    elif ((orientation_daughters >= 0) and (orientation_daughters <= 90)):
+                    elif (orientation_daughters >= 0) and (orientation_daughters <= 90):
                         orientation_daughters = 90 - orientation_daughters
-                    elif ((orientation_daughters > -90) and (orientation_daughters < 0)):
+                    elif (orientation_daughters > -90) and (orientation_daughters < 0):
                         orientation_daughters = -90 - orientation_daughters
-                    elif ((orientation_daughters > 90) and (orientation_daughters <= 180)):
-                        orientation_daughters = - orientation_daughters + 90
+                    elif (orientation_daughters > 90) and (
+                        orientation_daughters <= 180
+                    ):
+                        orientation_daughters = -orientation_daughters + 90
 
                     orientation_mother = orientations[mother_tmp - 1]
                     # print("Orientation of mother is ", orientation_mother, " and its sign is ", np.sign(orientation_mother))
@@ -225,35 +269,44 @@ def run_strack(files_list: List[Union[str, bytes, os.PathLike]], output_dir: Uni
                     # Compute difference between 2 angles:
                     # If they have the same sign, simply substact them
                     if np.sign(orientation_mother) == np.sign(orientation_daughters):
-                        diff_btw_angles = abs(orientation_mother - (orientation_daughters))
+                        diff_btw_angles = abs(
+                            orientation_mother - (orientation_daughters)
+                        )
                     # If they have opposite signs, sum up their absolute values
                     else:
-                        diff_btw_angles = abs(orientation_mother) + abs((orientation_daughters))
+                        diff_btw_angles = abs(orientation_mother) + abs(
+                            (orientation_daughters)
+                        )
 
                     # If angle between mother cell orientation and division into 2 daughters is small enough, add daughter cell link
                     # print("difference between angles is ", diff_btw_angles)
-                    if (diff_btw_angles < int(max_angle)):
+                    if diff_btw_angles < int(max_angle):
                         # print("Angle is small enough, daughter cell will be added")
-                        complete_table.loc[daughter_tmp] = [tp,  # timepoint
-                                                            daughter_tmp,  # mask number
-                                                            my_array1[daughter_tmp - 1][0],  # = cx
-                                                            my_array1[daughter_tmp - 1][1],  # = cy
-                                                            mother_tmp,  # mother mask
-                                                            np.amax(matching_pctgs),  # pctg matching
-                                                            my_array0[mother_tmp - 1][0],  # cx mother
-                                                            my_array0[mother_tmp - 1][1],  # cy mother
-                                                            dist_mat[tmp_match[0][0], tmp_match[1][
-                                                                0]]]  # distance btw mother and daughter cell
+                        complete_table.loc[daughter_tmp] = [
+                            tp,  # timepoint
+                            daughter_tmp,  # mask number
+                            my_array1[daughter_tmp - 1][0],  # = cx
+                            my_array1[daughter_tmp - 1][1],  # = cy
+                            mother_tmp,  # mother mask
+                            np.amax(matching_pctgs),  # pctg matching
+                            my_array0[mother_tmp - 1][0],  # cx mother
+                            my_array0[mother_tmp - 1][1],  # cy mother
+                            dist_mat[tmp_match[0][0], tmp_match[1][0]],
+                        ]  # distance btw mother and daughter cell
                         # remove daughter cell from matching_pctgs and dist_mat tables
                         matching_pctgs = np.delete(matching_pctgs, tmp_match[1][0], 1)
                         dist_mat = np.delete(dist_mat, tmp_match[1][0], 1)
                         # also remove daughter cell from daughters_still_in_table array
-                        daughters_still_in_table = np.delete(daughters_still_in_table, tmp_match[1][0])
+                        daughters_still_in_table = np.delete(
+                            daughters_still_in_table, tmp_match[1][0]
+                        )
                         # remove mother cell from matching_pctgs and dist_mat tables
                         matching_pctgs = np.delete(matching_pctgs, tmp_match[0][0], 0)
                         dist_mat = np.delete(dist_mat, tmp_match[0][0], 0)
                         # also remove mother cell from mothers_still_in_table array
-                        mothers_still_in_table = np.delete(mothers_still_in_table, tmp_match[0][0])
+                        mothers_still_in_table = np.delete(
+                            mothers_still_in_table, tmp_match[0][0]
+                        )
                     else:
                         # if angle between mother cell and its 2 possible daughter cells is too large,
                         # remove the tmp_match from the dist_mat and pctgs_matching tables because
@@ -263,11 +316,11 @@ def run_strack(files_list: List[Union[str, bytes, os.PathLike]], output_dir: Uni
                         # print("tmp mother is ", tmp_match[0][0], " and tmp daughter is ", tmp_match[1][0])
                         matching_pctgs[tmp_match[0][0], tmp_match[1][0]] = 0
 
-
                 # else, if the mother cell already has more than one daughter cell (should never happen)
                 else:
                     logger.info(
-                        "Rows haven't been deleted properly and one mother cell has been assigned more than 2 daughter cells")
+                        "Rows haven't been deleted properly and one mother cell has been assigned more than 2 daughter cells"
+                    )
             # else if there are no more overlapping cells, look at distances
             else:
                 # if all matching_pctgs == 0
@@ -283,34 +336,49 @@ def run_strack(files_list: List[Union[str, bytes, os.PathLike]], output_dir: Uni
                 # print("daughter tmp is ", daughter_tmp)
 
                 # If the distance between mother and daughter is small enough
-                if (dist_mat[tmp_match[0][0], tmp_match[1][0]] < int(max_dist)):
-
+                if dist_mat[tmp_match[0][0], tmp_match[1][0]] < int(max_dist):
                     # If the mother cell does not have daughters yet
-                    if (mother_tmp not in complete_table["Mother_mask"].values):
+                    if mother_tmp not in complete_table["Mother_mask"].values:
                         # create link
-                        complete_table.loc[daughter_tmp] = [tp,  # timepoint
-                                                            daughter_tmp,  # mask number
-                                                            my_array1[daughter_tmp - 1][0],  # = cx
-                                                            my_array1[daughter_tmp - 1][1],  # = cy
-                                                            mother_tmp,  # mother mask
-                                                            0,  # pctg matching
-                                                            my_array0[mother_tmp - 1][0],  # cx mother
-                                                            my_array0[mother_tmp - 1][1],  # cy mother
-                                                            dist_mat[tmp_match[0][0], tmp_match[1][
-                                                                0]]]  # distance btw mother and daughter cell
+                        complete_table.loc[daughter_tmp] = [
+                            tp,  # timepoint
+                            daughter_tmp,  # mask number
+                            my_array1[daughter_tmp - 1][0],  # = cx
+                            my_array1[daughter_tmp - 1][1],  # = cy
+                            mother_tmp,  # mother mask
+                            0,  # pctg matching
+                            my_array0[mother_tmp - 1][0],  # cx mother
+                            my_array0[mother_tmp - 1][1],  # cy mother
+                            dist_mat[tmp_match[0][0], tmp_match[1][0]],
+                        ]  # distance btw mother and daughter cell
                         # remove daughter cell from matching_pctgs and dist_mat tables
                         matching_pctgs = np.delete(matching_pctgs, tmp_match[1][0], 1)
                         dist_mat = np.delete(dist_mat, tmp_match[1][0], 1)
                         # also remove daughter cell from daughters_still_in_table array
-                        daughters_still_in_table = np.delete(daughters_still_in_table, tmp_match[1][0])
+                        daughters_still_in_table = np.delete(
+                            daughters_still_in_table, tmp_match[1][0]
+                        )
 
                     # else, if the mother cell already has one daughter cell
-                    elif np.count_nonzero(complete_table["Mother_mask"].values == mother_tmp) == 1:
+                    elif (
+                        np.count_nonzero(
+                            complete_table["Mother_mask"].values == mother_tmp
+                        )
+                        == 1
+                    ):
                         # recover info on the cell that has already been asigned to the same mother
-                        other_daughter_line = complete_table.loc[complete_table['Mother_mask'] == mother_tmp]
+                        other_daughter_line = complete_table.loc[
+                            complete_table["Mother_mask"] == mother_tmp
+                        ]
                         # compute angle between current cell's centroid and its hypothetic sister's centroid
-                        cell1_centroid = (other_daughter_line["Centroid_x"], other_daughter_line["Centroid_y"])
-                        cell2_centroid = (my_array1[daughter_tmp - 1][0], my_array1[daughter_tmp - 1][1])
+                        cell1_centroid = (
+                            other_daughter_line["Centroid_x"],
+                            other_daughter_line["Centroid_y"],
+                        )
+                        cell2_centroid = (
+                            my_array1[daughter_tmp - 1][0],
+                            my_array1[daughter_tmp - 1][1],
+                        )
                         # Difference in x coordinates
                         dx = cell2_centroid[0] - cell1_centroid[0]
                         # print(" cell1 centroids are ", cell1_centroid)
@@ -326,49 +394,72 @@ def run_strack(files_list: List[Union[str, bytes, os.PathLike]], output_dir: Uni
 
                         # Re-scale daughters orientation so that it matches the scale of the mother orientation,
                         # which allows to make the angles comparable
-                        if ((orientation_daughters >= -180) and (orientation_daughters <= -90)):
+                        if (orientation_daughters >= -180) and (
+                            orientation_daughters <= -90
+                        ):
                             orientation_daughters = -orientation_daughters - 90
-                        elif ((orientation_daughters >= 0) and (orientation_daughters <= 90)):
+                        elif (orientation_daughters >= 0) and (
+                            orientation_daughters <= 90
+                        ):
                             orientation_daughters = 90 - orientation_daughters
-                        elif ((orientation_daughters > -90) and (orientation_daughters < 0)):
+                        elif (orientation_daughters > -90) and (
+                            orientation_daughters < 0
+                        ):
                             orientation_daughters = -90 - orientation_daughters
-                        elif ((orientation_daughters > 90) and (orientation_daughters <= 180)):
-                            orientation_daughters = - orientation_daughters + 90
+                        elif (orientation_daughters > 90) and (
+                            orientation_daughters <= 180
+                        ):
+                            orientation_daughters = -orientation_daughters + 90
 
                         # print("Orientation of division AFTER RESCALING is ", orientation_daughters, " and its sign is ", np.sign(orientation_daughters))
 
                         # Compute difference between 2 angles:
                         # If they have the same sign, simply substact them
-                        if np.sign(orientation_mother) == np.sign(orientation_daughters):
-                            diff_btw_angles = abs(orientation_mother - (orientation_daughters))
+                        if np.sign(orientation_mother) == np.sign(
+                            orientation_daughters
+                        ):
+                            diff_btw_angles = abs(
+                                orientation_mother - (orientation_daughters)
+                            )
                         # If they have opposite signs, sum up their absolute values
                         else:
-                            diff_btw_angles = abs(orientation_mother) + abs((orientation_daughters))
+                            diff_btw_angles = abs(orientation_mother) + abs(
+                                (orientation_daughters)
+                            )
 
                         # If angle between mother cell orientation and division into 2 daughters is small enough, add daughter cell link
                         # print("difference between angles is ", diff_btw_angles)
-                        if (diff_btw_angles < int(max_angle)):
+                        if diff_btw_angles < int(max_angle):
                             # print("Angle is small enough, daughter cell will be added")
-                            complete_table.loc[daughter_tmp] = [tp,  # timepoint
-                                                                daughter_tmp,  # mask number
-                                                                my_array1[daughter_tmp - 1][0],  # = cx
-                                                                my_array1[daughter_tmp - 1][1],  # = cy
-                                                                mother_tmp,  # mother mask
-                                                                np.amax(matching_pctgs),  # pctg matching = 0
-                                                                my_array0[mother_tmp - 1][0],  # cx mother
-                                                                my_array0[mother_tmp - 1][1],  # cy mother
-                                                                dist_mat[tmp_match[0][0], tmp_match[1][
-                                                                    0]]]  # distance btw mother and daughter cell
+                            complete_table.loc[daughter_tmp] = [
+                                tp,  # timepoint
+                                daughter_tmp,  # mask number
+                                my_array1[daughter_tmp - 1][0],  # = cx
+                                my_array1[daughter_tmp - 1][1],  # = cy
+                                mother_tmp,  # mother mask
+                                np.amax(matching_pctgs),  # pctg matching = 0
+                                my_array0[mother_tmp - 1][0],  # cx mother
+                                my_array0[mother_tmp - 1][1],  # cy mother
+                                dist_mat[tmp_match[0][0], tmp_match[1][0]],
+                            ]  # distance btw mother and daughter cell
                             # remove daughter cell from matching_pctgs and dist_mat tables
-                            matching_pctgs = np.delete(matching_pctgs, tmp_match[1][0], 1)
+                            matching_pctgs = np.delete(
+                                matching_pctgs, tmp_match[1][0], 1
+                            )
                             dist_mat = np.delete(dist_mat, tmp_match[1][0], 1)
                             # also remove daughter cell from daughters_still_in_table array
-                            daughters_still_in_table = np.delete(daughters_still_in_table, tmp_match[1][0])
+                            daughters_still_in_table = np.delete(
+                                daughters_still_in_table, tmp_match[1][0]
+                            )
                             # remove mother cell from matching_pctgs and dist_mat tables
-                            matching_pctgs = np.delete(matching_pctgs, tmp_match[0][0], 0)
+                            matching_pctgs = np.delete(
+                                matching_pctgs, tmp_match[0][0], 0
+                            )
                             dist_mat = np.delete(dist_mat, tmp_match[0][0], 0)
                             # also remove mother cell from mothers_still_in_table array
-                            mothers_still_in_table = np.delete(mothers_still_in_table, tmp_match[0][0])
+                            mothers_still_in_table = np.delete(
+                                mothers_still_in_table, tmp_match[0][0]
+                            )
                         else:
                             # if angle between mother cell and its 2 possible daughter cells is too large,
                             # remove the tmp_match from the dist_mat and pctgs_matching tables because
@@ -376,26 +467,30 @@ def run_strack(files_list: List[Union[str, bytes, os.PathLike]], output_dir: Uni
                             # print("Angle is too large, removing this mother-daughter combination from the tables")
                             # print(" matching_pctgs is ", matching_pctgs)
                             # print("tmp mother is ", tmp_match[0][0], " and tmp daughter is ", tmp_match[1][0])
-                            dist_mat[tmp_match[0][0], tmp_match[1][
-                                0]] = 1000  # set distance to an extremely high value so it never gets picked again
+                            dist_mat[
+                                tmp_match[0][0], tmp_match[1][0]
+                            ] = 1000  # set distance to an extremely high value so it never gets picked again
 
                 # if distance between mother and daughter cell is too large, create a new track
                 else:
-                    complete_table.loc[daughter_tmp] = [tp,  # timepoint
-                                                        daughter_tmp,  # mask number
-                                                        my_array1[daughter_tmp - 1][0],  # = cx
-                                                        my_array1[daughter_tmp - 1][1],  # = cy
-                                                        0,  # mother mask
-                                                        np.amax(matching_pctgs),  # pctg matching = 0
-                                                        my_array1[daughter_tmp - 1][0],  # cx mother = cx
-                                                        my_array1[daughter_tmp - 1][1],  # cy mother = cy
-                                                        dist_mat[tmp_match[0][0], tmp_match[1][
-                                                            0]]]  # distance btw mother and daughter cell
+                    complete_table.loc[daughter_tmp] = [
+                        tp,  # timepoint
+                        daughter_tmp,  # mask number
+                        my_array1[daughter_tmp - 1][0],  # = cx
+                        my_array1[daughter_tmp - 1][1],  # = cy
+                        0,  # mother mask
+                        np.amax(matching_pctgs),  # pctg matching = 0
+                        my_array1[daughter_tmp - 1][0],  # cx mother = cx
+                        my_array1[daughter_tmp - 1][1],  # cy mother = cy
+                        dist_mat[tmp_match[0][0], tmp_match[1][0]],
+                    ]  # distance btw mother and daughter cell
                     # remove daughter cell from matching_pctgs and dist_mat tables
                     matching_pctgs = np.delete(matching_pctgs, tmp_match[1][0], 1)
                     dist_mat = np.delete(dist_mat, tmp_match[1][0], 1)
                     # also remove daughter cell from daughters_still_in_table array
-                    daughters_still_in_table = np.delete(daughters_still_in_table, tmp_match[1][0])
+                    daughters_still_in_table = np.delete(
+                        daughters_still_in_table, tmp_match[1][0]
+                    )
 
         ##########################################################################
         # Export tracking info and matching cells info for the current timepoint #
@@ -409,12 +504,21 @@ def run_strack(files_list: List[Union[str, bytes, os.PathLike]], output_dir: Uni
         ax = plt.gca()
         im = ax.imshow(img1)
         nb_cells = complete_table.shape[0]
-        if (nb_cells != 1):
+        if nb_cells != 1:
             complete_table.index = list(range(1, nb_cells + 1))
         for row_idx in range(1, nb_cells + 1):
             # draw vertical line from (70,100) to (70, 250)
-            plt.plot([complete_table.loc[row_idx]['Centroid_x_mother'], complete_table.loc[row_idx]['Centroid_x']],
-                     [complete_table.loc[row_idx]['Centroid_y_mother'], complete_table.loc[row_idx]['Centroid_y']], 'r-',
-                     lw=2)
+            plt.plot(
+                [
+                    complete_table.loc[row_idx]["Centroid_x_mother"],
+                    complete_table.loc[row_idx]["Centroid_x"],
+                ],
+                [
+                    complete_table.loc[row_idx]["Centroid_y_mother"],
+                    complete_table.loc[row_idx]["Centroid_y"],
+                ],
+                "r-",
+                lw=2,
+            )
         # plt.show()
         plt.savefig(output_dir.joinpath(f"tracking_figure_time{tp}.png"))

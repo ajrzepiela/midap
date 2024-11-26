@@ -11,6 +11,7 @@ from .base_cutout import CutoutImage
 
 # functions for the pool
 
+
 def init_pool(img):
     """
     Initializes the pool by setting the image that is used for the cutout
@@ -39,7 +40,9 @@ def get_single_shift(x1, x2, y1, y2, offset):
 
     # get the shift
     x_dim = x2 - x1
-    shift = phase_cross_correlation(y_cut[:, offset:offset + x_dim], chamber, normalization=None)[0].astype(int)
+    shift = phase_cross_correlation(
+        y_cut[:, offset : offset + x_dim], chamber, normalization=None
+    )[0].astype(int)
     return shift
 
 
@@ -93,7 +96,9 @@ class SemiAutomatedCutout(CutoutImage):
         # get all the valid offsets and calculate the shifts in parallel
         y_cut = self._interactive_img[y1:y2]
         offset = np.arange(0, y_cut.shape[1] - x_dim, 1)
-        shifts = self._pool.starmap(get_single_shift, [(x1, x2, y1, y2, i) for i in offset])
+        shifts = self._pool.starmap(
+            get_single_shift, [(x1, x2, y1, y2, i) for i in offset]
+        )
         shifts = np.stack(shifts, axis=0)
 
         # we get the minimum shifts by getting the peaks of the min abs
@@ -103,7 +108,7 @@ class SemiAutomatedCutout(CutoutImage):
         offsets = peaks - x1
 
         # we filter all offsets that are too much to the left (skipped chambers)
-        offsets = offsets[offsets > - x_dim // 2]
+        offsets = offsets[offsets > -x_dim // 2]
 
         return offsets
 
@@ -141,7 +146,9 @@ class SemiAutomatedCutout(CutoutImage):
         if len(self.offsets) >= 3:
             for num, offset in enumerate(self.offsets):
                 c = "r" if num % 2 == 0 else "g"
-                self.ax[1].fill_betweenx([y2, y1], x1 + offset, offset + x2, color=c, alpha=0.5)
+                self.ax[1].fill_betweenx(
+                    [y2, y1], x1 + offset, offset + x2, color=c, alpha=0.5
+                )
 
         plt.draw()
 
@@ -162,11 +169,23 @@ class SemiAutomatedCutout(CutoutImage):
         self.ax[0].set_xticks([])
         self.ax[0].set_yticks([])
         self.ax[0].set_title("Select Region here:")
-        rs = RectangleSelector(self.ax[0], self.line_select_callback,
-                       drawtype='box', useblit=True, button=[1],
-                       minspanx=5, minspany=5, spancoords='pixels',
-                       interactive=True)
-        x1, x2, y1, y2 = img.shape[0]//4, 3*img.shape[0]//4, img.shape[1]//4, 3*img.shape[1]//4
+        rs = RectangleSelector(
+            self.ax[0],
+            self.line_select_callback,
+            drawtype="box",
+            useblit=True,
+            button=[1],
+            minspanx=5,
+            minspany=5,
+            spancoords="pixels",
+            interactive=True,
+        )
+        x1, x2, y1, y2 = (
+            img.shape[0] // 4,
+            3 * img.shape[0] // 4,
+            img.shape[1] // 4,
+            3 * img.shape[1] // 4,
+        )
         rs.extents = (x1, x2, y1, y2)
 
         # show the zoom

@@ -72,15 +72,22 @@ def tracking_instance(monkeypatch, img1, img2):
 
     # the model weights (this is a dummy for v1 tracking but we set it corret anyway)
     weight_path = Path(__file__).absolute().parent.parent.parent
-    weight_path = weight_path.joinpath("model_weights", "model_weights_tracking", "unet_moma_track_multisets.hdf5")
+    weight_path = weight_path.joinpath(
+        "model_weights", "model_weights_tracking", "unet_moma_track_multisets.hdf5"
+    )
 
     # sizes
     target_size = None
     input_size = None
 
     # get the instance
-    bayes = BayesianCellTracking(imgs=imgs, segs=segs, model_weights=weight_path, input_size=input_size,
-                                 target_size=target_size)
+    bayes = BayesianCellTracking(
+        imgs=imgs,
+        segs=segs,
+        model_weights=weight_path,
+        input_size=input_size,
+        target_size=target_size,
+    )
 
     return bayes
 

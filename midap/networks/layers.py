@@ -1,14 +1,23 @@
 import tensorflow as tf
 from typing import Union
 
+
 class UNetLayerClassicDown(tf.keras.layers.Layer):
 
     """
     This class implements a basic Unet block
     """
 
-    def __init__(self, filters: int, kernel_size: Union[int, tuple], activation='relu', padding='same', dropout=None,
-                 kernel_initializer='he_normal', pool_size=None):
+    def __init__(
+        self,
+        filters: int,
+        kernel_size: Union[int, tuple],
+        activation="relu",
+        padding="same",
+        dropout=None,
+        kernel_initializer="he_normal",
+        pool_size=None,
+    ):
         """
         Initializes the layer
         :param filters: The number of filters for the convolution
@@ -24,10 +33,20 @@ class UNetLayerClassicDown(tf.keras.layers.Layer):
         super(UNetLayerClassicDown, self).__init__()
 
         # convolutions
-        self.conv1 = tf.keras.layers.Conv2D(filters=filters, activation=activation, kernel_size=kernel_size,
-                                            padding=padding, kernel_initializer=kernel_initializer)
-        self.conv2 = tf.keras.layers.Conv2D(filters=filters, activation=activation, kernel_size=kernel_size,
-                                            padding=padding, kernel_initializer=kernel_initializer)
+        self.conv1 = tf.keras.layers.Conv2D(
+            filters=filters,
+            activation=activation,
+            kernel_size=kernel_size,
+            padding=padding,
+            kernel_initializer=kernel_initializer,
+        )
+        self.conv2 = tf.keras.layers.Conv2D(
+            filters=filters,
+            activation=activation,
+            kernel_size=kernel_size,
+            padding=padding,
+            kernel_initializer=kernel_initializer,
+        )
 
         # dropout and pooling
         if dropout is not None:
@@ -62,8 +81,16 @@ class UNetLayerClassicUp(tf.keras.layers.Layer):
     This class implements a basic Unet block
     """
 
-    def __init__(self, filters: int, kernel_size: Union[int, tuple], activation='relu', padding='same', dropout=None,
-                 kernel_initializer='he_normal', upsize=(2,2)):
+    def __init__(
+        self,
+        filters: int,
+        kernel_size: Union[int, tuple],
+        activation="relu",
+        padding="same",
+        dropout=None,
+        kernel_initializer="he_normal",
+        upsize=(2, 2),
+    ):
         """
         Initializes the layer
         :param filters: The number of filters for the convolution
@@ -80,13 +107,28 @@ class UNetLayerClassicUp(tf.keras.layers.Layer):
 
         # up smpling
         self.upsampling = tf.keras.layers.UpSampling2D(size=upsize)
-        self.conv0 = tf.keras.layers.Conv2D(filters=filters, activation=activation, kernel_size=2,
-                                            padding=padding, kernel_initializer=kernel_initializer)
+        self.conv0 = tf.keras.layers.Conv2D(
+            filters=filters,
+            activation=activation,
+            kernel_size=2,
+            padding=padding,
+            kernel_initializer=kernel_initializer,
+        )
         # convolutions
-        self.conv1 = tf.keras.layers.Conv2D(filters=filters, activation=activation, kernel_size=kernel_size,
-                                            padding=padding, kernel_initializer=kernel_initializer)
-        self.conv2 = tf.keras.layers.Conv2D(filters=filters, activation=activation, kernel_size=kernel_size,
-                                            padding=padding, kernel_initializer=kernel_initializer)
+        self.conv1 = tf.keras.layers.Conv2D(
+            filters=filters,
+            activation=activation,
+            kernel_size=kernel_size,
+            padding=padding,
+            kernel_initializer=kernel_initializer,
+        )
+        self.conv2 = tf.keras.layers.Conv2D(
+            filters=filters,
+            activation=activation,
+            kernel_size=kernel_size,
+            padding=padding,
+            kernel_initializer=kernel_initializer,
+        )
 
         # dropout and pooling
         if dropout is not None:

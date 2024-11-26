@@ -25,9 +25,4 @@ def main(path: Union[str, os.PathLike], channels: List[str], tracking_class: str
 
 
 if __name__ == "__main__":
-    path = Path(
-        "/Users/franziskaoschmann/Documents/midap-datasets/Simon-GlucoseAcetate/GlucoseAcetateExampleData/Data/pos1"
-    )
-    channels = ["ph", "gfp", "mCherry"]
-    tracking_class = "STrack"
-    main(path, channels, tracking_class=tracking_class)
+    main()

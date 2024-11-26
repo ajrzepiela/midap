@@ -34,7 +34,12 @@ class STrack(Tracking):
         self.seg_imgs = np.array(segs)
         self.raw_imgs = np.array(raws)
 
-    def track_all_frames(self, output_folder: Union[str, bytes, os.PathLike], max_dist=50.0, max_angle=30.0): #40
+    def track_all_frames(
+        self,
+        output_folder: Union[str, bytes, os.PathLike],
+        max_dist=50.0,
+        max_angle=30.0,
+    ):  # 40
         """
         Tracks all frames and converts output to standard format.
         :param output_folder: Folder for the output
@@ -46,8 +51,15 @@ class STrack(Tracking):
         output_folder = Path(output_folder)
         strack_dir = output_folder.joinpath("STrack")
         os.makedirs(strack_dir, exist_ok=True)
-        run_strack(files_list=self.segs, output_dir=strack_dir, max_dist=max_dist, max_angle=max_angle)
-        strack_lineages = STrackLineage(output_folder, imgs=self.raw_imgs, segs=self.seg_imgs)
+        run_strack(
+            files_list=self.segs,
+            output_dir=strack_dir,
+            max_dist=max_dist,
+            max_angle=max_angle,
+        )
+        strack_lineages = STrackLineage(
+            output_folder, imgs=self.raw_imgs, segs=self.seg_imgs
+        )
         data_file, csv_file = strack_lineages.generate_midap_output()
 
         return data_file, csv_file

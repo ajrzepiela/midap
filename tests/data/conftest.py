@@ -26,6 +26,7 @@ def tmpdir():
     # cleanup
     tmp_dir.cleanup()
 
+
 @pytest.fixture()
 def dir_setup(tmpdir):
     """
@@ -37,7 +38,7 @@ def dir_setup(tmpdir):
 
     # fake data
     test_img = np.ones((5, 5))
-    test_img = np.pad(test_img, [(5, 5), (5, 5)], mode='constant', constant_values=0.0)
+    test_img = np.pad(test_img, [(5, 5), (5, 5)], mode="constant", constant_values=0.0)
     test_img = np.concatenate([test_img for i in range(20)], axis=1)
     test_img = np.concatenate([test_img for i in range(20)], axis=0)
 
