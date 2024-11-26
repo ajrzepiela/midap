@@ -21,7 +21,7 @@ from tensorflow.keras.layers import (
 from tensorflow.keras.optimizers import Adam
 
 
-#%% Losses/metrics
+# %% Losses/metrics
 
 
 def pixelwise_weighted_binary_crossentropy_seg(
@@ -75,7 +75,7 @@ def pixelwise_weighted_binary_crossentropy_seg(
     loss = K.mean(math_ops.multiply(weight, entropy), axis=-1)
 
     loss = tf.scalar_mul(
-        10 ** 6, tf.scalar_mul(1 / tf.math.sqrt(tf.math.reduce_sum(weight)), loss)
+        10**6, tf.scalar_mul(1 / tf.math.sqrt(tf.math.reduce_sum(weight)), loss)
     )
 
     return loss
@@ -128,7 +128,7 @@ def pixelwise_weighted_binary_crossentropy_track(
     loss = K.mean(math_ops.multiply(weight, entropy), axis=-1)
 
     loss = tf.scalar_mul(
-        10 ** 6, tf.scalar_mul(1 / tf.math.sqrt(tf.math.reduce_sum(weight)), loss)
+        10**6, tf.scalar_mul(1 / tf.math.sqrt(tf.math.reduce_sum(weight)), loss)
     )
 
     return loss
@@ -155,7 +155,6 @@ def class_weighted_categorical_crossentropy(
     """
 
     def loss_function(y_true: tf.Tensor, y_pred: tf.Tensor) -> float:
-
         # scale preds so that the class probas of each sample sum to 1
         y_pred /= tf.reduce_sum(y_pred, -1, True)
         # manual computation of crossentropy
@@ -202,7 +201,7 @@ def unstack_acc(y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
     return keras.metrics.binary_accuracy(seg, y_pred)
 
 
-#%% Models
+# %% Models
 # Generic unet declaration:
 def unet(
     input_size: Tuple[int, int, int] = (256, 32, 1),

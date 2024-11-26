@@ -40,7 +40,9 @@ def query_yes_no(question: str, default="yes"):
             sys.stdout.write("Please respond with 'yes' or 'no' " "(or 'y' or 'n').\n")
 
 
-def download_file(url: str, fname: Union[str, bytes, os.PathLike], desc: Optional[str]=None):
+def download_file(
+    url: str, fname: Union[str, bytes, os.PathLike], desc: Optional[str] = None
+):
     """
     Downloads a file as stream (not full file in memory)
     :param url: The URL of the file
@@ -50,11 +52,11 @@ def download_file(url: str, fname: Union[str, bytes, os.PathLike], desc: Optiona
 
     with requests.get(url, stream=True) as r:
         r.raise_for_status()
-        with open(fname, 'wb') as f:
+        with open(fname, "wb") as f:
             pbar = tqdm(unit="B", unit_scale=True, unit_divisor=1024, desc=desc)
             pbar.clear()
             for chunk in r.iter_content(chunk_size=8192):
-                if chunk: # filter out keep-alive new chunks
+                if chunk:  # filter out keep-alive new chunks
                     pbar.update(len(chunk))
                     f.write(chunk)
             pbar.close()
@@ -71,9 +73,14 @@ def main(args=None):
         args = sys.argv[1:]
 
     # arg parsing
-    parser = argparse.ArgumentParser(description="Download the files for the MIDAP pipeline.")
-    parser.add_argument("--force", action="store_true", help="Option to force a download even though files already "
-                                                             "exist.")
+    parser = argparse.ArgumentParser(
+        description="Download the files for the MIDAP pipeline."
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Option to force a download even though files already " "exist.",
+    )
     args = parser.parse_args(args)
 
     # this file indicates a succesful download
@@ -85,9 +92,19 @@ def main(args=None):
     # download the files
     with open(Path(__file__).parent.joinpath("download_info.json"), "r") as f:
         d_dict = json.load(f)
-    downloads = [(d_dict["psf"]["url"], d_dict["psf"]["name"], d_dict["psf"]["version"]),
-                 (d_dict["model_weights"]["url"], d_dict["model_weights"]["name"], d_dict["model_weights"]["version"]),
-                 (d_dict["example_data"]["url"], d_dict["example_data"]["name"], d_dict["example_data"]["version"])]
+    downloads = [
+        (d_dict["psf"]["url"], d_dict["psf"]["name"], d_dict["psf"]["version"]),
+        (
+            d_dict["model_weights"]["url"],
+            d_dict["model_weights"]["name"],
+            d_dict["model_weights"]["version"],
+        ),
+        (
+            d_dict["example_data"]["url"],
+            d_dict["example_data"]["name"],
+            d_dict["example_data"]["version"],
+        ),
+    ]
     for url, fname, version in downloads:
         # The full path of the downloaded file and the folder of the unpacked file
         zip_file = root.joinpath(fname)
@@ -109,7 +126,9 @@ def main(args=None):
             if up_to_date:
                 # ask to download again if we want to
                 if args.force:
-                    answer = query_yes_no(f"{zip_file.name} appears to be already downloaded, overwrite?")
+                    answer = query_yes_no(
+                        f"{zip_file.name} appears to be already downloaded, overwrite?"
+                    )
                     if not answer:
                         continue
                 else:

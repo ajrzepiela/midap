@@ -12,9 +12,18 @@ from midap.utils import get_inheritors
 ### Functions
 #############
 
-def main(path_model_weights: Union[str,bytes,os.PathLike], path_pos: Union[str,bytes,os.PathLike], path_channel: str,
-         segmentation_class: str, postprocessing: bool, clean_border: bool, network_name: Union[str,bytes,os.PathLike,None]=None,
-         just_select=False, img_threshold=1.0):
+
+def main(
+    path_model_weights: Union[str, bytes, os.PathLike],
+    path_pos: Union[str, bytes, os.PathLike],
+    path_channel: str,
+    segmentation_class: str,
+    postprocessing: bool,
+    clean_border: bool,
+    network_name: Union[str, bytes, os.PathLike, None] = None,
+    just_select=False,
+    img_threshold=1.0,
+):
     """
     Performs cell segmentation on all images in a given directory
     :param path_model_weights: The path to the pretrained model weights
@@ -30,7 +39,6 @@ def main(path_model_weights: Union[str,bytes,os.PathLike], path_pos: Union[str,b
              a check is performed if the model class actually exists and the model weights are returned if so
     """
 
-
     # get the right subclass
     class_instance = None
     for subclass in get_inheritors(base_segmentator.SegmentationPredictor):
@@ -42,8 +50,12 @@ def main(path_model_weights: Union[str,bytes,os.PathLike], path_pos: Union[str,b
         raise ValueError(f"Chosen class does not exist: {segmentation_class}")
 
     # get the Predictor
-    pred = class_instance(path_model_weights=path_model_weights, postprocessing=postprocessing,
-                          model_weights=network_name, img_threshold=img_threshold)
+    pred = class_instance(
+        path_model_weights=path_model_weights,
+        postprocessing=postprocessing,
+        model_weights=network_name,
+        img_threshold=img_threshold,
+    )
 
     # set the paths
     path_channel = Path(path_pos).joinpath(path_channel)
@@ -54,7 +66,10 @@ def main(path_model_weights: Union[str,bytes,os.PathLike], path_pos: Union[str,b
     # now we select the segmentor
     pred.set_segmentation_method(path_cut)
     # make sure that if this is a path, we have it absolute
-    if pred.model_weights is not None and (weight_path := Path(pred.model_weights).absolute()).exists():
+    if (
+        pred.model_weights is not None
+        and (weight_path := Path(pred.model_weights).absolute()).exists()
+    ):
         pred.model_weights = str(weight_path)
 
     # if we just want to set the method we are done here
@@ -65,21 +80,40 @@ def main(path_model_weights: Union[str,bytes,os.PathLike], path_pos: Union[str,b
     pred.run_image_stack(path_channel, clean_border)
     return pred.model_weights
 
+
 # Main
 ######
 
 if __name__ == "__main__":
-
     # arg parsing
     parser = argparse.ArgumentParser()
-    parser.add_argument("--path_model_weights", type=str, required=True, help="Path to the model weights that will be used "
-                                                                              "for the segmentation.")
-    parser.add_argument("--path_pos", type=str, required=True, help="Path to the current identifier folder to work on.")
-    parser.add_argument("--path_channel", type=str, required=True, help="Name of the current channel to process.")
-    parser.add_argument("--segmentation_class", type=str,
-                        help="Name of the class used for the cell segmentation. Must be defined in a file of "
-                             "midap.segmentation and a subclass of midap.segmentation.SegmentationPredictor")
-    parser.add_argument("--postprocessing", action="store_true", help="Flag for postprocessing.")
+    parser.add_argument(
+        "--path_model_weights",
+        type=str,
+        required=True,
+        help="Path to the model weights that will be used " "for the segmentation.",
+    )
+    parser.add_argument(
+        "--path_pos",
+        type=str,
+        required=True,
+        help="Path to the current identifier folder to work on.",
+    )
+    parser.add_argument(
+        "--path_channel",
+        type=str,
+        required=True,
+        help="Name of the current channel to process.",
+    )
+    parser.add_argument(
+        "--segmentation_class",
+        type=str,
+        help="Name of the class used for the cell segmentation. Must be defined in a file of "
+        "midap.segmentation and a subclass of midap.segmentation.SegmentationPredictor",
+    )
+    parser.add_argument(
+        "--postprocessing", action="store_true", help="Flag for postprocessing."
+    )
     args = parser.parse_args()
 
     # run

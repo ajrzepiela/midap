@@ -3,6 +3,7 @@ import numpy as np
 from midap.networks import unets
 from pathlib import Path
 
+
 def test_UNetv1():
     """
     Tests the UNetv1 class
@@ -10,12 +11,15 @@ def test_UNetv1():
 
     # path to weights
     weight_path = Path(__file__).absolute().parent.parent.parent
-    weight_path = weight_path.joinpath("model_weights", "model_weights_legacy",
-                                       "model_weights_C-crescentus-CB15_mKate2_v01.h5")
+    weight_path = weight_path.joinpath(
+        "model_weights",
+        "model_weights_legacy",
+        "model_weights_C-crescentus-CB15_mKate2_v01.h5",
+    )
 
     # create the model (no inference mode)
     inp_size = (64, 128, 1)
-    inp = tf.ones((2, ) + inp_size)
+    inp = tf.ones((2,) + inp_size)
     model1 = unets.UNetv1(input_size=inp_size, inference=False)
     model1.load_weights(weight_path)
 

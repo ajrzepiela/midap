@@ -36,9 +36,19 @@ class DataProcessor(object):
     # This logger can be accessed by classmethods etc
     logger = get_logger(__file__)
 
-    def __init__(self, paths: Union[str, bytes, os.PathLike, List[Union[str, bytes, os.PathLike]]],
-                 n_grid=4, test_size=0.15, val_size=0.2, sigma=2.0, w_0=2.0, w_c0=1.0, w_c1=1.1, loglevel=7,
-                 np_random_seed: Optional[int]=None):
+    def __init__(
+        self,
+        paths: Union[str, bytes, os.PathLike, List[Union[str, bytes, os.PathLike]]],
+        n_grid=4,
+        test_size=0.15,
+        val_size=0.2,
+        sigma=2.0,
+        w_0=2.0,
+        w_c0=1.0,
+        w_c1=1.1,
+        loglevel=7,
+        np_random_seed: Optional[int] = None,
+    ):
         """
         Initializes the DataProcessor instance. Note that a lot parameters are used to implement the weight map
         generation according to [1] (https://arxiv.org/abs/1505.04597)
@@ -82,12 +92,17 @@ class DataProcessor(object):
             self.img_paths = [Path(p) for p in paths]
         else:
             self.img_paths = [Path(paths)]
-        self.seg_paths = [p.parent.joinpath(p.name.replace("raw.tif", "seg.tif")) for p in self.img_paths]
+        self.seg_paths = [
+            p.parent.joinpath(p.name.replace("raw.tif", "seg.tif"))
+            for p in self.img_paths
+        ]
 
         # check for existence
         for raw, seg in zip(self.img_paths, self.seg_paths):
             if not raw.name.endswith("raw.tif"):
-                raise ValueError(f"Raw image name does not match format: {raw} (needs to end with raw.tif)")
+                raise ValueError(
+                    f"Raw image name does not match format: {raw} (needs to end with raw.tif)"
+                )
             if not raw.exists():
                 raise FileNotFoundError(f"File for training does not exist: {raw}")
             if not seg.exists():
@@ -112,8 +127,12 @@ class DataProcessor(object):
             seg = self.scale_pixel_vals_seg(io.imread(seg_path)).astype(int)
 
             # 2) Generate weight map
-            w_string = f"w_0={self.w_0}_w_c0={self.w_c0}_w_c1={self.w_c1}_sigma={self.sigma}"
-            w_path = img_path.parent.joinpath(img_path.name.replace("raw.tif", f"{w_string}_weights.tif"))
+            w_string = (
+                f"w_0={self.w_0}_w_c0={self.w_c0}_w_c1={self.w_c1}_sigma={self.sigma}"
+            )
+            w_path = img_path.parent.joinpath(
+                img_path.name.replace("raw.tif", f"{w_string}_weights.tif")
+            )
             if w_path.exists():
                 weights = io.imread(w_path)
             else:
@@ -123,7 +142,9 @@ class DataProcessor(object):
 
             # 3) Split image, masks and weight map into a grid
             self.logger.info(f"Splitting into {self.n_grid}x{self.n_grid} grid...")
-            imgs, masks, weight_maps = self.generate_patches(img, seg, weights, ensure_channel=True)
+            imgs, masks, weight_maps = self.generate_patches(
+                img, seg, weights, ensure_channel=True
+            )
 
             # 4) Split patches into train and validation set
             # compute ratio of cell pixels in masks
@@ -155,22 +176,32 @@ class DataProcessor(object):
         height, width, *_ = img.shape
 
         # get the dims of the tiles (make sure they are divisible by divisor)
-        r_dim = divisor*(height//(n_grid*divisor))
-        c_dim = divisor*(width//(n_grid*divisor))
+        r_dim = divisor * (height // (n_grid * divisor))
+        c_dim = divisor * (width // (n_grid * divisor))
 
-        assert r_dim != 0 and c_dim != 0, f"The requested tiling causes at least on dimension of the tiles to be 0: " \
-                                          f"{r_dim=} {c_dim=}"
+        assert r_dim != 0 and c_dim != 0, (
+            f"The requested tiling causes at least on dimension of the tiles to be 0: "
+            f"{r_dim=} {c_dim=}"
+        )
 
         # tile the image
         tiles = []
         for i in range(n_grid):
             for j in range(n_grid):
-                tiles.append(img[i*r_dim:(i+1)*r_dim, j*c_dim:(j+1)*c_dim])
+                tiles.append(
+                    img[i * r_dim : (i + 1) * r_dim, j * c_dim : (j + 1) * c_dim]
+                )
 
         # transform to array and return
         return np.array(tiles)
 
-    def generate_patches(self, img: np.ndarray, mask: np.ndarray, weight_map: np.ndarray, ensure_channel=True):
+    def generate_patches(
+        self,
+        img: np.ndarray,
+        mask: np.ndarray,
+        weight_map: np.ndarray,
+        ensure_channel=True,
+    ):
         """
         Splits the inputs into a grid of distinct patches
         :param img: The original input image
@@ -202,8 +233,8 @@ class DataProcessor(object):
         """
 
         img = np.array(img)
-        return ((img - img.min()) / (img.max() - img.min()))
-    
+        return (img - img.min()) / (img.max() - img.min())
+
     @classmethod
     def scale_pixel_vals_seg(cls, seg: np.ndarray):
         """
@@ -217,7 +248,9 @@ class DataProcessor(object):
 
     @staticmethod
     @njit("void(i8[:,:],f8[:,:,:],i4)")
-    def update_dist_array(bound_indices: np.ndarray, dist_array: np.ndarray, cut_off: int):
+    def update_dist_array(
+        bound_indices: np.ndarray, dist_array: np.ndarray, cut_off: int
+    ):
         """
         This is a numba optimized static method to update the distance array to calculate the weights of a map
         It works by defining a window around the current cell (with width cut_off) and then calculating the minimum
@@ -235,10 +268,10 @@ class DataProcessor(object):
         n, m, _ = dist_array.shape
 
         # define the window around the current cell
-        min_x = max(min(bound_indices[:,0]) - cut_off, 0)
-        max_x = min(max(bound_indices[:,0]) + cut_off, n)
-        min_y = max(min(bound_indices[:,1]) - cut_off, 0)
-        max_y = min(max(bound_indices[:,1]) + cut_off, m)
+        min_x = max(min(bound_indices[:, 0]) - cut_off, 0)
+        max_x = min(max(bound_indices[:, 0]) + cut_off, n)
+        min_y = max(min(bound_indices[:, 1]) - cut_off, 0)
+        max_y = min(max(bound_indices[:, 1]) + cut_off, m)
 
         # cycle through all pixels in the window
         for id_x in range(min_x, max_x):
@@ -250,7 +283,7 @@ class DataProcessor(object):
                     bound_x = bound[0]
                     bound_y = bound[1]
                     # calculate distance and update temp min if necessary
-                    d = np.sqrt((id_x - bound_x)**2 + (id_y - bound_y)**2)
+                    d = np.sqrt((id_x - bound_x) ** 2 + (id_y - bound_y) ** 2)
                     if d < tmp_min:
                         tmp_min = d
                 # update the dist array if necessary
@@ -279,7 +312,7 @@ class DataProcessor(object):
         # for the weight map we need to calculate the distances from any pixel that is not part of the closest pixel
         # of any cell, where the distance is measured as Eucledean distance in pixel space
         # we start by initializeing the distance array (default large -> weight ~0)
-        dist_array = np.full(shape=mask.shape + (2, ), fill_value=10000.0)
+        dist_array = np.full(shape=mask.shape + (2,), fill_value=10000.0)
 
         # now we cycle though all cells and keep the closest distances for all cells
         self.logger.info("Calculating pixel distances...")
@@ -287,20 +320,25 @@ class DataProcessor(object):
             # isolate the cell
             cell_mask = (mask_label == cell_id).astype(int)
             # get the boundaries (boolean array)
-            bounds = find_boundaries(cell_mask, mode='inner')
+            bounds = find_boundaries(cell_mask, mode="inner")
             # get the indices of the boundary
             indices = np.argwhere(bounds)
             # update the dist array
-            self.update_dist_array(bound_indices=indices, dist_array=dist_array, cut_off=int(cut_off*self.sigma))
+            self.update_dist_array(
+                bound_indices=indices,
+                dist_array=dist_array,
+                cut_off=int(cut_off * self.sigma),
+            )
 
         # get distance to nearest and second-nearest cell
         self.logger.info("Calculating weights...")
-        d1_val = dist_array[...,0]
-        d2_val = dist_array[...,1]
+        d1_val = dist_array[..., 0]
+        d2_val = dist_array[..., 1]
 
         # calculate the weights
-        weights = self.w_c0 + self.w_0 * \
-            np.exp((-1 * (d1_val + d2_val) ** 2) / (2 * (self.sigma ** 2)))
+        weights = self.w_c0 + self.w_0 * np.exp(
+            (-1 * (d1_val + d2_val) ** 2) / (2 * (self.sigma**2))
+        )
         # where there is a cell, we want to have c1
         weights[mask != 0] = self.w_c1
 
@@ -336,12 +374,20 @@ class DataProcessor(object):
         asort = np.argsort(x)
         # we bundle x in "quantiles" for the stratification
         stratification = np.zeros(x.shape, dtype=int)
-        for class_id, indices in enumerate(np.array_split(asort, indices_or_sections=n)):
+        for class_id, indices in enumerate(
+            np.array_split(asort, indices_or_sections=n)
+        ):
             stratification[indices] = class_id
 
         return stratification
 
-    def split_data(self, imgs: np.ndarray, masks: np.ndarray, weight_maps: np.ndarray, ratio: np.ndarray):
+    def split_data(
+        self,
+        imgs: np.ndarray,
+        masks: np.ndarray,
+        weight_maps: np.ndarray,
+        ratio: np.ndarray,
+    ):
         """
         Split data depending on the ratio of colored pixels in all images (patches).
         :param imgs: The original images split into patches (training data)
@@ -352,7 +398,7 @@ class DataProcessor(object):
         """
 
         # get the number of images in the test set, this defines the number of "classes"
-        n_test = int(self.test_size*len(ratio)) + 1
+        n_test = int(self.test_size * len(ratio)) + 1
         # get the stratification according to quantiles
         stratification = self.get_quantile_classes(ratio, n_test)
 
@@ -360,15 +406,22 @@ class DataProcessor(object):
         arrays = (ratio, imgs, masks, weight_maps)
 
         # split
-        ratio_train, ratio_test, *splits = train_test_split(*arrays, test_size=self.test_size, stratify=stratification)
+        ratio_train, ratio_test, *splits = train_test_split(
+            *arrays, test_size=self.test_size, stratify=stratification
+        )
 
         # add to result dictionarray
-        res = {"X_train": splits[0], "X_test": splits[1],
-               "y_train": splits[2], "y_test": splits[3],
-               "weight_maps_train": splits[4], "weight_maps_test": splits[5]}
+        res = {
+            "X_train": splits[0],
+            "X_test": splits[1],
+            "y_train": splits[2],
+            "y_test": splits[3],
+            "weight_maps_train": splits[4],
+            "weight_maps_test": splits[5],
+        }
 
         # we split the training set into training and validation
-        n_val = int(self.val_size*len(ratio_train)) + 1
+        n_val = int(self.val_size * len(ratio_train)) + 1
         # get the stratification according to quantiles
         stratification = self.get_quantile_classes(ratio_train, n_val)
 
@@ -376,11 +429,20 @@ class DataProcessor(object):
         arrays = (res["X_train"], res["y_train"], res["weight_maps_train"])
 
         # split
-        splits = train_test_split(*arrays, test_size=self.val_size, stratify=stratification)
+        splits = train_test_split(
+            *arrays, test_size=self.val_size, stratify=stratification
+        )
 
         # add to result dictionarray
-        res.update({"X_train": splits[0], "X_val": splits[1],
-                    "y_train": splits[2], "y_val": splits[3],
-                    "weight_maps_train": splits[4], "weight_maps_val": splits[5]})
+        res.update(
+            {
+                "X_train": splits[0],
+                "X_val": splits[1],
+                "y_train": splits[2],
+                "y_val": splits[3],
+                "weight_maps_train": splits[4],
+                "weight_maps_val": splits[5],
+            }
+        )
 
         return res

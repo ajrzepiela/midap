@@ -7,6 +7,7 @@ from midap.networks.evaluation import evaluation
 # Tests
 #######
 
+
 @mark.usefixtures("img_and_seg")
 def test_evaluate_accuracy(img_and_seg):
     """
@@ -52,7 +53,7 @@ def test_evaluate_bayes_stats(img_and_seg):
     assert fnr.size == 1
     assert np.allclose(tpr, 1.0)
     # we should have a 25 pixel missmatch (see fixture)
-    test_tnr = (img.size - 399*25 - 25) / (img.size - 399*25)
+    test_tnr = (img.size - 399 * 25 - 25) / (img.size - 399 * 25)
     assert np.allclose(tnr, test_tnr)
     assert np.allclose(fpr, 1.0 - test_tnr)
     assert np.allclose(fnr, 1.0 - tpr)

@@ -12,6 +12,7 @@ from midap.apps.segment_cells import main
 # Fixtures
 ##########
 
+
 @pytest.fixture()
 @mark.usefixtures("setup_dir")
 def prep_dirs(setup_dir):
@@ -38,6 +39,7 @@ def prep_dirs(setup_dir):
 # Tests
 #######
 
+
 def test_main(prep_dirs):
     """
     Tests the main routine of the segment_cells app
@@ -48,30 +50,53 @@ def test_main(prep_dirs):
     path_pos, path_channel, sol_path = prep_dirs
 
     # prep the remaining arguments
-    path_model_weights = Path(__file__).parent.parent.parent.joinpath("model_weights",
-                                                                      "model_weights_legacy")
+    path_model_weights = Path(__file__).parent.parent.parent.joinpath(
+        "model_weights", "model_weights_legacy"
+    )
     postprocessing = True
 
     # Test for invalid segmentation class
     with pytest.raises(ValueError):
-        main(path_model_weights=path_model_weights, path_pos=path_pos, path_channel=path_channel,
-             segmentation_class="This is not a valid class", postprocessing=postprocessing, clean_border=True)
+        main(
+            path_model_weights=path_model_weights,
+            path_pos=path_pos,
+            path_channel=path_channel,
+            segmentation_class="This is not a valid class",
+            postprocessing=postprocessing,
+            clean_border=True,
+        )
 
     # Tests for UNetSegmentation
     segmentation_class = "UNetSegmentation"
-    network_name = path_model_weights.joinpath("model_weights_C-crescentus-CB15_mKate2_v01.h5")
+    network_name = path_model_weights.joinpath(
+        "model_weights_C-crescentus-CB15_mKate2_v01.h5"
+    )
 
     # just the selection
-    network_name_new = main(path_model_weights=path_model_weights, path_pos=path_pos, path_channel=path_channel,
-                            segmentation_class=segmentation_class, postprocessing=postprocessing,
-                            clean_border=True, network_name=network_name,  just_select=True)
+    network_name_new = main(
+        path_model_weights=path_model_weights,
+        path_pos=path_pos,
+        path_channel=path_channel,
+        segmentation_class=segmentation_class,
+        postprocessing=postprocessing,
+        clean_border=True,
+        network_name=network_name,
+        just_select=True,
+    )
 
     assert Path(network_name_new) == Path(network_name)
 
     # now actual segmentation
-    _ = main(path_model_weights=path_model_weights, path_pos=path_pos, path_channel=path_channel,
-             segmentation_class=segmentation_class, postprocessing=postprocessing, clean_border=True,
-             network_name=network_name, just_select=False)
+    _ = main(
+        path_model_weights=path_model_weights,
+        path_pos=path_pos,
+        path_channel=path_channel,
+        segmentation_class=segmentation_class,
+        postprocessing=postprocessing,
+        clean_border=True,
+        network_name=network_name,
+        just_select=False,
+    )
 
     # get the segmented images and the solution
     sol_imgs = sorted(sol_path.glob("*.png"))
@@ -89,13 +114,21 @@ def test_main(prep_dirs):
     try:
         import omnipose
         from cellpose import models
+
         segmentation_class = "OmniSegmentation"
         network_name = "bact_fluor_omni"
 
         # just the selection, testing the actual segmentation would require larger images
-        network_name_new = main(path_model_weights=path_model_weights, path_pos=path_pos, path_channel=path_channel,
-                                segmentation_class=segmentation_class, postprocessing=postprocessing,
-                                clean_border=True, network_name=network_name,  just_select=True)
+        network_name_new = main(
+            path_model_weights=path_model_weights,
+            path_pos=path_pos,
+            path_channel=path_channel,
+            segmentation_class=segmentation_class,
+            postprocessing=postprocessing,
+            clean_border=True,
+            network_name=network_name,
+            just_select=True,
+        )
 
         assert network_name_new == network_name
     except ImportError:

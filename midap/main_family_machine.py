@@ -5,7 +5,15 @@ from shutil import copyfile
 
 import numpy as np
 
-from midap.apps import split_frames, cut_chamber, segment_cells, seg_fluo_change_analysis, segment_analysis, track_cells, track_analysis
+from midap.apps import (
+    split_frames,
+    cut_chamber,
+    segment_cells,
+    seg_fluo_change_analysis,
+    segment_analysis,
+    track_cells,
+    track_analysis,
+)
 from midap.checkpoint import CheckpointManager
 
 
@@ -36,16 +44,23 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
     # we cycle through all pos identifiers
     for identifier in config.getlist("General", "IdentifierFound"):
         # read out what we need to do
-        run_segmentation = config.get(identifier, "RunOption").lower() in ['both', 'segmentation']
+        run_segmentation = config.get(identifier, "RunOption").lower() in [
+            "both",
+            "segmentation",
+        ]
         # current path of the identifier
         current_path = base_path.joinpath(identifier)
 
         # stuff we do for the segmentation
         if run_segmentation:
-
             # setup all the directories
-            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="SetupDirs",
-                                   identifier=identifier) as checker:
+            with CheckpointManager(
+                restart=restart,
+                checkpoint=checkpoint,
+                config=config,
+                state="SetupDirs",
+                identifier=identifier,
+            ) as checker:
                 # check to skip
                 checker.check()
 
@@ -62,14 +77,24 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
                 for channel in config.getlist(identifier, "Channels"):
                     current_path.joinpath(channel, raw_im_folder).mkdir(parents=True)
                     current_path.joinpath(channel, cut_im_folder).mkdir(parents=True)
-                    current_path.joinpath(channel, cut_im_rawcounts_folder).mkdir(parents=True)
+                    current_path.joinpath(channel, cut_im_rawcounts_folder).mkdir(
+                        parents=True
+                    )
                     current_path.joinpath(channel, seg_im_folder).mkdir(parents=True)
-                    current_path.joinpath(channel, seg_im_bin_folder).mkdir(parents=True)
+                    current_path.joinpath(channel, seg_im_bin_folder).mkdir(
+                        parents=True
+                    )
                     current_path.joinpath(channel, track_folder).mkdir(parents=True)
 
             # copy the files
-            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="CopyFiles",
-                                   identifier=identifier, copy_path=current_path) as checker:
+            with CheckpointManager(
+                restart=restart,
+                checkpoint=checkpoint,
+                config=config,
+                state="CopyFiles",
+                identifier=identifier,
+                copy_path=current_path,
+            ) as checker:
                 # check to skip
                 checker.check()
 
@@ -92,8 +117,14 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
             ######################################################################################
 
             # split frames
-            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="SplitFramesInit",
-                                   identifier=identifier, copy_path=current_path) as checker:
+            with CheckpointManager(
+                restart=restart,
+                checkpoint=checkpoint,
+                config=config,
+                state="SplitFramesInit",
+                identifier=identifier,
+                copy_path=current_path,
+            ) as checker:
                 # check to skip
                 checker.check()
 
@@ -104,39 +135,64 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
                 for channel in config.getlist(identifier, "Channels"):
                     paths = list(current_path.joinpath(channel).glob(f"*.{file_ext}"))
                     if len(paths) == 0:
-                        raise FileNotFoundError(f"No file of the type '.{file_ext}' exists for channel {channel}")
+                        raise FileNotFoundError(
+                            f"No file of the type '.{file_ext}' exists for channel {channel}"
+                        )
                     if len(paths) > 1:
-                        raise FileExistsError(f"More than one file of the type '.{file_ext}' "
-                                              f"exists for channel {channel}")
+                        raise FileExistsError(
+                            f"More than one file of the type '.{file_ext}' "
+                            f"exists for channel {channel}"
+                        )
 
                     # we only get the first frame and the mid frame
                     first_frame = config.getint(identifier, "StartFrame")
-                    mid_frame = int(0.5*(first_frame + config.getint(identifier, "EndFrame")))
+                    mid_frame = int(
+                        0.5 * (first_frame + config.getint(identifier, "EndFrame"))
+                    )
                     frames = np.unique([first_frame, mid_frame])
-                    split_frames.main(path=paths[0], save_dir=current_path.joinpath(channel, raw_im_folder),
-                                      frames=frames,
-                                      deconv=config.get(identifier, "Deconvolution"),
-                                      loglevel=main_args.loglevel)
+                    split_frames.main(
+                        path=paths[0],
+                        save_dir=current_path.joinpath(channel, raw_im_folder),
+                        frames=frames,
+                        deconv=config.get(identifier, "Deconvolution"),
+                        loglevel=main_args.loglevel,
+                    )
 
             # cut chamber and images
-            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="CutFramesInit",
-                                   identifier=identifier, copy_path=current_path) as checker:
+            with CheckpointManager(
+                restart=restart,
+                checkpoint=checkpoint,
+                config=config,
+                state="CutFramesInit",
+                identifier=identifier,
+                copy_path=current_path,
+            ) as checker:
                 # check to skip
                 checker.check()
 
                 logger.info(f"Cutting test frames for {identifier}")
 
                 # get the paths
-                paths = [current_path.joinpath(channel, raw_im_folder)
-                         for channel in config.getlist(identifier, "Channels")]
+                paths = [
+                    current_path.joinpath(channel, raw_im_folder)
+                    for channel in config.getlist(identifier, "Channels")
+                ]
 
                 # Do the init cutouts
                 if config.get(identifier, "Corners") == "None":
                     corners = None
                 else:
-                    corners = tuple([int(corner) for corner in config.getlist(identifier, "Corners")])
-                cut_corners = cut_chamber.main(channel=paths, cutout_class=config.get(identifier, "CutImgClass"),
-                                               corners=corners)
+                    corners = tuple(
+                        [
+                            int(corner)
+                            for corner in config.getlist(identifier, "Corners")
+                        ]
+                    )
+                cut_corners = cut_chamber.main(
+                    channel=paths,
+                    cutout_class=config.get(identifier, "CutImgClass"),
+                    corners=corners,
+                )
 
                 # save the corners if necessary
                 if corners is None:
@@ -145,8 +201,14 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
                     config.to_file()
 
             # select the networks
-            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="SegmentationInit",
-                                   identifier=identifier, copy_path=current_path) as checker:
+            with CheckpointManager(
+                restart=restart,
+                checkpoint=checkpoint,
+                config=config,
+                state="SegmentationInit",
+                identifier=identifier,
+                copy_path=current_path,
+            ) as checker:
                 # check to skip
                 checker.check()
 
@@ -155,30 +217,45 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
                 # cycle through all channels
                 for num, channel in enumerate(config.getlist(identifier, "Channels")):
                     # The phase channel is always the first
-                    if num == 0 and not config.getboolean(identifier, "PhaseSegmentation"):
+                    if num == 0 and not config.getboolean(
+                        identifier, "PhaseSegmentation"
+                    ):
                         continue
 
                     # get the current model weight (if defined)
-                    model_weights = config.get(identifier, f"ModelWeights_{channel}", fallback=None)
+                    model_weights = config.get(
+                        identifier, f"ModelWeights_{channel}", fallback=None
+                    )
 
                     # run the selector
                     segmentation_class = config.get(identifier, "SegmentationClass")
                     if segmentation_class == "HybridSegmentation":
-                        path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
-                                                                                   "model_weights_hybrid")
+                        path_model_weights = Path(__file__).parent.parent.joinpath(
+                            "model_weights", "model_weights_hybrid"
+                        )
                     elif segmentation_class == "OmniSegmentation":
-                        path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
-                                                                                   "model_weights_omni")
+                        path_model_weights = Path(__file__).parent.parent.joinpath(
+                            "model_weights", "model_weights_omni"
+                        )
                     elif segmentation_class == "StarDistSegmentation":
-                        path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
-                                                                                   "model_weights_stardist")
+                        path_model_weights = Path(__file__).parent.parent.joinpath(
+                            "model_weights", "model_weights_stardist"
+                        )
                     else:
-                        path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
-                                                                                   "model_weights_legacy")
-                    weights = segment_cells.main(path_model_weights=path_model_weights, path_pos=current_path,
-                                                 path_channel=channel, postprocessing=True, clean_border=config.get(identifier, "RemoveBorder"), network_name=model_weights,
-                                                 segmentation_class=segmentation_class, just_select=True,
-                                                 img_threshold=config.getfloat(identifier, "ImgThreshold"))
+                        path_model_weights = Path(__file__).parent.parent.joinpath(
+                            "model_weights", "model_weights_legacy"
+                        )
+                    weights = segment_cells.main(
+                        path_model_weights=path_model_weights,
+                        path_pos=current_path,
+                        path_channel=channel,
+                        postprocessing=True,
+                        clean_border=config.get(identifier, "RemoveBorder"),
+                        network_name=model_weights,
+                        segmentation_class=segmentation_class,
+                        just_select=True,
+                        img_threshold=config.getfloat(identifier, "ImgThreshold"),
+                    )
 
                     # save to config
                     if model_weights is None:
@@ -190,8 +267,14 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
 
     for identifier in config.getlist("General", "IdentifierFound"):
         # read out what we need to do
-        run_segmentation = config.get(identifier, "RunOption").lower() in ['both', 'segmentation']
-        run_tracking = config.get(identifier, "RunOption").lower() in ['both', 'tracking']
+        run_segmentation = config.get(identifier, "RunOption").lower() in [
+            "both",
+            "segmentation",
+        ]
+        run_tracking = config.get(identifier, "RunOption").lower() in [
+            "both",
+            "tracking",
+        ]
 
         # current path of the identifier
         current_path = base_path.joinpath(identifier)
@@ -199,12 +282,19 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
         # stuff we do for the segmentation
         if run_segmentation:
             # split frames
-            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="SplitFramesFull",
-                                   identifier=identifier, copy_path=current_path) as checker:
-
+            with CheckpointManager(
+                restart=restart,
+                checkpoint=checkpoint,
+                config=config,
+                state="SplitFramesFull",
+                identifier=identifier,
+                copy_path=current_path,
+            ) as checker:
                 # exit if this is only run to prepare config
                 if main_args.prepare_config_cluster:
-                    sys.exit('Preparation of config file is finished. Please follow instructions on https://github.com/Microbial-Systems-Ecology/midap/wiki/MIDAP-On-Euler to submit your job on the cluster.')
+                    sys.exit(
+                        "Preparation of config file is finished. Please follow instructions on https://github.com/Microbial-Systems-Ecology/midap/wiki/MIDAP-On-Euler to submit your job on the cluster."
+                    )
 
                 # check to skip
                 checker.check()
@@ -216,31 +306,53 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
                 for channel in config.getlist(identifier, "Channels"):
                     paths = list(current_path.joinpath(channel).glob(f"*.{file_ext}"))
                     if len(paths) > 1:
-                        raise FileExistsError(f"More than one file of the type '.{file_ext}' "
-                                              f"exists for channel {channel}")
+                        raise FileExistsError(
+                            f"More than one file of the type '.{file_ext}' "
+                            f"exists for channel {channel}"
+                        )
 
                     # get all the frames and split
-                    frames = np.arange(config.getint(identifier, "StartFrame"), config.getint(identifier, "EndFrame"))
-                    split_frames.main(path=paths[0], save_dir=current_path.joinpath(channel, raw_im_folder),
-                                      frames=frames,
-                                      deconv=config.get(identifier, "Deconvolution"),
-                                      loglevel=main_args.loglevel)
+                    frames = np.arange(
+                        config.getint(identifier, "StartFrame"),
+                        config.getint(identifier, "EndFrame"),
+                    )
+                    split_frames.main(
+                        path=paths[0],
+                        save_dir=current_path.joinpath(channel, raw_im_folder),
+                        frames=frames,
+                        deconv=config.get(identifier, "Deconvolution"),
+                        loglevel=main_args.loglevel,
+                    )
 
             # cut chamber and images
-            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config, state="CutFramesFull",
-                                   identifier=identifier, copy_path=current_path) as checker:
+            with CheckpointManager(
+                restart=restart,
+                checkpoint=checkpoint,
+                config=config,
+                state="CutFramesFull",
+                identifier=identifier,
+                copy_path=current_path,
+            ) as checker:
                 # check to skip
                 checker.check()
 
                 logger.info(f"Cutting all frames for {identifier}")
 
                 # get the paths
-                paths = [current_path.joinpath(channel, raw_im_folder)
-                         for channel in config.getlist(identifier, "Channels")]
+                paths = [
+                    current_path.joinpath(channel, raw_im_folder)
+                    for channel in config.getlist(identifier, "Channels")
+                ]
 
                 # Get the corners and cut
-                corners = tuple([int(corner) for corner in config.getlist(identifier, "Corners")])
-                _ = cut_chamber.main(channel=paths, cutout_class=config.get(identifier, "CutImgClass"), corners=corners)
+                corners = tuple(
+                    [int(corner) for corner in config.getlist(identifier, "Corners")]
+                )
+                _ = cut_chamber.main(
+                    channel=paths,
+                    cutout_class=config.get(identifier, "CutImgClass"),
+                    corners=corners,
+                )
 
             # run full segmentation (we checkpoint after each channel)
             for num, channel in enumerate(config.getlist(identifier, "Channels")):
@@ -248,32 +360,52 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
                 if num == 0 and not config.getboolean(identifier, "PhaseSegmentation"):
                     continue
 
-                with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config,
-                                       state=f"SegmentationFull_{channel}", identifier=identifier,
-                                       copy_path=current_path) as checker:
+                with CheckpointManager(
+                    restart=restart,
+                    checkpoint=checkpoint,
+                    config=config,
+                    state=f"SegmentationFull_{channel}",
+                    identifier=identifier,
+                    copy_path=current_path,
+                ) as checker:
                     # check to skip
                     checker.check()
 
-                    logger.info(f"Segmenting all frames for {identifier} and channel {channel}...")
+                    logger.info(
+                        f"Segmenting all frames for {identifier} and channel {channel}..."
+                    )
 
                     # get the current model weight (if defined)
                     model_weights = config.get(identifier, f"ModelWeights_{channel}")
 
                     # run the segmentation, the actual path to the weights does not matter anymore since it is selected
-                    path_model_weights = Path(__file__).parent.parent.joinpath("model_weights")
-                    _ = segment_cells.main(path_model_weights=path_model_weights, path_pos=current_path,
-                                           path_channel=channel, postprocessing=True, clean_border=config.get(identifier, "RemoveBorder"), network_name=model_weights,
-                                           segmentation_class=config.get(identifier, "SegmentationClass"),
-                                           img_threshold=config.getfloat(identifier, "ImgThreshold"))
+                    path_model_weights = Path(__file__).parent.parent.joinpath(
+                        "model_weights"
+                    )
+                    _ = segment_cells.main(
+                        path_model_weights=path_model_weights,
+                        path_pos=current_path,
+                        path_channel=channel,
+                        postprocessing=True,
+                        clean_border=config.get(identifier, "RemoveBorder"),
+                        network_name=model_weights,
+                        segmentation_class=config.get(identifier, "SegmentationClass"),
+                        img_threshold=config.getfloat(identifier, "ImgThreshold"),
+                    )
                     # analyse the images
-                    segment_analysis.main(path_seg=current_path.joinpath(channel, seg_im_folder),
-                                          path_result=current_path.joinpath(channel),
-                                          loglevel=main_args.loglevel)
-                    
+                    segment_analysis.main(
+                        path_seg=current_path.joinpath(channel, seg_im_folder),
+                        path_result=current_path.joinpath(channel),
+                        loglevel=main_args.loglevel,
+                    )
+
             if config.getboolean(identifier, "FluoChange") and not run_tracking:
-                logger.info(f"Performs fluo change analysis based on segmentation images...")
-                seg_fluo_change_analysis.main(path=current_path,
-                channels=config.getlist(identifier, "Channels"),
+                logger.info(
+                    f"Performs fluo change analysis based on segmentation images..."
+                )
+                seg_fluo_change_analysis.main(
+                    path=current_path,
+                    channels=config.getlist(identifier, "Channels"),
                 )
 
         if run_tracking:
@@ -283,29 +415,43 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
                 if num == 0 and not config.getboolean(identifier, "PhaseSegmentation"):
                     continue
 
-                with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config,
-                                       state=f"Tracking_{channel}", identifier=identifier,
-                                       copy_path=current_path) as checker:
+                with CheckpointManager(
+                    restart=restart,
+                    checkpoint=checkpoint,
+                    config=config,
+                    state=f"Tracking_{channel}",
+                    identifier=identifier,
+                    copy_path=current_path,
+                ) as checker:
                     # check to skip
                     checker.check()
 
                     # track the cells
-                    track_cells.main(path=current_path.joinpath(channel),
-                                     tracking_class=config.get(identifier, "TrackingClass"),
-                                     loglevel=main_args.loglevel)
-                    
+                    track_cells.main(
+                        path=current_path.joinpath(channel),
+                        tracking_class=config.get(identifier, "TrackingClass"),
+                        loglevel=main_args.loglevel,
+                    )
+
             # Tracking postprocessing
             if config.getboolean(identifier, "FluoChange"):
-                track_analysis.main(path=current_path,
-                                    channels=config.getlist(identifier, "Channels"), 
-                                    tracking_class=config.get(identifier, "TrackingClass"))
+                track_analysis.main(
+                    path=current_path,
+                    channels=config.getlist(identifier, "Channels"),
+                    tracking_class=config.get(identifier, "TrackingClass"),
+                )
 
         # Cleanup
         for channel in config.getlist(identifier, "Channels"):
             logger.info(f"Cleaning up {identifier} and channel {channel}...")
-            with CheckpointManager(restart=restart, checkpoint=checkpoint, config=config,
-                                   state=f"Cleanup_{channel}", identifier=identifier,
-                                   copy_path=current_path) as checker:
+            with CheckpointManager(
+                restart=restart,
+                checkpoint=checkpoint,
+                config=config,
+                state=f"Cleanup_{channel}",
+                identifier=identifier,
+                copy_path=current_path,
+            ) as checker:
                 # check to skip
                 checker.check()
 
@@ -314,25 +460,46 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
                     # get a list of files to remove
                     file_ext = config.get("General", "FileType")
                     if file_ext == "ome.tif":
-                        files = base_path.joinpath(identifier, channel).glob(f"*{identifier}*/**/*.ome.tif")
+                        files = base_path.joinpath(identifier, channel).glob(
+                            f"*{identifier}*/**/*.ome.tif"
+                        )
                     else:
-                        files = base_path.joinpath(identifier, channel).glob(f"*{identifier}*.{file_ext}")
+                        files = base_path.joinpath(identifier, channel).glob(
+                            f"*{identifier}*.{file_ext}"
+                        )
 
                     # remove the files
                     for file in files:
                         file.unlink(missing_ok=True)
                 if not config.getboolean(identifier, "KeepRawImages"):
-                    shutil.rmtree(current_path.joinpath(channel, raw_im_folder), ignore_errors=True)
+                    shutil.rmtree(
+                        current_path.joinpath(channel, raw_im_folder),
+                        ignore_errors=True,
+                    )
                 if not config.getboolean(identifier, "KeepCutoutImages"):
-                    shutil.rmtree(current_path.joinpath(channel, cut_im_folder), ignore_errors=True)
+                    shutil.rmtree(
+                        current_path.joinpath(channel, cut_im_folder),
+                        ignore_errors=True,
+                    )
                 if not config.getboolean(identifier, "KeepCutoutImagesRaw"):
-                    shutil.rmtree(current_path.joinpath(channel, cut_im_rawcounts_folder), ignore_errors=True)
+                    shutil.rmtree(
+                        current_path.joinpath(channel, cut_im_rawcounts_folder),
+                        ignore_errors=True,
+                    )
                 if not config.getboolean(identifier, "KeepSegImagesLabel"):
-                    shutil.rmtree(current_path.joinpath(channel, seg_im_folder), ignore_errors=True)
+                    shutil.rmtree(
+                        current_path.joinpath(channel, seg_im_folder),
+                        ignore_errors=True,
+                    )
                 if not config.getboolean(identifier, "KeepSegImagesBin"):
-                    shutil.rmtree(current_path.joinpath(channel, seg_im_bin_folder), ignore_errors=True)
+                    shutil.rmtree(
+                        current_path.joinpath(channel, seg_im_bin_folder),
+                        ignore_errors=True,
+                    )
                 if not config.getboolean(identifier, "KeepSegImagesTrack"):
-                    files = current_path.joinpath(channel, track_folder).glob(f"segmentations_*.h5")
+                    files = current_path.joinpath(channel, track_folder).glob(
+                        f"segmentations_*.h5"
+                    )
                     for file in files:
                         file.unlink(missing_ok=True)
 

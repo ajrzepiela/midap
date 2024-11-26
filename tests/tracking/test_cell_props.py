@@ -9,6 +9,7 @@ from midap.tracking.cell_props import CellProps
 # Fixtures
 ##########
 
+
 @pytest.fixture()
 def tmpdir():
     """
@@ -28,6 +29,7 @@ def tmpdir():
 
 # Tests
 #######
+
 
 def test_cell_props(tmpdir):
     """

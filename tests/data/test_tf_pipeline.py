@@ -11,6 +11,7 @@ from midap.data.tf_pipeline import TFPipeFamilyMachine
 # Fixtures
 ##########
 
+
 @pytest.fixture()
 def sample_images():
     """
@@ -31,7 +32,14 @@ def sample_images():
 #######
 
 
-def run_statics(static_method: Callable, i: tf.Tensor, w: tf.Tensor, l: tf.Tensor, image_only_transform: bool,**kwargs):
+def run_statics(
+    static_method: Callable,
+    i: tf.Tensor,
+    w: tf.Tensor,
+    l: tf.Tensor,
+    image_only_transform: bool,
+    **kwargs
+):
     """
     This test tests a static method of the TFPipe by running it stateless and stateful and check if the
     output are as expected
@@ -48,8 +56,12 @@ def run_statics(static_method: Callable, i: tf.Tensor, w: tf.Tensor, l: tf.Tenso
     # random operations inside the static_methods are seeded in this case with a randomly generated seed, so
     # they produce the same output when the dataset it traversed multiple times. For pytest, this means that we should
     # not set a global seed anywhere, because otherwise the tests have a different behaviour depending on the order
-    dset = TFPipeFamilyMachine.zip_inputs(i.numpy()[None, ...], w.numpy()[None, ...], l.numpy()[None, ...]).enumerate()
-    dset = dset.map(lambda num, imgs: static_method(num, imgs, stateless_seed=None, **kwargs))
+    dset = TFPipeFamilyMachine.zip_inputs(
+        i.numpy()[None, ...], w.numpy()[None, ...], l.numpy()[None, ...]
+    ).enumerate()
+    dset = dset.map(
+        lambda num, imgs: static_method(num, imgs, stateless_seed=None, **kwargs)
+    )
     for num, (i1, w1, l1) in dset:
         pass
     for num, (i2, w2, l2) in dset:
@@ -64,8 +76,12 @@ def run_statics(static_method: Callable, i: tf.Tensor, w: tf.Tensor, l: tf.Tenso
         assert not np.allclose(l1.numpy(), l2.numpy())
 
     # we build it with state, each run through should be identical
-    dset = TFPipeFamilyMachine.zip_inputs(i.numpy()[None, ...], w.numpy()[None, ...], l.numpy()[None, ...]).enumerate()
-    dset = dset.map(lambda num, imgs: static_method(num, imgs, stateless_seed=(11, 12), **kwargs))
+    dset = TFPipeFamilyMachine.zip_inputs(
+        i.numpy()[None, ...], w.numpy()[None, ...], l.numpy()[None, ...]
+    ).enumerate()
+    dset = dset.map(
+        lambda num, imgs: static_method(num, imgs, stateless_seed=(11, 12), **kwargs)
+    )
     for num, (i1, w1, l1) in dset:
         pass
     for num, (i2, w2, l2) in dset:
@@ -86,7 +102,9 @@ def test_zip_inputs(sample_images):
     i, w, l = sample_images
 
     # we zip the inputs
-    dset = TFPipeFamilyMachine.zip_inputs(i.numpy()[None,...], w.numpy()[None,...], l.numpy()[None,...])
+    dset = TFPipeFamilyMachine.zip_inputs(
+        i.numpy()[None, ...], w.numpy()[None, ...], l.numpy()[None, ...]
+    )
 
     for i1, w1, l1 in dset:
         assert np.allclose(i1.numpy(), i.numpy())
@@ -105,7 +123,14 @@ def test_map_crop(sample_images):
 
     # the cropping
     target_size = (128, 128, 1)
-    run_statics(TFPipeFamilyMachine._map_crop, i, w, l, image_only_transform=False, target_size=target_size)
+    run_statics(
+        TFPipeFamilyMachine._map_crop,
+        i,
+        w,
+        l,
+        image_only_transform=False,
+        target_size=target_size,
+    )
 
 
 def test_map_brightness(sample_images):
@@ -119,7 +144,14 @@ def test_map_brightness(sample_images):
 
     # the cropping
     max_delta = 0.4
-    run_statics(TFPipeFamilyMachine._map_brightness, i, w, l, image_only_transform=True, max_delta=max_delta)
+    run_statics(
+        TFPipeFamilyMachine._map_brightness,
+        i,
+        w,
+        l,
+        image_only_transform=True,
+        max_delta=max_delta,
+    )
 
 
 def test_map_gamma(sample_images):
@@ -136,7 +168,15 @@ def test_map_gamma(sample_images):
     # the cropping
     delta_gamma = 0.1
     delta_gain = 0.1
-    run_statics(TFPipeFamilyMachine._map_gamma, i, w, l, image_only_transform=True, delta_gamma=delta_gamma, delta_gain=delta_gain)
+    run_statics(
+        TFPipeFamilyMachine._map_gamma,
+        i,
+        w,
+        l,
+        image_only_transform=True,
+        delta_gamma=delta_gamma,
+        delta_gain=delta_gain,
+    )
 
 
 def test_map_contrast(sample_images):
@@ -151,7 +191,15 @@ def test_map_contrast(sample_images):
     # the cropping
     lower = 0.2
     upper = 0.4
-    run_statics(TFPipeFamilyMachine._map_contrast, i, w, l, image_only_transform=True, lower=lower, upper=upper)
+    run_statics(
+        TFPipeFamilyMachine._map_contrast,
+        i,
+        w,
+        l,
+        image_only_transform=True,
+        lower=lower,
+        upper=upper,
+    )
 
 
 @mark.usefixtures("dir_setup")

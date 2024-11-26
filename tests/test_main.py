@@ -13,6 +13,7 @@ from midap.main import run_module
 # Fixtures
 ##########
 
+
 @pytest.fixture()
 def prep_dir():
     """
@@ -49,7 +50,9 @@ def prep_settings(prep_dir):
     data_path.mkdir()
 
     # copy the test data
-    src = Path(__file__).parent.absolute().joinpath("apps", "data", "example_stack.tiff")
+    src = (
+        Path(__file__).parent.absolute().joinpath("apps", "data", "example_stack.tiff")
+    )
     dst = data_path.joinpath("example_stack_pos1_PH.tiff")
     copyfile(src=src, dst=dst)
 
@@ -63,9 +66,11 @@ def prep_settings(prep_dir):
     config.set("pos1", "EndFrame", "6")
     config.set("pos1", "Channels", "PH")
     config.set("pos1", "Corners", "7,102,68,155")
-    path_model_weights = Path(__file__).parent.parent.joinpath("model_weights",
-                                                               "model_weights_legacy",
-                                                               "model_weights_C-crescentus-CB15_mKate2_v01.h5")
+    path_model_weights = Path(__file__).parent.parent.joinpath(
+        "model_weights",
+        "model_weights_legacy",
+        "model_weights_C-crescentus-CB15_mKate2_v01.h5",
+    )
     config.set("pos1", "ModelWeights_PH", f"{path_model_weights}")
     config.to_file()
 
@@ -74,6 +79,7 @@ def prep_settings(prep_dir):
 
 # Tests
 #######
+
 
 def test_run_module_create_config(prep_dir):
     """
@@ -143,11 +149,25 @@ def test_run_module_full(prep_settings):
     # run in headless mode
     run_module(["--headless"])
     # since we only have one channel and no phase seg, we expect a log of dirs to be empty
-    assert len(list(prep_settings.joinpath("data", "pos1", "PH", "seg_im").iterdir())) == 0
-    assert len(list(prep_settings.joinpath("data", "pos1", "PH", "seg_im_bin").iterdir())) == 0
-    assert len(list(prep_settings.joinpath("data", "pos1", "PH", "track_output").iterdir())) == 0
-    assert len(list(prep_settings.joinpath("data", "pos1", "PH", "cut_im").iterdir())) == 3
-    assert len(list(prep_settings.joinpath("data", "pos1", "PH", "raw_im").iterdir())) == 3
+    assert (
+        len(list(prep_settings.joinpath("data", "pos1", "PH", "seg_im").iterdir())) == 0
+    )
+    assert (
+        len(list(prep_settings.joinpath("data", "pos1", "PH", "seg_im_bin").iterdir()))
+        == 0
+    )
+    assert (
+        len(
+            list(prep_settings.joinpath("data", "pos1", "PH", "track_output").iterdir())
+        )
+        == 0
+    )
+    assert (
+        len(list(prep_settings.joinpath("data", "pos1", "PH", "cut_im").iterdir())) == 3
+    )
+    assert (
+        len(list(prep_settings.joinpath("data", "pos1", "PH", "raw_im").iterdir())) == 3
+    )
     # checkpoint and config
     assert not prep_settings.joinpath("data", "pos1", "checkpoints.log").exists()
     assert prep_settings.joinpath("data", "pos1", "settings.ini").exists()
@@ -159,11 +179,25 @@ def test_run_module_full(prep_settings):
     run_module(["--headless"])
 
     # check everything again
-    assert len(list(prep_settings.joinpath("data", "pos1", "PH", "seg_im").iterdir())) == 3
-    assert len(list(prep_settings.joinpath("data", "pos1", "PH", "seg_im_bin").iterdir())) == 3
-    assert len(list(prep_settings.joinpath("data", "pos1", "PH", "track_output").iterdir())) == 5
-    assert len(list(prep_settings.joinpath("data", "pos1", "PH", "cut_im").iterdir())) == 3
-    assert len(list(prep_settings.joinpath("data", "pos1", "PH", "raw_im").iterdir())) == 3
+    assert (
+        len(list(prep_settings.joinpath("data", "pos1", "PH", "seg_im").iterdir())) == 3
+    )
+    assert (
+        len(list(prep_settings.joinpath("data", "pos1", "PH", "seg_im_bin").iterdir()))
+        == 3
+    )
+    assert (
+        len(
+            list(prep_settings.joinpath("data", "pos1", "PH", "track_output").iterdir())
+        )
+        == 5
+    )
+    assert (
+        len(list(prep_settings.joinpath("data", "pos1", "PH", "cut_im").iterdir())) == 3
+    )
+    assert (
+        len(list(prep_settings.joinpath("data", "pos1", "PH", "raw_im").iterdir())) == 3
+    )
     # checkpoint and config
     assert not prep_settings.joinpath("data", "pos1", "checkpoints.log").exists()
     assert prep_settings.joinpath("data", "pos1", "settings.ini").exists()

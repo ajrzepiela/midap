@@ -8,6 +8,7 @@ from pathlib import Path
 # Fixtures
 ##########
 
+
 @fixture()
 def img1():
     """
@@ -22,6 +23,7 @@ def img1():
 
     return img
 
+
 @fixture()
 def img2(img1):
     """
@@ -35,6 +37,7 @@ def img2(img1):
     img[50:55, 75:100] = 0
 
     return img
+
 
 @fixture()
 def tracking_instance(monkeypatch, img1, img2):
@@ -67,20 +70,30 @@ def tracking_instance(monkeypatch, img1, img2):
 
     # the model weights (this is a dummy for v1 tracking but we set it corret anyway)
     weight_path = Path(__file__).absolute().parent.parent.parent
-    weight_path = weight_path.joinpath("model_weights", "model_weights_tracking", "unet_moma_track_multisets.hdf5")
+    weight_path = weight_path.joinpath(
+        "model_weights", "model_weights_tracking", "unet_moma_track_multisets.hdf5"
+    )
 
     # sizes
     target_size = None
     input_size = None
 
     # get the instance
-    deltav1 = DeltaV1Tracking(imgs=imgs, segs=segs, model_weights=weight_path, input_size=input_size,
-                              target_size=target_size, connectivity=1)
+    deltav1 = DeltaV1Tracking(
+        imgs=imgs,
+        segs=segs,
+        model_weights=weight_path,
+        input_size=input_size,
+        target_size=target_size,
+        connectivity=1,
+    )
 
     return deltav1
 
+
 # Tests
 #######
+
 
 def test_run_model_crop(tracking_instance):
     """

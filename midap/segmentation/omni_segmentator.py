@@ -30,11 +30,10 @@ class OmniSegmentation(SegmentationPredictor):
         # base class init
         super().__init__(*args, **kwargs)
 
-        if platform.processor() == 'arm':
+        if platform.processor() == "arm":
             self.gpu_available = torch.backends.mps.is_available()
         else:
             self.gpu_available = torch.cuda.is_available()
-
 
     def set_segmentation_method(self, path_to_cutouts):
         """
@@ -45,7 +44,7 @@ class OmniSegmentation(SegmentationPredictor):
         """
 
         if self.model_weights is None:
-            self.logger.info('Selecting weights...')
+            self.logger.info("Selecting weights...")
 
             # get the image that is roughly in the middle of the stack
             list_files = np.sort(os.listdir(path_to_cutouts))
@@ -58,31 +57,48 @@ class OmniSegmentation(SegmentationPredictor):
             path_img = list_files[ix_half]
 
             # scale the image and pad
-            img = self.scale_pixel_vals(io.imread(os.path.join(path_to_cutouts, path_img)))
+            img = self.scale_pixel_vals(
+                io.imread(os.path.join(path_to_cutouts, path_img))
+            )
 
             # display different segmentation models
-            label_dict = {'bact_phase_cp': 'bact_phase_cp',
-                          'bact_fluor_cp': 'bact_fluor_cp',
-                          'bact_phase_omni': 'bact_phase_omni',
-                          'bact_fluor_omni': 'bact_fluor_omni',}
+            label_dict = {
+                "bact_phase_cp": "bact_phase_cp",
+                "bact_fluor_cp": "bact_fluor_cp",
+                "bact_phase_omni": "bact_phase_omni",
+                "bact_fluor_omni": "bact_fluor_omni",
+            }
             for custom_model in Path(self.path_model_weights).iterdir():
                 label_dict.update({custom_model.name: custom_model})
             figures = []
             for model_name, model_path in label_dict.items():
                 if Path(model_path).is_file():
-                    model = models.CellposeModel(gpu=self.gpu_available, pretrained_model=str(model_path))
+                    model = models.CellposeModel(
+                        gpu=self.gpu_available, pretrained_model=str(model_path)
+                    )
                 else:
-                    model = models.CellposeModel(gpu=self.gpu_available, model_type=model_name)
+                    model = models.CellposeModel(
+                        gpu=self.gpu_available, model_type=model_name
+                    )
                 # predict, we only need the mask, see omnipose tutorial for the rest of the args
-                mask, _, _ = model.eval(img, channels=[0, 0], rescale=None, mask_threshold=-1,
-                                        transparency=True, flow_threshold=0, omni=True, resample=True, verbose=0)
+                mask, _, _ = model.eval(
+                    img,
+                    channels=[0, 0],
+                    rescale=None,
+                    mask_threshold=-1,
+                    transparency=True,
+                    flow_threshold=0,
+                    omni=True,
+                    resample=True,
+                    verbose=0,
+                )
                 # omni removes axes that are just 1
                 seg = (mask > 0.5).astype(int)
 
                 # now we create a plot that can be used as a button image
-                fig, ax = plt.subplots(figsize=(3,3))
+                fig, ax = plt.subplots(figsize=(3, 3))
                 ax.imshow(img)
-                ax.contour(seg, [0.5], colors='r', linewidths=0.5)
+                ax.contour(seg, [0.5], colors="r", linewidths=0.5)
                 ax.set_xticks([])
                 ax.set_yticks([])
                 ax.set_title(model_name)
@@ -91,32 +107,49 @@ class OmniSegmentation(SegmentationPredictor):
             # Title for the GUI
             channel = os.path.basename(os.path.dirname(path_to_cutouts))
             # if we just got the chamber folder, we need to go one more up
-            if channel.startswith('chamber'):
-                channel = os.path.basename(os.path.dirname(os.path.dirname(path_to_cutouts)))
-            title = f'Segmentation Selection for channel: {channel}'
+            if channel.startswith("chamber"):
+                channel = os.path.basename(
+                    os.path.dirname(os.path.dirname(path_to_cutouts))
+                )
+            title = f"Segmentation Selection for channel: {channel}"
 
             # start the gui
-            marked = GUI_selector(figures=figures, labels=list(label_dict.keys()), title=title)
+            marked = GUI_selector(
+                figures=figures, labels=list(label_dict.keys()), title=title
+            )
 
             # set weights
             self.model_weights = label_dict[marked]
 
         # helper function for the seg method
         if Path(self.model_weights).is_file():
-            model = models.CellposeModel(gpu=self.gpu_available, pretrained_model=str(self.model_weights))
+            model = models.CellposeModel(
+                gpu=self.gpu_available, pretrained_model=str(self.model_weights)
+            )
         else:
-            model = models.CellposeModel(gpu=self.gpu_available, model_type=self.model_weights)
+            model = models.CellposeModel(
+                gpu=self.gpu_available, model_type=self.model_weights
+            )
 
         def seg_method(imgs):
             # scale all the images
             imgs = [self.scale_pixel_vals(img) for img in imgs]
             # we catch here ValueErrors because omni can fail at masking when there are no cells
             try:
-                mask, _, _ = model.eval(imgs, channels=[0, 0], rescale=None, mask_threshold=-1,
-                                        transparency=True, flow_threshold=0, omni=True, resample=True, verbose=0)
+                mask, _, _ = model.eval(
+                    imgs,
+                    channels=[0, 0],
+                    rescale=None,
+                    mask_threshold=-1,
+                    transparency=True,
+                    flow_threshold=0,
+                    omni=True,
+                    resample=True,
+                    verbose=0,
+                )
             except ValueError:
-                self.logger.warning('Segmentation failed, returning empty mask!')
-                mask = np.zeros((len(imgs), ) + imgs[0].shape, dtype=int)
+                self.logger.warning("Segmentation failed, returning empty mask!")
+                mask = np.zeros((len(imgs),) + imgs[0].shape, dtype=int)
 
             # add the channel dimension and batch if it was 1
             return mask

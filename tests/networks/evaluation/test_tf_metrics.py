@@ -8,6 +8,7 @@ from midap.networks.evaluation import tf_metrics
 # Tests
 #######
 
+
 def test_toggle_metrics():
     """
     A very simple test to see if we can init the metric
@@ -79,14 +80,14 @@ def test_average_precision(img_and_seg):
     average_precision.update_state(seg, img)
 
     # now we should get something (see fixture for value)
-    assert np.isclose(average_precision.result().numpy(), 399/400)
+    assert np.isclose(average_precision.result().numpy(), 399 / 400)
 
     # another update should increase the true positives to 2*399
     # update state
     average_precision.update_state(seg, img)
 
     # now we should get something (see fixture for value)
-    assert np.isclose(average_precision.tp.numpy(), 2*399)
+    assert np.isclose(average_precision.tp.numpy(), 2 * 399)
 
     # reset and we get nan again
     average_precision.reset_state()

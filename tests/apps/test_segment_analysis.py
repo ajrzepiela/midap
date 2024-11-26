@@ -12,6 +12,7 @@ from midap.apps.segment_analysis import main
 # Fixtures
 ##########
 
+
 @pytest.fixture()
 @mark.usefixtures("setup_dir")
 def prep_dirs(setup_dir):
@@ -37,6 +38,7 @@ def prep_dirs(setup_dir):
 
 # Tests
 #######
+
 
 def test_main(prep_dirs):
     """
