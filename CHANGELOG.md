@@ -19,6 +19,13 @@ Efficiency:
 Fix:
 - ...
 
+## [1.0.1]
+
+2024-11-26
+
+Feature:
+- Add functionality to run notebooks on JupyterHub.
+
 ## [1.0]
 
 2024-11-22
