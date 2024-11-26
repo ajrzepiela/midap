@@ -162,7 +162,7 @@ jobs:
       - name: Run Tests 
         shell: bash -l {0}
         run: |
-          coverage run --source="midap" -m pytest -v tests
+          coverage run -m pytest -v tests
           coverage report -m
 
       - name: Extract Coverage
