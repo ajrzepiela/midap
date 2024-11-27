@@ -34,7 +34,7 @@ class SegmentationJupyter(object):
         :path: path to folder containing images
         """
         self.path = path
-        self.path_midap = "/Users/franziskaoschmann/Documents/midap"  #"/cluster/software/others/services/jupyterhub/environments/segmentation_training/midap"
+        self.path_midap = str(Path(__file__).parent.resolve().parent.parent)
 
         # existing folders
         self.path_data_input = self.path + "/input_data/"
@@ -72,13 +72,13 @@ class SegmentationJupyter(object):
             with self.output:
                 self.chosen_files = self.file_selection.label
                 self.chosen_dir = self.fc_file.selected
-                self.load_input_image()
+                #self.load_input_image()
 
         self.button.on_click(on_button_clicked)
         ip.display.display(self.file_selection)
         ip.display.display(self.button)
 
-    def load_input_image(self):
+    def load_input_image(self, image_stack=False):
         """
         Loads selected image and extracts image dimensions.
         """
@@ -96,13 +96,16 @@ class SegmentationJupyter(object):
                     "**The image shapes do not match. Please select only images with the same image dimensions.**"
                 )
             )
-        else:
+        elif len(list(set([i.shape for i in self.imgs]))) == 1:
             self.imgs = np.stack(self.imgs, axis=0)
             self.get_img_dims()
             self.get_img_dims_ix()
 
             # get indices of additional dimensions
             self.get_ix_add_dims()
+            if image_stack==False:
+                self.make_dropdowns_img_dims()
+                ip.display.display(self.hbox_dropdowns)
 
     def get_img_dims(self):
         """
@@ -309,17 +312,6 @@ class SegmentationJupyter(object):
                 description="Image ID",
             ),
         )
-
-        # def f(i):
-        #     return self.imgs_cut[int(i)]
-
-        # if len(self.imgs_cut) > 1:
-        #     fig, ax = plt.subplots()
-        #     controls = iplt.imshow(f, i=np.arange(0, int(len(self.imgs_cut) - 1)))
-        # else:
-        #     fig, ax = plt.subplots()
-        #     plt.imshow(self.imgs_cut[0])
-        # plt.show()
 
     def save_cutouts(self):
         """
@@ -558,9 +550,9 @@ class SegmentationJupyter(object):
         if self.out_add_file.children[0].value == True:
             self.chosen_files = os.listdir(self.fc_add_file.selected)
             self.chosen_dir = self.fc_add_file.selected
-            self.load_input_image()
-            self.get_img_dims_ix()
-            self.spec_img_dims()
+            self.load_input_image(image_stack=True)
+            #self.get_img_dims_ix()
+            #self.spec_img_dims()
             self.align_img_dims()
             self.set_channel()
             self.make_cutouts()

@@ -27,8 +27,15 @@ class SegmentationPredictor(ABC):
     # this logger will be shared by all instances and subclasses
     logger = logger
 
-    def __init__(self, path_model_weights: Union[str, bytes, os.PathLike], postprocessing: bool, div=16, connectivity=1,
-                 model_weights: Union[str, bytes, os.PathLike, None]=None, img_threshold=1.0):
+    def __init__(
+        self,
+        path_model_weights: Union[str, bytes, os.PathLike],
+        postprocessing: bool,
+        div=16,
+        connectivity=1,
+        model_weights: Union[str, bytes, os.PathLike, None] = None,
+        img_threshold=1.0,
+    ):
         """
         Initializes the SegmentationPredictor instance
         :param path_model_weights: Path to the model weights
@@ -55,6 +62,7 @@ class SegmentationPredictor(ABC):
         self.model_weights = model_weights
         self.segmentation_method = None
 
+        
     def run_image_stack_jupyter(self, imgs, model_weights, clean_border: bool):
         """
         Performs image segmentation, postprocessing and storage for all images found in channel_path
@@ -82,17 +90,16 @@ class SegmentationPredictor(ABC):
             self.set_segmentation_method(path_cut)
 
         # We read in all the images
-        self.logger.info('Reading in images...')
+        self.logger.info("Reading in images...")
         imgs = []
         for p in tqdm(path_imgs):
             imgs.append(io.imread(os.path.join(path_cut, p)))
 
         # segement all images
-        self.logger.info('Segmenting images...')
+        self.logger.info("Segmenting images...")
         segs = self.segmentation_method(imgs)
 
-
-        self.logger.info('Postprocessing and storage...')
+        self.logger.info("Postprocessing and storage...")
         self.num_cells = []
         for seg, p in zip(segs, path_imgs):
             # postprocessing
@@ -106,15 +113,23 @@ class SegmentationPredictor(ABC):
             # label in case no post processing or border removal
             seg = label(seg, connectivity=self.connectivity)
 
-            self.num_cells.append(len(np.unique(seg))-1)
+            self.num_cells.append(len(np.unique(seg)) - 1)
 
             # save individual image
             os.makedirs(path_seg, exist_ok=True)
             label_fname = re.sub("(_cut.tif|_cut.png|.tif)", "_seg.tif", p)
-            io.imsave(os.path.join(path_seg, label_fname), seg.astype(np.uint16), check_contrast=False)
+            io.imsave(
+                os.path.join(path_seg, label_fname),
+                seg.astype(np.uint16),
+                check_contrast=False,
+            )
             seg_fname = re.sub("(_cut.tif|_cut.png|.tif)", "_seg_bin.png", p)
             os.makedirs(path_seg_bin, exist_ok=True)
-            io.imsave(os.path.join(path_seg_bin, seg_fname), 255*(seg > 0).astype(np.uint8), check_contrast=False)
+            io.imsave(
+                os.path.join(path_seg_bin, seg_fname),
+                255 * (seg > 0).astype(np.uint8),
+                check_contrast=False,
+            )
 
     def postprocess_seg(self, seg: np.ndarray):
         """
@@ -130,11 +145,11 @@ class SegmentationPredictor(ABC):
         areas = [r.area for r in reg]
 
         # We take everything that is larger than 1% of the average size
-        min_size = np.mean(areas)*0.01
-        mask_sizes = (sizes > min_size)
+        min_size = np.mean(areas) * 0.01
+        mask_sizes = sizes > min_size
         mask_sizes[0] = 0
         # we multiply the labels to get a labelled image back
-        img_filt = (mask_sizes[label_objects] > 0).astype(int)*label_objects
+        img_filt = (mask_sizes[label_objects] > 0).astype(int) * label_objects
 
         return img_filt
 
@@ -147,8 +162,8 @@ class SegmentationPredictor(ABC):
         """
 
         img = np.array(img)
-        img = np.clip(img, img.min(), self.threshold*img.max())
-        return ((img - img.min()) / (img.max() - img.min()))
+        img = np.clip(img, img.min(), self.threshold * img.max())
+        return (img - img.min()) / (img.max() - img.min())
 
     @abstractmethod
     def set_segmentation_method(self, path_to_cutouts):
