@@ -69,9 +69,11 @@ class OmniSegmentation(SegmentationPredictor):
                 "bact_fluor_omni": "bact_fluor_omni",
             }
             for custom_model in Path(self.path_model_weights).iterdir():
-                label_dict.update({custom_model.name: custom_model})
+                    if custom_model.is_file() and custom_model.suffix == "" and not custom_model.name.startswith("."): # Filter out any other files that contain no weights (i.e .jsons)
+                        label_dict.update({custom_model.name: custom_model})
             figures = []
             for model_name, model_path in label_dict.items():
+                self.logger.info("Try model: " + str(model_name))
                 if Path(model_path).is_file():
                     model = models.CellposeModel(
                         gpu=self.gpu_available, pretrained_model=str(model_path)
