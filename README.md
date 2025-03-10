@@ -43,7 +43,7 @@ pip install -e .
 3. Once the conda environment is activated, you can run the module from anywhere via `midap`. If you run the pipeline for the first time, it will download all the required files (~3 GB). You can also manually (re)download the files using the command `midap_download`. The module accepts arguments and has the following signature:
 
 ```
-usage: midap [-h] [--restart [RESTART]] [--headless] [--loglevel LOGLEVEL] [--cpu_only] [--create_config]
+usage: midap [-h] [--restart [RESTART]] [--headless] [--loglevel LOGLEVEL] [--cpu_only] [--create_config] [--cut_data [INPUT_FOLDER OUTPUT_FOLDER FROM_CUT TO_CUT]]
 
 Runs the cell segmentation and tracking pipeline.
 
@@ -57,6 +57,15 @@ optional arguments:
   --create_config      If this flag is set, all other arguments will be ignored and a 'settings.ini' config file is
                        generated in the current working directory. This option is meant generate config file templates
                        for the '--headless' mode. Note that this will overwrite if a file already exists.
+  --cut_data           INPUT_FOLDER OUTPUT_FOLDER FROM_CUT TO_CUT
+                       This option will run midap in data cut mode
+                       Specify parameters for cutting data from a dataset. Requires 4 values:
+                       INPUT_FOLDER (path to input data, must contain .tif or .tiff files only!),
+                       "OUTPUT_FOLDER (path to save output), "
+                       "FROM_CUT (start index, integer), and" 
+                       "TO_CUT (end index, integer). "
+                       "Example usage: --cut_data /path/to/input /path/to/output 10 50. "
+                       
 ```
 
 For an installation with GPU support, please refer to the documentation.   

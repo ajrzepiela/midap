@@ -70,6 +70,17 @@ def run_module(args=None):
         "if a file already exists.",
     )
 
+    parser.add_argument(
+        "--cut_data",
+        nargs=4,
+        metavar=("INPUT_FOLDER", "OUTPUT_FOLDER", "FROM_CUT", "TO_CUT"),
+        help="Specify parameters for cutting data from a dataset. Requires four values: "
+        "INPUT_FOLDER (path to input data), OUTPUT_FOLDER (path to save output), "
+        "FROM_CUT (start index, integer), and TO_CUT (end index, integer). "
+        "Example usage: --cut_data /path/to/input /path/to/output 10 50. "
+        "Extracts data from position 10 to 50 and saves it in the output folder.",
+    )  
+
     # parsing
     args = parser.parse_args(args)
 
@@ -113,6 +124,7 @@ def run_module(args=None):
         segment_analysis,
         track_cells,
     )
+    from midap.data.reduce_data import filter_data_set
     from midap.main_family_machine import run_family_machine
     from midap.main_mother_machine import run_mother_machine
 
@@ -122,6 +134,18 @@ def run_module(args=None):
     logger.info(f"Checking necessary files...")
     download_files.main(args=[])
     logger.info("Done!")
+
+    # check if we run in data cut mode
+    if args.cut_data:
+        input_folder, output_folder, from_cut, to_cut = args.cut_data
+        try: 
+            from_cut = int(from_cut)
+            to_cut = int(to_cut)
+        except ValueError:
+            parser.error("FROM_CUT and TO_CUT must be integers.")
+        logger.info("Runing data cut mode...")
+        filter_data_set(input_folder, output_folder, from_cut, to_cut)
+        return 0
 
     # create a config file if requested and exit
     if args.create_config:
