@@ -173,14 +173,21 @@ class DeltaTypeTracking(Tracking):
         # get the distance matrix of the centroids
         centers_prev = np.array([p.centroid for p in props_prev])
         centers_curr = np.array([p.centroid for p in props_curr])
-        dist_mat = distance_matrix(centers_prev, centers_curr)
 
-        # if min distance between to cells in the frames is smaller than our input, we adjust to the next higher
-        min_dist = int(np.max(np.min(dist_mat, axis=1)))
-        # the square crop region should be large enough to fit the biggest cell
-        min_dist = np.maximum(
-            min_dist, np.max([r.axis_major_length for r in props_curr]).astype(int)
-        )
+        try: #added to catch error where an empty segmentation output leads to a crash of the entire pipeline
+            dist_mat = distance_matrix(centers_prev, centers_curr)
+
+            # if min distance between to cells in the frames is smaller than our input, we adjust to the next higher
+            min_dist = int(np.max(np.min(dist_mat, axis=1)))
+
+            # the square crop region should be large enough to fit the biggest cell
+            min_dist = np.maximum(
+                min_dist, np.max([r.axis_major_length for r in props_curr]).astype(int)
+                )   
+        except:
+            self.logger.info("Empty distance matrix found due to empty segmentation output")
+            min_dist = self.input_size[0] - 1
+
         # it should not be bigger than the frame itself or max input shape
         min_dist = np.minimum(
             np.minimum(self.max_input_size, np.min(label_cur_frame.shape)), min_dist
@@ -283,7 +290,10 @@ class DeltaTypeTracking(Tracking):
         start = time.time()
         self.load_model()
         inputs_cur_frame, input_whole_frame, crop_box = self.gen_input_crop(1)
-        _ = self.model.predict(inputs_cur_frame, verbose=0)
+        try:
+            _ = self.model.predict(inputs_cur_frame, verbose=0)
+        except:
+            pass
         end = time.time()
 
         process_time = int((end - start) * 1e3)
@@ -333,9 +343,13 @@ class DeltaTypeTracking(Tracking):
 
             # check if there is a segmentation
             if inputs_cur_frame.size > 0:
-                results_cur_frame_crop = self.model.predict(
-                    inputs_cur_frame.astype(np.float32), verbose=0, batch_size=128
-                )
+                try:
+                    results_cur_frame_crop = self.model.predict(
+                        inputs_cur_frame.astype(np.float32), verbose=0, batch_size=128
+                    )
+                except:
+                    self.logger.info("Unable to track due to empty segmentation output")
+                    results_cur_frame_crop = np.empty_like(inputs_cur_frame)
             else:
                 results_cur_frame_crop = np.empty_like(inputs_cur_frame)
 

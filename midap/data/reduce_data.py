@@ -38,7 +38,7 @@ def filter_data_set(input_folder, output_folder, from_idx, to_idx):
     if not os.path.isdir(output_folder):
         logger.info(f"Creating output folder at location {output_folder}")
         os.mkdir(output_folder)
-    logger.info(f"Initializing data cuting from {input_folder} with destination {output_folder}")
+    logger.info(f"Initializing data cuting from source {input_folder} with destination {output_folder}")
     for f in files:
         filter_tiff_stack(os.path.join(input_folder,f), os.path.join(output_folder,f),from_idx,to_idx)
 

@@ -74,11 +74,14 @@ def run_module(args=None):
         "--cut_data",
         nargs=4,
         metavar=("INPUT_FOLDER", "OUTPUT_FOLDER", "FROM_CUT", "TO_CUT"),
-        help="Specify parameters for cutting data from a dataset. Requires four values: "
-        "INPUT_FOLDER (path to input data), OUTPUT_FOLDER (path to save output), "
-        "FROM_CUT (start index, integer), and TO_CUT (end index, integer). "
+        help="This option will run midap in data cut mode." 
+        "Specify parameters for cutting data from a dataset. Requires 4 values: "
+        "INPUT_FOLDER (path to input data, must contain .tif or .tiff files only!)," 
+        "OUTPUT_FOLDER (path to save output), "
+        "FROM_CUT (start index, integer), and" 
+        "TO_CUT (end index, integer). "
         "Example usage: --cut_data /path/to/input /path/to/output 10 50. "
-        "Extracts data from position 10 to 50 and saves it in the output folder.",
+        "Extracts for each .tif file frames from position 10 to 50 and saves it in the output folder.",
     )  
 
     # parsing
