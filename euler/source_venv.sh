@@ -1,14 +1,11 @@
 #!/bin/bash
 
-# swap to the right module /env2lmod is an alias for this
-# space between the dot is because it is an absolute path
-. /cluster/apps/local/env2lmod.sh
-
 # actiavte the right modules
-# gcc 8.2 stack
-module load gcc/8.2.0
-# python 3.9.9 and the proxy
-module load python_gpu/3.10.4 eth_proxy
+module load stack/2024-06 python_cuda/3.11.6 cudnn/8.9.7.29-12 eth_proxy || true
 
 # activate the env, use realpath and dir name to make it sourable from everywhere
 source $(realpath $BASH_SOURCE | xargs dirname)/midap/bin/activate
+
+#point to correct cuda version
+export XLA_FLAGS=--xla_gpu_cuda_data_dir=$CUDA_EULER_ROOT
+export CUDA_DIR=$CUDA_EULER_ROOT

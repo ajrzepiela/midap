@@ -1,8 +1,9 @@
 from setuptools import setup, find_packages
 import platform
+import os
 
 
-def get_requirements():
+def get_requirements(version = "core"):
     requirements = [
         "btrack==0.4.6",
         "coverage>=7.3.2",
@@ -25,6 +26,24 @@ def get_requirements():
 
     if platform.processor() == "arm":
         requirements += ["tensorflow-metal"]
+        
+    # Check if installation is happening on euler
+    if os.getenv("MIDAP_INSTALL_VERSION", "core").lower() == "euler":
+        requirements = [
+            "btrack==0.4.6",
+            "coverage>=7.3.2",
+            "gitpython>=3.1.40",
+            "napari[all]",
+            "omnipose==0.4.4",
+            "opencv-python>=4.8.1",
+            "pandas>=2.0.2",
+            "scikit-image>=0.19.3,<=0.20.0",
+            "stardist>=0.8.5",
+            "tensorflow==2.15.0",
+            "tqdm>=4.65.0",
+            "build",
+            "twine",
+        ]
 
     return requirements
 

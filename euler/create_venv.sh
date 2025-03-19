@@ -1,14 +1,8 @@
 #!/bin/bash
 
-# swap to the right module /env2lmod is an alias for this
-# space between the dot is because it is an absolute path
-. /cluster/apps/local/env2lmod.sh
-
 # actiavte the right modules
-# gcc 8.2 stack
-module load gcc/8.2.0
-# python 3.10.4 and the proxy
-module load python_gpu/3.10.4 eth_proxy
+# stack 2024-06 with ggc 12.2.0 python 3.11.6 + cuda and cunn 8.9.7
+module load stack/2024-06 python_cuda/3.11.6 cudnn/8.9.7.29-12 eth_proxy || true
 
 # create the env
 python -m venv midap
@@ -20,26 +14,12 @@ source midap/bin/activate
 pip --disable-pip-version-check install -U pip
 pip install -r requirements.txt
 
-# now we link TF and its dependencies to the venv from the cluster
-# we do this because the cluster installation has been optimized
-# but we don't want all (--system-site-package) because we also
-# want to overwrite stuff with our requirements
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/tensorboard ./midap/lib/python3.10/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/tensorflow* ./midap/lib/python3.10/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/absl ./midap/lib/python3.10/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/google* ./midap/lib/python3.10/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/tf_estimator_nightly* ./midap/lib/python3.10/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/opt_einsum* ./midap/lib/python3.10/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/gast* ./midap/lib/python3.10/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/astunparse* ./midap/lib/python3.10/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/termcolor* ./midap/lib/python3.10/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/flatbuffers* ./midap/lib/python3.10/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/grpc* ./midap/lib/python3.10/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/keras* ./midap/lib/python3.10/site-packages/
-ln -s /cluster/apps/nss/gcc-8.2.0/python/3.10.4/x86_64/lib64/python3.10/site-packages/libclang* ./midap/lib/python3.10/site-packages/
-
 # install the package
-pip install -e ..
+export MIDAP_INSTALL_VERSION=euler
+pip install -e .. 
+
+export XLA_FLAGS=--xla_gpu_cuda_data_dir=$CUDA_EULER_ROOT
+export CUDA_DIR=$CUDA_EULER_ROOT
 
 while true; do
     read -p "Do you want to add the source script to your .bash_profile? Y/N " yn
