@@ -389,3 +389,37 @@ class Config(ConfigParser):
 
         # if no error was thrown we return the instance
         return config
+    
+    @classmethod
+    def from_euler_file(cls, path: Union[str, bytes, os.PathLike], fname, full_check=False):
+        """
+        Initiates a new instance of the class and overwrites the defaults with contents from a file. The contents read
+        from the file. the path in the configu will be updated to the passed folder path. then, the file will be checked for validity.
+        :path path: The name of path where the file resides
+        :param fname: The name of the file to read
+        :param full_check: If True, all parameters of the file will be checked, otherwise only the initial params.
+        :return: An instance of the class
+        """
+
+        # get the path
+        fname = Path(os.path.join(path, fname))
+
+        # create a class instance
+        if fname.is_file():
+            config = Config(fname=fname.name)
+        else:
+            raise FileNotFoundError(f"File {fname} does not exist!")
+
+        # read the file
+        with open(fname, "r") as f:
+            config.read_file(f)
+           
+        config.set_path(path)
+
+        # check validity
+        config.validate_general()
+        for id_name in config.get("General", "IdentifierFound").split(","):
+            config.validate_id_section(id_name=id_name, basic=~full_check)
+
+        # if no error was thrown we return the instance
+        return config
