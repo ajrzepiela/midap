@@ -43,6 +43,12 @@ def run_module(args=None):
         help="Run pipeline in headless mode, ALL parameters have to be set prior in a config file.",
     )
     parser.add_argument(
+        "--headless_cluster",
+        nargs="?",
+        const=os.getcwd(),
+        help="Run pipeline in headless mode on a new machine (i.e cluster). Optionally provide a config file path (default: 'settings.ini' in current directory). will reset path of setting.ini to selected location.",
+    )
+    parser.add_argument(
         "--loglevel",
         type=int,
         default=7,
@@ -158,6 +164,7 @@ def run_module(args=None):
 
     # check if we are restarting
     restart = False
+    config_mode = False
     if args.restart is not None:
         # we set the restart flag
         restart = True
@@ -204,6 +211,28 @@ def run_module(args=None):
         logger.info("Running in headless mode, checking config file...")
         config = Config.from_file(config_file, full_check=True)
         checkpoint = Checkpoint(check_file)
+        
+    # since we do a full check above if we have headless mode and restart this is an elif
+    elif args.headless_cluster is not None:
+        # read the config from the working directory
+        path = os.path.join(args.headless_cluster, config_file)
+        logger.info(f"Running in headless mode for cluster, checking config file in folder {args.headless_cluster}")
+        config = Config.from_file(path, full_check=True)
+        config.set_path(args.headless_cluster)
+        logger.info(f"Found settings.ini. Updating path in config file to new location...")
+        checkpoint = Checkpoint(check_file)
+              
+
+    # if selected, we use the GUI to start a session that generates the config file for headless mode on cluster
+    elif args.prepare_config_cluster:
+        logger.info("Starting up initial GUI for config creation...")
+        # start the GUI
+        init_GUI.main(config_file=config_file)
+        config = Config.from_file(fname=config_file, full_check=False)
+        config.fname = os.path.join(Path(config.get("General", "FolderPath")), config_file) #set the config to be created inside the data folder
+        logger.info("Starting config creation process...")
+        config_mode = True
+        checkpoint = Checkpoint(check_file)
 
     # we are not restarting nor are we in headless mode
     else:
@@ -222,6 +251,7 @@ def run_module(args=None):
             main_args=args,
             logger=logger,
             restart=restart,
+            config_mode = config_mode
         )
     elif config.get("General", "DataType") == "Mother_Machine":
         run_mother_machine(
@@ -230,6 +260,7 @@ def run_module(args=None):
             main_args=args,
             logger=logger,
             restart=restart,
+            config_mode=config_mode
         )
     else:
         raise ValueError(f"Unknown DataType: {config.get('General', 'DataType')}")

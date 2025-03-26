@@ -108,6 +108,9 @@ class Config(ConfigParser):
                 }
             }
         )
+        
+    def set_path(self, new_path):
+        self.set("General","FolderPath",new_path)
 
     def validate_general(self):
         """
