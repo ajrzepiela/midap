@@ -1,9 +1,10 @@
 import shutil
 import sys
 from pathlib import Path
-from shutil import copyfile
+from shutil import copyfile, rmtree
 
 import numpy as np
+import os
 
 from midap.apps import (
     split_frames,
@@ -17,7 +18,7 @@ from midap.apps import (
 from midap.checkpoint import CheckpointManager
 
 
-def run_family_machine(config, checkpoint, main_args, logger, restart=False):
+def run_family_machine(config, checkpoint, main_args, logger, restart=False, config_mode = False):
     """
     This function runs the family machine.
     :param config: The config object to use
@@ -261,6 +262,18 @@ def run_family_machine(config, checkpoint, main_args, logger, restart=False):
                     if model_weights is None:
                         config.set(identifier, f"ModelWeights_{channel}", weights)
                         config.to_file()
+    
+    #if we are in config creation mode, we want to exit here                    
+    if config_mode:
+        config.to_file(overwrite=True)
+        logger.info("Cleaning up temporary data:")
+        for identifier in config.getlist("General", "IdentifierFound"):
+            idenitifer_path = os.path.join(base_path,identifier)
+            logger.info(f"Deleting temporary data at: {idenitifer_path}")
+            rmtree(idenitifer_path)
+        logger.info("Successfully finished config setup for headless mode!")
+        return 0
+        
 
     # we cycle through all pos identifiers again to perform all tasks fully
     #######################################################################
