@@ -215,11 +215,9 @@ def run_module(args=None):
     # since we do a full check above if we have headless mode and restart this is an elif
     elif args.headless_cluster is not None:
         # read the config from the working directory
-        path = os.path.join(args.headless_cluster, config_file)
         logger.info(f"Running in headless mode for cluster, checking config file in folder {args.headless_cluster}")
-        config = Config.from_file(path, full_check=True)
-        config.set_path(args.headless_cluster)
-        logger.info(f"Found settings.ini. Updating path in config file to new location...")
+        config = Config.from_euler_file(path = args.headless_cluster, fname= config_file, full_check=True)
+        logger.info(f"Found settings.ini. Updated path in config file to new location...")
         checkpoint = Checkpoint(check_file)
               
 
