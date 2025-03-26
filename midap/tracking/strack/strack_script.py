@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Union, List
 
 import cv2
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt    deactivated matplotlib to reduce dependencies. keeping output rendering of strack images has currently no entry point
 import numpy as np
 import pandas as pd
 
@@ -500,25 +500,26 @@ def run_strack(
         ################################################################
         # Export corresponding image with tracking info plotted on top #
         ################################################################
-        plt.figure(figsize=(10, 10))
-        ax = plt.gca()
-        im = ax.imshow(img1)
-        nb_cells = complete_table.shape[0]
-        if nb_cells != 1:
-            complete_table.index = list(range(1, nb_cells + 1))
-        for row_idx in range(1, nb_cells + 1):
-            # draw vertical line from (70,100) to (70, 250)
-            plt.plot(
-                [
-                    complete_table.loc[row_idx]["Centroid_x_mother"],
-                    complete_table.loc[row_idx]["Centroid_x"],
-                ],
-                [
-                    complete_table.loc[row_idx]["Centroid_y_mother"],
-                    complete_table.loc[row_idx]["Centroid_y"],
-                ],
-                "r-",
-                lw=2,
-            )
+        #DEACTIVATED TO REDUCE matplotlib dependency!
+        #plt.figure(figsize=(10, 10))
+        #ax = plt.gca()
+        #im = ax.imshow(img1)
+        #nb_cells = complete_table.shape[0]
+        #if nb_cells != 1:
+        #    complete_table.index = list(range(1, nb_cells + 1))
+        #for row_idx in range(1, nb_cells + 1):
+        #    # draw vertical line from (70,100) to (70, 250)
+        #    plt.plot(
+        #        [
+        #            complete_table.loc[row_idx]["Centroid_x_mother"],
+        #            complete_table.loc[row_idx]["Centroid_x"],
+        #        ],
+        #        [
+        #            complete_table.loc[row_idx]["Centroid_y_mother"],
+        #            complete_table.loc[row_idx]["Centroid_y"],
+        #        ],
+        #        "r-",
+        #        lw=2,
+        #    )
         # plt.show()
-        plt.savefig(output_dir.joinpath(f"tracking_figure_time{tp}.png"))
+        #plt.savefig(output_dir.joinpath(f"tracking_figure_time{tp}.png"))
