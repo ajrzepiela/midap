@@ -111,6 +111,28 @@ class Config(ConfigParser):
         
     def set_path(self, new_path):
         self.set("General","FolderPath",new_path)
+        
+    def update_model_paths(self):
+        """
+        Updates the path of any models weights to work properly on a system with new realtive paths
+        """
+        current_file = Path(__file__).resolve()
+        repo_root = current_file.parents[1]
+        model_weights_dir = repo_root / "model_weights"
+
+        for section in self.sections():
+            for key in self[section]:
+                if key.startswith("ModelWeights_"): 
+                    original_value = self[section][key]
+
+                    # Heuristic: it's a path if it contains slashes or has a file extension
+                    if "/model_weights/" in original_value:
+                        # Extract the path after "/model_weights/"
+                        post_model_weights = original_value.split("/model_weights/", 1)[1]
+                        new_path = model_weights_dir / post_model_weights
+                        self[section][key] = str(new_path)
+
+        
 
     def validate_general(self):
         """
@@ -415,6 +437,7 @@ class Config(ConfigParser):
             config.read_file(f)
            
         config.set_path(path)
+        config.update_model_paths()
 
         # check validity
         config.validate_general()
