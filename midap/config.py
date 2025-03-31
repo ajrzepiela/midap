@@ -91,7 +91,7 @@ class Config(ConfigParser):
         try:
             repo = git.Repo(path=Path(__file__).parent, search_parent_directories=True)
             sha = repo.head.object.hexsha
-        except git.InvalidGitRepositoryError:
+        except Exception:
             sha = "None"
 
         # set defaults
