@@ -21,6 +21,14 @@ from midap.utils import get_logger
 # This file is taken from the following repository:
 # https://github.com/Helena-todd/STrack/blob/master/Docker_structure/strack_script_v4.py
 
+def safe_float_from_series(val):
+    if isinstance(val, pd.Series):
+        if len(val) == 1:
+            return float(val.iloc[0])
+        else:
+            raise ValueError("Expected single element Series, got multiple elements")
+    return float(val)
+
 
 def run_strack(
     files_list: List[Union[str, bytes, os.PathLike]],
@@ -243,7 +251,7 @@ def run_strack(
                     # Difference in y coordinates
                     dy = cell2_centroid[1] - cell1_centroid[1]
                     # Angle between cell1 and cell2 in radians
-                    theta = math.atan2(dy, dx)
+                    theta = math.atan2(dy.iloc[0], dx.iloc[0])
                     orientation_daughters = math.degrees(theta)
                     # print("Orientation of division is ", orientation_daughters, " and its sign is ", np.sign(orientation_daughters + 90))
 
@@ -386,7 +394,7 @@ def run_strack(
                         # Difference in y coordinates
                         dy = cell2_centroid[1] - cell1_centroid[1]
                         # Angle between cell1 and cell2 in radians
-                        theta = math.atan2(dy, dx)
+                        theta = math.atan2(dy.iloc[0], dx.iloc[0])
                         orientation_daughters = math.degrees(theta)
                         orientation_mother = orientations[mother_tmp - 1]
                         # print("Orientation of mother is ", orientation_mother, " and its sign is ", np.sign(orientation_mother))
