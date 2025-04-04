@@ -132,13 +132,6 @@ class Config(ConfigParser):
                         new_path = model_weights_dir / post_model_weights
                         self[section][key] = str(new_path)
 
-    def set_position(self, position):
-        """
-        sets the IdentifierFound to a single position (option for headless cluster mode)
-        """
-        self.set("General","IdentifierFound",position)
-        
-
     def validate_general(self):
         """
         Validates the contents of the general section
