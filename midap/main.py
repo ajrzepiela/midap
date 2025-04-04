@@ -44,9 +44,12 @@ def run_module(args=None):
     )
     parser.add_argument(
         "--headless_cluster",
-        nargs="?",
-        const=os.getcwd(),
-        help="Run pipeline in headless mode on a new machine (i.e cluster). Optionally provide a config file path (default: 'settings.ini' in current directory). will reset path of setting.ini to selected location.",
+        nargs="*",
+        help=(
+            "Run pipeline in headless mode on a new machine (i.e. cluster). "
+            "Optionally provide a config directory path (default: current working directory), "
+            "and optionally a positional identifier"
+        ),
     )
     parser.add_argument(
         "--loglevel",
@@ -214,9 +217,16 @@ def run_module(args=None):
         
     # since we do a full check above if we have headless mode and restart this is an elif
     elif args.headless_cluster is not None:
+        
+        cluster_args = args.headless_cluster
+        path = os.getcwd() if len(cluster_args) == 0 else cluster_args[0]
+        position_id = cluster_args[1] if len(cluster_args) > 1 else None
+        
         # read the config from the working directory
         logger.info(f"Running in headless mode for cluster, checking config file in folder {args.headless_cluster}")
-        config = Config.from_euler_file(path = args.headless_cluster, fname= config_file, full_check=True)
+        if position_id is not None:
+            logger.info(f"Running on restricted data position {position_id}")
+        config = Config.from_euler_file(path, fname= config_file, full_check=True, position = position_id)
         logger.info(f"Found settings.ini. Updated path in config file to new location...")
         checkpoint = Checkpoint(check_file)
               

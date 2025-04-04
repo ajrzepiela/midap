@@ -132,8 +132,6 @@ class Config(ConfigParser):
                         new_path = model_weights_dir / post_model_weights
                         self[section][key] = str(new_path)
 
-        
-
     def validate_general(self):
         """
         Validates the contents of the general section
@@ -413,7 +411,7 @@ class Config(ConfigParser):
         return config
     
     @classmethod
-    def from_euler_file(cls, path: Union[str, bytes, os.PathLike], fname, full_check=False):
+    def from_euler_file(cls, path: Union[str, bytes, os.PathLike], fname, full_check=False, position = None):
         """
         Initiates a new instance of the class and overwrites the defaults with contents from a file. The contents read
         from the file. the path in the configu will be updated to the passed folder path. then, the file will be checked for validity.
@@ -438,6 +436,8 @@ class Config(ConfigParser):
            
         config.set_path(path)
         config.update_model_paths()
+        if position is not None:
+            config.set("General","IdentifierFound",position)
 
         # check validity
         config.validate_general()
