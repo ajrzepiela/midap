@@ -21,13 +21,6 @@ from midap.utils import get_logger
 # This file is taken from the following repository:
 # https://github.com/Helena-todd/STrack/blob/master/Docker_structure/strack_script_v4.py
 
-def safe_float_from_series(val):
-    if isinstance(val, pd.Series):
-        if len(val) == 1:
-            return float(val.iloc[0])
-        else:
-            raise ValueError("Expected single element Series, got multiple elements")
-    return float(val)
 
 
 def run_strack(
