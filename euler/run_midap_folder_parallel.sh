@@ -32,7 +32,7 @@ POSITIONS=$(echo "$IDENTIFIER_LINE" | cut -d'=' -f2 | tr -d ' ' | tr ',' '\n')
 # Submit a job for each position
 for POS in $POSITIONS; do
   echo "Submitting job for position: $POS"
-  CMD = "Command submitted: midap --headless_cluster $FOLDER $POS"
+  CMD="Command submitted: midap --headless_cluster $FOLDER $POS"
   echo "$CMD"
-  #sbatch --ntasks=1 --cpus-per-task=4 --time=08:00:00 --mem-per-cpu=4096 --wrap="midap --headless_cluster $FOLDER $POS"
+  sbatch --ntasks=1 --cpus-per-task=4 --time=24:00:00 --mem-per-cpu=4096 --wrap="midap --headless_cluster $FOLDER $POS"
 done

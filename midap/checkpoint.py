@@ -20,7 +20,7 @@ class Checkpoint(ConfigParser):
     This class implements the checkpoint files of the MIDAP pipeline as simple config files
     """
 
-    def __init__(self, fname: Union[str, Path, None]):
+    def __init__(self, fname: Union[str, Path, None], cluster_mode = False):
         """
         Inits the checkpoint with a given file name. A default restart point is created.
         :param fname: The name of the checkpoint file.
@@ -34,6 +34,7 @@ class Checkpoint(ConfigParser):
 
         # save the file_name
         self.fname = fname
+        self.cluster_mode = cluster_mode
 
         # set the defaults
         self.set_defaults()
@@ -72,7 +73,7 @@ class Checkpoint(ConfigParser):
                 f"File already exists, set overwrite to True to overwrite: {fname}"
             )
 
-        # now we can open a w+ without worrying
+        # now we can open a w+ without worrying.
         with open(fname, "w+") as f:
             self.write(f)
 
@@ -234,7 +235,10 @@ class CheckpointManager(object):
 
         # update the checkpoint
         self.checkpoint.set_state(state=self.state, identifier=self.identifier)
-        self.save_files()
+        
+        #ensure on cluster we dont run into file access conflicts
+        if not self.checkpoint.cluster_mode:
+            self.save_files()
 
         # the checkpoint checker needs to get the original checkpoint not the updated one
         return CheckpointChecker(
@@ -264,7 +268,10 @@ class CheckpointManager(object):
             self.checkpoint.set_state(
                 state=original_state, identifier=original_identifier, flush=True
             )
-            self.save_files()
+            
+            #ensure on cluster we dont run into file access conflicts
+            if not self.checkpoint.cluster_mode:
+                self.save_files()
             return True
 
         # if there is no Error and we successfully finished the job we reset the checkpoint

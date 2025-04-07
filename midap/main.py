@@ -228,7 +228,7 @@ def run_module(args=None):
             logger.info(f"Running on restricted data position {position_id}")
         config = Config.from_euler_file(path, fname= config_file, full_check=True, position = position_id)
         logger.info(f"Found settings.ini. Updated path in config file to new location...")
-        checkpoint = Checkpoint(check_file)
+        checkpoint = Checkpoint(check_file, cluster_mode=True)
               
 
     # if selected, we use the GUI to start a session that generates the config file for headless mode on cluster
