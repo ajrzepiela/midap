@@ -2,7 +2,7 @@ name: midap
 channels:
   - defaults
 dependencies:
-  - python=3.11.0
+  - python=3.11.11
   - pip
   - pip:
     - btrack>=0.4.6
