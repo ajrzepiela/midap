@@ -1,12 +1,13 @@
 import os
 from skimage import io
 from pathlib import Path
-import matplotlib.pyplot as plt
+
 import mpl_interactions.ipyplot as iplt
 
 import matplotlib
 import ipympl
 matplotlib.use('module://ipympl.backend_nbagg')
+import matplotlib.pyplot as plt
 
 import numpy as np
 import pandas as pd
