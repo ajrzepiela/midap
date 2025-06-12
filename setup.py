@@ -5,23 +5,19 @@ import os
 
 def get_requirements(version = "core"):
     requirements = [
-        "btrack==0.4.6",
-        "coverage>=7.3.2",
-        "gitpython>=3.1.40",
-        "jupyterlab==4.0.8",
-        "matplotlib>=3.3.0,<=3.6.3",
-        "napari[all]",
-        "omnipose==0.4.4",
-        "opencv-python>=4.8.1",
-        "pandas>=2.0.2",
-        "psutil>=5.9.0",
-        "pytest>=7.4.3",
-        "scikit-image>=0.19.3,<=0.20.0",
-        "stardist>=0.8.5",
-        "tensorflow==2.13.0",
-        "tqdm>=4.65.0",
-        "build",
-        "twine",
+            "btrack==0.4.6",
+            "coverage>=7.3.2",
+            "gitpython>=3.1.40",
+            "napari[all]",
+            "omnipose==0.4.4",
+            "opencv-python>=4.8.1",
+            "pandas>=2.0.2",
+            "scikit-image>=0.19.3,<=0.20.0",
+            "stardist>=0.8.5",
+            "tensorflow==2.15.0",
+            "tqdm>=4.65.0",
+            "build",
+            "twine",
     ]
 
     if platform.processor() == "arm":
