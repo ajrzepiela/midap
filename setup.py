@@ -18,6 +18,8 @@ def get_requirements(version = "core"):
             "tqdm>=4.65.0",
             "build",
             "twine",
+            "mpl_interactions",
+            "ipympl",
     ]
 
     if platform.processor() == "arm":
