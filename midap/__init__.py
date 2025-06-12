@@ -8,4 +8,7 @@ import os
 # yet, we fall back to "TkAgg" for interactive local sessions.
 if 'matplotlib.pyplot' not in sys.modules:
     backend = os.environ.get('MATPLOTLIB_BACKEND', 'TkAgg')
+    import matplotlib
     matplotlib.use(backend)
+else:
+    import matplotlib
