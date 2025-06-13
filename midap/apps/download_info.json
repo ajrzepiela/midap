@@ -1,17 +1,7 @@
 {
   "model_weights": {
     "name": "model_weights.zip",
-    "url": "https://polybox.ethz.ch/index.php/s/otjTueqrs4i6i5K/download",
+    "url": "https://polybox.ethz.ch/index.php/s/bLanLtdZ44rM9Tn/download",
     "version": "v0.4"
-  },
-  "psf": {
-    "name": "psf.zip",
-    "url": "https://polybox.ethz.ch/index.php/s/a1oLGN73UNuxwQv/download",
-    "version": "v0.1"
-  },
-  "example_data": {
-    "name": "example_data.zip",
-    "url": "https://polybox.ethz.ch/index.php/s/Ub30B0ivoTdGWzK/download",
-    "version": "v0.1"
   }
 }
