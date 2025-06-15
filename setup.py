@@ -5,21 +5,22 @@ import os
 
 def get_requirements(version = "core"):
     requirements = [
-            "btrack==0.4.6",
-            "coverage>=7.3.2",
-            "gitpython>=3.1.40",
-            "napari[all]",
-            "omnipose==0.4.4",
-            "opencv-python>=4.8.1",
-            "pandas>=2.0.2",
-            "scikit-image>=0.19.3,<=0.20.0",
-            "stardist>=0.8.5",
-            "tensorflow_gpu==2.15.0",
-            "tqdm>=4.65.0",
-            "build",
-            "twine",
-            "mpl_interactions",
-            "ipympl",
+        "btrack>=0.5.0",
+        "coverage>=7.3.2",
+        "gitpython>=3.1.40",
+        "napari[all]",
+        "omnipose>=0.4.4",
+        "opencv-python>=4.9.0.80",
+        "pandas>=2.1.0",
+        "scikit-image>=0.22.0",
+        "stardist>=0.9.0",
+        "tensorflow==2.18.0",
+        "numpy>=1.26,<2.0",          # explicit, though TF will bring it in
+        "tqdm>=4.65.0",
+        "build",
+        "twine",
+        "mpl_interactions",
+        "ipympl",
     ]
 
     if platform.processor() == "arm":
