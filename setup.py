@@ -14,6 +14,7 @@ def get_requirements(version = "core"):
             "pandas>=2.0.2",
             "scikit-image>=0.19.3,<=0.20.0",
             "stardist>=0.8.5",
+            "tensorflow_gpu==2.15.0",
             "tqdm>=4.65.0",
             "build",
             "twine",
