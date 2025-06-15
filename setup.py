@@ -17,7 +17,7 @@ def get_requirements(version = "core"):
         "scikit-image>=0.22.0",
         "stardist>=0.9.0",
         "tqdm>=4.65.0",
-        "napari[all]==0.5.6" \
+        "napari[all]==0.5.6" ,
         "build",
         "twine",
         "mpl_interactions",
