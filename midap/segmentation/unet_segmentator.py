@@ -152,10 +152,26 @@ class UNetSegmentation(SegmentationPredictor):
             imgs_pad.append(img_pad)
         imgs_pad = np.concatenate(imgs_pad)
 
-        # segments
-        model_pred = UNetv1(input_size=imgs_pad.shape[1:3] + (1,), inference=True)
-        model_pred.load_weights(self.model_weights)
-        y_preds = model_pred.predict(imgs_pad, batch_size=1, verbose=1)
+        # ------------------------------------------------------------------
+        # Use GPU for inference if available
+        # ------------------------------------------------------------------
+        try:
+            import tensorflow as tf
+            gpus = tf.config.list_physical_devices("GPU")
+            device_ctx = tf.device("/GPU:0") if len(gpus) > 0 else tf.device("/CPU:0")
+        except (ImportError, AttributeError):
+            # Fallback to default device placement
+            class _NullContext:
+                def __enter__(self):
+                    return None
+                def __exit__(self, exc_type, exc_val, exc_tb):
+                    return False
+            device_ctx = _NullContext()
+
+        with device_ctx:
+            model_pred = UNetv1(input_size=imgs_pad.shape[1:3] + (1,), inference=True)
+            model_pred.load_weights(self.model_weights)
+            y_preds = model_pred.predict(imgs_pad, batch_size=1, verbose=1)
 
         # remove tha padding and transform to segmentation
         segs = []

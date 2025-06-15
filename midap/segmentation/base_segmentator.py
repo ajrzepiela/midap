@@ -9,6 +9,14 @@ from skimage.measure import label, regionprops
 from skimage.segmentation import clear_border
 from tqdm import tqdm
 
+# Added for GPU configuration
+try:
+    import tensorflow as tf
+except ImportError:
+    # TensorFlow is not strictly required for all segmentators (e.g. Cellpose/Omnipose)
+    # so we import it conditionally and fall back to CPU if it is missing.
+    tf = None
+
 from ..utils import get_logger
 
 # get the logger we readout the variable or set it to max output
@@ -62,7 +70,43 @@ class SegmentationPredictor(ABC):
         self.model_weights = model_weights
         self.segmentation_method = None
 
-        
+        # ------------------------------------------------------------------
+        # GPU handling
+        # ------------------------------------------------------------------
+        # For segmentators that rely on TensorFlow (e.g. UNet or StarDist), we
+        # explicitly check whether a compatible GPU is available and, if so,
+        # make sure TensorFlow is allowed to allocate memory on it.  Even if
+        # the user only runs Cellpose-based models, performing this check is
+        # harmless and guarantees a consistent behaviour across all back-ends.
+
+        self.gpu_available = False
+        if tf is not None:
+            gpus = tf.config.list_physical_devices("GPU")
+            if len(gpus) > 0:
+                self.gpu_available = True
+                try:
+                    # Enable dynamic memory growth – safer than allowing TF to
+                    # pre-allocate all GPU memory, especially in shared setups.
+                    for gpu in gpus:
+                        tf.config.experimental.set_memory_growth(gpu, True)
+                    self.logger.info(
+                        f"TensorFlow will run on GPU(s): {[g.name for g in gpus]}"
+                    )
+                except RuntimeError as e:
+                    # Memory growth must be set before GPUs have been
+                    # initialised. If that already happened, we log the issue
+                    # and silently continue – TF will still use the GPU.
+                    self.logger.warning(
+                        f"Could not set TensorFlow GPU memory growth: {e}"
+                    )
+            else:
+                self.logger.info("No compatible GPU detected – TensorFlow will run on CPU.")
+        else:
+            # TensorFlow not installed – relevant for Omni/Cellpose paths that
+            # rely on PyTorch instead. GPU management for those is handled in
+            # the respective segmentators.
+            self.logger.debug("TensorFlow not available; skipping GPU setup.")
+
     def run_image_stack_jupyter(self, imgs, model_weights, clean_border: bool):
         """
         Performs image segmentation, postprocessing and storage for all images found in channel_path
