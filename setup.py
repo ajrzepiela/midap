@@ -14,7 +14,6 @@ def get_requirements(version = "core"):
         "pandas>=2.1.0",
         "scikit-image>=0.22.0",
         "stardist>=0.9.0",
-        "tensorflow==2.18.0",
         "numpy>=1.26,<2.0",          # explicit, though TF will bring it in
         "tqdm>=4.65.0",
         "build",
