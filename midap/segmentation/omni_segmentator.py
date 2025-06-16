@@ -180,8 +180,16 @@ class OmniSegmentation(SegmentationPredictor):
                 first_conv = next(v for v in ckpt["state_dict"].values()
                                    if v.ndim == 4)
                 nchan = first_conv.shape[1]
+            except (StopIteration, KeyError):
+                # checkpoint was read but tensor not found – fallback
+                stem = Path(model_id).stem
+                if stem in built_in_two_chan:
+                    nchan = 2
             except Exception:
-                pass
+                # file not readable => use filename heuristic
+                stem = Path(model_id).stem
+                if stem in built_in_two_chan:
+                    nchan = 2
             return models.CellposeModel(
                 gpu=gpu, nchan=nchan, pretrained_model=model_id
             )
