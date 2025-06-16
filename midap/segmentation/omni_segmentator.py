@@ -177,9 +177,14 @@ class OmniSegmentation(SegmentationPredictor):
         if Path(model_id).is_file():                      # custom file
             try:
                 ckpt = torch.load(model_id, map_location="cpu")
-                first_conv = next(v for v in ckpt["state_dict"].values()
-                                   if v.ndim == 4)
-                nchan = first_conv.shape[1]
+                # take the *largest* in-channel dimension among all
+                # 4-D tensors; Cellpose checkpoints contain only 1- or
+                # 2-channel kernels, so this reliably gives 1 or 2.
+                nchan = max(
+                    tensor.shape[1]
+                    for tensor in ckpt["state_dict"].values()
+                    if tensor.ndim == 4
+                )
             except (StopIteration, KeyError):
                 # checkpoint was read but tensor not found – fallback
                 stem = Path(model_id).stem
