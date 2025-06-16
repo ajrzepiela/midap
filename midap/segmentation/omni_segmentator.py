@@ -63,8 +63,8 @@ class OmniSegmentation(SegmentationPredictor):
 
             # display different segmentation models
             label_dict = {
-                "bact_phase_cp": "bact_phase_cp",
-                "bact_fluor_cp": "bact_fluor_cp",
+                #"bact_phase_cp": "bact_phase_cp",
+                #"bact_fluor_cp": "bact_fluor_cp",
                 "bact_phase_omni": "bact_phase_omni",
                 "bact_fluor_omni": "bact_fluor_omni",
             }
