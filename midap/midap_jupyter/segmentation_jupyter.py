@@ -333,15 +333,15 @@ class SegmentationJupyter(object):
         for f, cut in zip(self.chosen_files, self.imgs_cut):
             cut_scale = self.scale_pixel_val(cut)
             io.imsave(self.path_cut.joinpath(Path(f).stem + "_cut.png"), cut_scale, check_contrast=False)
-     def get_segmentation_models(self):
-         """
+    def get_segmentation_models(self):
+        """
          Collects all json files and combines model information in table.
          Ensures that the Omni default models are always listed, even if no
          corresponding weight file is found locally.
-         """
-         files = glob.glob(
+        """
+        files = glob.glob(
              self.path_midap + "/model_weights/**/model_weights*.json", recursive=True
-         )
+        )
  
 
         # ------------------------------------------------------------------
