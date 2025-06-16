@@ -63,6 +63,7 @@ class OmniSegmentationJupyter(OmniSegmentation):
             for model_name, model_path in label_dict.items():
                 print(model_name, model_path)
                 model = self._build_cellpose_model(model_path, gpu=True)
+                model.nchan = 2
 
                 # predict, we only need the mask, see omnipose tutorial for the rest of the args
                 try:
