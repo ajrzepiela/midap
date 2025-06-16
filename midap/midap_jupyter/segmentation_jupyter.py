@@ -333,22 +333,48 @@ class SegmentationJupyter(object):
         for f, cut in zip(self.chosen_files, self.imgs_cut):
             cut_scale = self.scale_pixel_val(cut)
             io.imsave(self.path_cut.joinpath(Path(f).stem + "_cut.png"), cut_scale, check_contrast=False)
+     def get_segmentation_models(self):
+         """
+         Collects all json files and combines model information in table.
+         Ensures that the Omni default models are always listed, even if no
+         corresponding weight file is found locally.
+         """
+         files = glob.glob(
+             self.path_midap + "/model_weights/**/model_weights*.json", recursive=True
+         )
+ 
 
-    def get_segmentation_models(self):
-        """
-        Collects all json files and combines model information in table.
-        """
-        files = glob.glob(
-            self.path_midap + "/model_weights/**/model_weights*.json", recursive=True
-        )
+        # ------------------------------------------------------------------
+        # 1) Aggregate all JSON-based model tables (if any)
+        # ------------------------------------------------------------------
+        if files:
+            df = pd.read_json(files[0])
+            for f in files[1:]:
+                df = pd.concat([df, pd.read_json(f)], axis=1)
+            self.df_models = df.T
+        else:
+            # Fresh installation without legacy weight files
+            self.df_models = pd.DataFrame()
 
-        df = pd.read_json(files[0])
+        # ------------------------------------------------------------------
+        # 2) Inject default Omni / Cellpose-Omni models
+        # ------------------------------------------------------------------
+        from midap.segmentation.omni_segmentator import OmniSegmentation
 
-        for f in files[1:]:
-            df_new = pd.read_json(f)
-            df = pd.concat([df, df_new], axis=1)
+        for mdl in OmniSegmentation.DEFAULT_MODELS:
+            # Row index format must match the legacy pattern because further
+            # downstream code strips the first two tokens:
+            #   "model_weights_<here...>" → "<here...>"
+            idx = f"model_weights_{mdl}"
+            if idx in self.df_models.index:
+                continue
 
-        self.df_models = df.T
+            # Create a minimal placeholder row.  Additional columns will be
+            # auto-filled with NaN and safely ignored by the GUI.
+            self.df_models.loc[idx, "species"] = "OmniPose"
+            self.df_models.loc[idx, "marker"] = "omni"
+            self.df_models.loc[idx, "nn_type_alias"] = "OmniSegmentationJupyter"
+
 
 
     def display_segmentation_models(self):
