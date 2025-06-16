@@ -50,20 +50,15 @@ class OmniSegmentationJupyter(OmniSegmentation):
                 img = self.scale_pixel_vals(io.imread(os.path.join(path_to_cutouts, f)))
                 imgs.append(img)
 
-            # Get all the labels
-            label_dict = {'bact_phase_cp': 'bact_phase_cp',
-                          'bact_fluor_cp': 'bact_fluor_cp',
-                          'bact_phase_omni': 'bact_phase_omni',
-                          'bact_fluor_omni': 'bact_fluor_omni',}
-            for custom_model in Path(self.path_model_weights).iterdir():
-                label_dict.update({custom_model.name: custom_model})
+            # start with the class-wide default models
+            label_dict = {m: m for m in self.DEFAULT_MODELS
+                          if m in self.AVAILABLE_MODELS}
 
             self.all_segs_label = {}
             self.all_overl = {}
             for model_name, model_path in label_dict.items():
                 print(model_name, model_path)
                 model = self._build_cellpose_model(model_path, gpu=True)
-                model.nchan = 2
 
                 # predict, we only need the mask, see omnipose tutorial for the rest of the args
                 try:

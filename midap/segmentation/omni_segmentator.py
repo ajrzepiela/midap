@@ -21,6 +21,17 @@ class OmniSegmentation(SegmentationPredictor):
 
     supported_setups = ["Family_Machine", "Mother_Machine"]
 
+    # --------------------------------------------------------------
+    # ❶  Library-provided and default model lists
+    # --------------------------------------------------------------
+    AVAILABLE_MODELS = [
+        "bact_phase_omni", "bact_fluor_omni", "worm_omni",
+        "worm_bact_omni", "worm_high_res_omni", "cyto2_omni",
+        "plant_omni", "bact_phase_cp", "bact_fluor_cp", "plant_cp",
+        "worm_cp", "cyto", "nuclei", "cyto2",
+    ]
+    DEFAULT_MODELS = ["bact_phase_omni", "bact_fluor_omni", "nuclei"]
+
     def __init__(self, *args, **kwargs):
         """
         Initializes the UNetSegmentation using the base class init
@@ -63,15 +74,9 @@ class OmniSegmentation(SegmentationPredictor):
             )
 
             # display different segmentation models
-            label_dict = {
-                #"bact_phase_cp": "bact_phase_cp",
-                #"bact_fluor_cp": "bact_fluor_cp",
-                "bact_phase_omni": "bact_phase_omni",
-                "bact_fluor_omni": "bact_fluor_omni",
-            }
-            for custom_model in Path(self.path_model_weights).iterdir():
-                    if custom_model.is_file() and custom_model.suffix == "" and not custom_model.name.startswith("."): # Filter out any other files that contain no weights (i.e .jsons)
-                        label_dict.update({custom_model.name: custom_model})
+            # start with the class default models
+            label_dict = {m: m for m in self.DEFAULT_MODELS
+                          if m in self.AVAILABLE_MODELS}
             figures = []
             for model_name, model_path in label_dict.items():
                 self.logger.info("Try model: " + str(model_name))
