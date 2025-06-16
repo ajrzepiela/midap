@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import skimage.io as io
 from cellpose_omni import models
+from typing import Union
 
 import torch
 
@@ -74,17 +75,15 @@ class OmniSegmentation(SegmentationPredictor):
             figures = []
             for model_name, model_path in label_dict.items():
                 self.logger.info("Try model: " + str(model_name))
-                if Path(model_path).is_file():
-                    model = models.CellposeModel(
-                        gpu=self.gpu_available, pretrained_model=str(model_path)
-                    )
-                else:
-                    model = models.CellposeModel(
-                        gpu=self.gpu_available, model_type=model_name
-                    )
-                # predict, we only need the mask, see omnipose tutorial for the rest of the args
+                model = self._build_cellpose_model(
+                    model_path, gpu=self.gpu_available
+                )
+
+                # predict – adjust image if the model expects 2 channels
+                test_img = (np.stack([img, img], -1)
+                            if model.nchan == 2 and img.ndim == 2 else img)
                 mask, _, _ = model.eval(
-                    img,
+                    test_img,
                     channels=[0, 0],
                     rescale=None,
                     mask_threshold=-1,
@@ -124,18 +123,16 @@ class OmniSegmentation(SegmentationPredictor):
             self.model_weights = label_dict[marked]
 
         # helper function for the seg method
-        if Path(self.model_weights).is_file():
-            model = models.CellposeModel(
-                gpu=self.gpu_available, pretrained_model=str(self.model_weights)
-            )
-        else:
-            model = models.CellposeModel(
-                gpu=self.gpu_available, model_type=self.model_weights
-            )
+        model = self._build_cellpose_model(
+            self.model_weights, gpu=self.gpu_available
+        )
 
         def seg_method(imgs):
             # scale all the images
             imgs = [self.scale_pixel_vals(img) for img in imgs]
+            if model.nchan == 2 and imgs[0].ndim == 2:        # duplicate chan
+                imgs = [np.stack([im, im], axis=-1) for im in imgs]
+
             # we catch here ValueErrors because omni can fail at masking when there are no cells
             try:
                 mask, _, _ = model.eval(
@@ -158,3 +155,38 @@ class OmniSegmentation(SegmentationPredictor):
 
         # set the segmentations method
         self.segmentation_method = seg_method
+
+    # --------------------------------------------------------------
+    # helper: build Cellpose / Omnipose model with correct nchan
+    # --------------------------------------------------------------
+    def _build_cellpose_model(
+        self, model_id: Union[str, os.PathLike], *, gpu: bool
+    ):
+        """
+        Create a CellposeModel with nchan adjusted to the checkpoint.
+        Falls back to 1-channel if the weight file cannot be inspected.
+        """
+        built_in_two_chan = {
+            "cyto", "cyto2", "cytotorch_0",
+            "bact_phase_cp", "bact_fluor_cp",
+        }
+
+        model_id = str(model_id)
+        nchan = 1
+
+        if Path(model_id).is_file():                      # custom file
+            try:
+                ckpt = torch.load(model_id, map_location="cpu")
+                first_conv = next(v for v in ckpt["state_dict"].values()
+                                   if v.ndim == 4)
+                nchan = first_conv.shape[1]
+            except Exception:
+                pass
+            return models.CellposeModel(
+                gpu=gpu, nchan=nchan, pretrained_model=model_id
+            )
+
+        if model_id in built_in_two_chan:                 # built-in name
+            nchan = 2
+
+        return models.CellposeModel(gpu=gpu, nchan=nchan, model_type=model_id)

@@ -62,14 +62,14 @@ class OmniSegmentationJupyter(OmniSegmentation):
             self.all_overl = {}
             for model_name, model_path in label_dict.items():
                 print(model_name, model_path)
-                if Path(model_path).is_file():
-                    model = models.CellposeModel(gpu=True, pretrained_model=str(model_path))
-                else:
-                    model = models.CellposeModel(gpu=True, model_type=model_name)
+                model = self._build_cellpose_model(model_path, gpu=True)
 
                 # predict, we only need the mask, see omnipose tutorial for the rest of the args
                 try:
-                    mask, _, _ = model.eval(imgs, channels=[0, 0], rescale=None, mask_threshold=-1,
+                    eval_imgs = ( [np.stack([im, im], -1) for im in imgs]
+                                  if model.nchan == 2 and imgs[0].ndim == 2
+                                  else imgs )
+                    mask, _, _ = model.eval(eval_imgs, channels=[0, 0], rescale=None, mask_threshold=-1,
                                             transparency=True, flow_threshold=0, omni=True, resample=True, verbose=0)
                                     # omni removes axes that are just 1
 
@@ -87,14 +87,12 @@ class OmniSegmentationJupyter(OmniSegmentation):
 
     def segment_images_jupyter(self, imgs, model_weights):
         # helper function for the seg method
-        if Path(model_weights).is_file():
-            model = models.CellposeModel(gpu=True, pretrained_model=str(model_weights))
-        else:
-            model = models.CellposeModel(gpu=True, model_type=model_weights)
-
+        model = self._build_cellpose_model(model_weights, gpu=True)
 
         # scale all the images
         imgs = [self.scale_pixel_vals(img) for img in imgs]
+        if model.nchan == 2 and imgs[0].ndim == 2:
+            imgs = [np.stack([im, im], axis=-1) for im in imgs]
         
         # we catch here ValueErrors because omni can fail at masking when there are no cells
         try:
