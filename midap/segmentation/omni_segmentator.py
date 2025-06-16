@@ -157,6 +157,13 @@ class OmniSegmentation(SegmentationPredictor):
                 self.logger.warning("Segmentation failed, returning empty mask!")
                 mask = np.zeros((len(imgs),) + imgs[0].shape, dtype=int)
 
+            # keep only one channel if mask is (H, W, 2)
+            if mask.ndim == 3 and mask.shape[-1] == 2:
+                mask = mask[..., 0]
+
+            self.seg_bin   = (np.array(mask) > 0).astype(int)
+            self.seg_label = mask
+
             # add the channel dimension and batch if it was 1
             return mask
 
