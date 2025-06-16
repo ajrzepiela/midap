@@ -6,21 +6,20 @@ import os
 def get_requirements(version = "core"):
     requirements = [
        # explicit, though TF will bring it in
-        "scipy",
-        "btrack>=0.5.0",
-        "coverage>=7.3.2",
-        "gitpython>=3.1.40",
-        "omnipose",
+        "tensorflow==2.18.0",
+        "numpy>=1.26,<2",
+        "scipy>=1.10,<1.12",
+        "scikit-image>=0.22.0",
         "opencv-python>=4.9.0.80",
         "pandas>=2.1.0",
-        "scikit-image>=0.22.0",
-        "stardist",
-        "tqdm",
-        "napari[all]" ,
-        "build",
-        "twine",
-        "mpl_interactions",
-        "ipympl",
+        "btrack>=0.6.5",
+        "stardist>=0.9.1",
+        "omnipose>=1.0.6",
+        "tqdm>=4.66",
+        "gitpython>=3.1.40",
+        "coverage>=7.3",
+        "mpl_interactions>=0.24",
+        "ipympl>=0.9",
     ]
 
     if platform.processor() == "arm":
