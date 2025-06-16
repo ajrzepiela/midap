@@ -12,7 +12,6 @@ def get_requirements(version = "core"):
         "scikit-image>=0.22.0",
         "opencv-python>=4.9.0.80",
         "pandas>=2.1.0",
-        "btrack>=0.6.5",
         "stardist>=0.9.1",
         "omnipose>=1.0.6",
         "tqdm>=4.66",
