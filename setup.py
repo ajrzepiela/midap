@@ -10,7 +10,7 @@ def get_requirements(version = "core"):
         "btrack>=0.5.0",
         "coverage>=7.3.2",
         "gitpython>=3.1.40",
-        "omnipose>=0.4.4",
+        "omnipose",
         "opencv-python>=4.9.0.80",
         "pandas>=2.1.0",
         "scikit-image>=0.22.0",
