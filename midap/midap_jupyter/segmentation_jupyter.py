@@ -483,7 +483,8 @@ class SegmentationJupyter(object):
         """
 
         def f(a, b, c):
-            fig = plt.figure(figsize=(12, 12))
+            fig = plt.figure(figsize=(15, 12))
+            raw = self.imgs_cut[int(c)]
 
             sem_seg_a = self.dict_all_models[a][int(c)]
             sem_seg_a = np.ma.masked_where(sem_seg_a == 0, sem_seg_a)
@@ -497,24 +498,27 @@ class SegmentationJupyter(object):
             inst_seg_b = self.dict_all_models_label[b][int(c)]
             inst_seg_b = np.ma.masked_where(inst_seg_b == 0, inst_seg_b)
 
+            # Row 1 – raw + semantic
+            ax0 = fig.add_subplot(231)
+            ax0.imshow(raw, cmap='gray'); ax0.set_xticks([]); ax0.set_yticks([])
+            ax0.set_title('Raw image')
 
-            ax1 = fig.add_subplot(221)
-            plt.imshow(sem_seg_a, cmap='tab20')
-            ax1.set_xticks([])
-            ax1.set_yticks([])
-            plt.title('Model 1 (semantic segmentation)')
+            ax1 = fig.add_subplot(232, sharex=ax0, sharey=ax0)
+            ax1.imshow(sem_seg_a, cmap='tab20'); ax1.set_xticks([]); ax1.set_yticks([])
+            ax1.set_title('Model 1 (semantic)')
 
-            ax2 = fig.add_subplot(222, sharex=ax1, sharey=ax1)
-            plt.imshow(sem_seg_b, cmap='tab20')
-            plt.title('Model 2 (semantic segmentation)')
+            ax2 = fig.add_subplot(233, sharex=ax0, sharey=ax0)
+            ax2.imshow(sem_seg_b, cmap='tab20'); ax2.set_title('Model 2 (semantic)')
 
-            ax3 = fig.add_subplot(223, sharex=ax1, sharey=ax1)
-            plt.imshow(inst_seg_a, cmap='tab20')
-            plt.title('Model 1 (instance segmentation)')
+            # Row 2 – raw + instance
+            ax3 = fig.add_subplot(234, sharex=ax0, sharey=ax0)
+            ax3.imshow(raw, cmap='gray'); ax3.set_xticks([]); ax3.set_yticks([])
 
-            ax4 = fig.add_subplot(224, sharex=ax1, sharey=ax1)
-            plt.imshow(inst_seg_b, cmap='tab20')
-            plt.title('Model 2 (instance segmentation)')
+            ax4 = fig.add_subplot(235, sharex=ax0, sharey=ax0)
+            ax4.imshow(inst_seg_a, cmap='tab20'); ax4.set_title('Model 1 (instance)')
+
+            ax5 = fig.add_subplot(236, sharex=ax0, sharey=ax0)
+            ax5.imshow(inst_seg_b, cmap='tab20'); ax5.set_title('Model 2 (instance)')
 
             plt.show()
 
