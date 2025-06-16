@@ -96,6 +96,7 @@ class OmniSegmentation(SegmentationPredictor):
                     flow_threshold=0,
                     omni=True,
                     resample=True,
+                    niter=20,
                     verbose=0,
                 )
                 # omni removes axes that are just 1
@@ -149,6 +150,7 @@ class OmniSegmentation(SegmentationPredictor):
                     flow_threshold=0,
                     omni=True,
                     resample=True,
+                    niter=20,
                     verbose=0,
                 )
             except ValueError:

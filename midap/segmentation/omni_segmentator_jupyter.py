@@ -65,8 +65,18 @@ class OmniSegmentationJupyter(OmniSegmentation):
                     eval_imgs = ( [np.stack([im, im], -1) for im in imgs]
                                   if model.nchan == 2 and imgs[0].ndim == 2
                                   else imgs )
-                    mask, _, _ = model.eval(eval_imgs, channels=[0, 0], rescale=None, mask_threshold=-1,
-                                            transparency=True, flow_threshold=0, omni=True, resample=True, verbose=0)
+                    mask, _, _ = model.eval(
+                        eval_imgs,
+                        channels=[0, 0],
+                        rescale=None,
+                        mask_threshold=-1,
+                        transparency=True,
+                        flow_threshold=0,
+                        omni=True,
+                        resample=True,
+                        niter=20,
+                        verbose=0,
+                    )
                                     # omni removes axes that are just 1
 
                     self.seg_bin = (np.array(mask) > 0).astype(int)
@@ -92,8 +102,18 @@ class OmniSegmentationJupyter(OmniSegmentation):
         
         # we catch here ValueErrors because omni can fail at masking when there are no cells
         try:
-            mask, _, _ = model.eval(imgs, channels=[0, 0], rescale=None, mask_threshold=-1,
-                                    transparency=True, flow_threshold=0, omni=True, resample=True, verbose=0)
+            mask, _, _ = model.eval(
+                imgs,
+                channels=[0, 0],
+                rescale=None,
+                mask_threshold=-1,
+                transparency=True,
+                flow_threshold=0,
+                omni=True,
+                resample=True,
+                niter=20,
+                verbose=0,
+            )
         except ValueError:
             self.logger.warning('Segmentation failed, returning empty mask!')
             mask = np.zeros((len(imgs), ) + imgs[0].shape, dtype=int)
