@@ -95,7 +95,7 @@ class OmniSegmentation(SegmentationPredictor):
                     transparency=True,
                     flow_threshold=0,
                     omni=True,
-                    resample=True,
+                    resample=False,
                     niter=20,
                     verbose=0,
                 )
@@ -149,7 +149,7 @@ class OmniSegmentation(SegmentationPredictor):
                     transparency=True,
                     flow_threshold=0,
                     omni=True,
-                    resample=True,
+                    resample=False,
                     niter=20,
                     verbose=0,
                 )

@@ -487,15 +487,23 @@ class SegmentationJupyter(object):
             raw = self.imgs_cut[int(c)]
 
             sem_seg_a = self.dict_all_models[a][int(c)]
+            if sem_seg_a.ndim == 3 and sem_seg_a.shape[-1] == 2:
+                sem_seg_a = sem_seg_a[..., 0]
             sem_seg_a = np.ma.masked_where(sem_seg_a == 0, sem_seg_a)
 
             sem_seg_b = self.dict_all_models[b][int(c)]
+            if sem_seg_b.ndim == 3 and sem_seg_b.shape[-1] == 2:
+                sem_seg_b = sem_seg_b[..., 0]
             sem_seg_b = np.ma.masked_where(sem_seg_b == 0, sem_seg_b)
 
             inst_seg_a = self.dict_all_models_label[a][int(c)]
+            if inst_seg_a.ndim == 3 and inst_seg_a.shape[-1] == 2:
+                inst_seg_a = inst_seg_a[..., 0]
             inst_seg_a = np.ma.masked_where(inst_seg_a == 0, inst_seg_a)
 
             inst_seg_b = self.dict_all_models_label[b][int(c)]
+            if inst_seg_b.ndim == 3 and inst_seg_b.shape[-1] == 2:
+                inst_seg_b = inst_seg_b[..., 0]
             inst_seg_b = np.ma.masked_where(inst_seg_b == 0, inst_seg_b)
 
             # Row 1 – raw + semantic
