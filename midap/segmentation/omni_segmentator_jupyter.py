@@ -93,26 +93,39 @@ class OmniSegmentationJupyter(OmniSegmentation):
 
     def segment_images_jupyter(self, imgs, model_weights):
         # helper function for the seg method
-        model = self._build_cellpose_model(model_weights, gpu=True)
+        model = self._build_cellpose_model(model_type=model_weights, gpu=True)
+
+        # --------- diagnostics ------------------------------------
+        print("DEBUG – OmniSegmentationJupyter")
+        print("  len(imgs):      ", len(imgs))
+        print("  model.nchan:    ", model.nchan)
+        print("  imgs[0].shape:  ", imgs[0].shape)
+        print("  imgs[0].dtype:  ", np.asarray(imgs[0]).dtype)
+        print("  imgs array shape", np.shape(imgs))
+        print("--------------------------------------------------------")
 
         # scale all the images
         imgs = [self.scale_pixel_vals(img) for img in imgs]
-        if model.nchan == 2 and imgs[0].ndim == 2:
-            imgs = [np.stack([im, im], axis=-1) for im in imgs]
+        #if model.nchan == 2 and imgs[0].ndim == 2:
+        #    imgs = [np.stack([im, im], axis=-1) for im in imgs]
         
         # we catch here ValueErrors because omni can fail at masking when there are no cells
         try:
             mask, _, _ = model.eval(
-                imgs,
-                channels=[0, 0],
-                rescale=None,
-                mask_threshold=-1,
-                transparency=True,
-                flow_threshold=0,
-                omni=True,
-                resample=True,
-                niter=20,
-                verbose=0,
+                    imgs,
+                    channels=[0, 0],
+                    rescale=None,
+                    mask_threshold=-1,
+                    transparency=True,
+                    flow_threshold=0,
+                    omni=True,
+                    cluster=True,
+                    resample=True,
+                    tile= False,
+                    niter= None,
+                    augment= False,
+                    affinity_seg= True,
+                    verbose=False,
             )
         except ValueError:
             self.logger.warning('Segmentation failed, returning empty mask!')
