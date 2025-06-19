@@ -96,13 +96,13 @@ class OmniSegmentationJupyter(OmniSegmentation):
         model = self._build_cellpose_model(model_weights, gpu=True)
 
         # --------- diagnostics ------------------------------------
-        print("DEBUG – OmniSegmentationJupyter")
-        print("  len(imgs):      ", len(imgs))
-        print("  model.nchan:    ", model.nchan)
-        print("  imgs[0].shape:  ", imgs[0].shape)
-        print("  imgs[0].dtype:  ", np.asarray(imgs[0]).dtype)
-        print("  imgs array shape", np.shape(imgs))
-        print("--------------------------------------------------------")
+        # print("DEBUG – OmniSegmentationJupyter")
+        # print("  len(imgs):      ", len(imgs))
+        # print("  model.nchan:    ", model.nchan)
+        # print("  imgs[0].shape:  ", imgs[0].shape)
+        # print("  imgs[0].dtype:  ", np.asarray(imgs[0]).dtype)
+        # print("  imgs array shape", np.shape(imgs))
+        # print("--------------------------------------------------------")
 
         # scale all the images
         imgs = [self.scale_pixel_vals(img) for img in imgs]

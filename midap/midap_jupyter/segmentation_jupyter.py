@@ -379,42 +379,51 @@ class SegmentationJupyter(object):
 
     def display_segmentation_models(self):
         """
-        Displays availbale models in interactive table.
+        Shows all pretrained models in a plain three-column table
+
+            | name | type | select |
+
+        - name    : full model identifier (index in *df_models*)  
+        - type    : the former "marker" field  
+        - select : a checkbox to tick the model for further processing
         """
 
-        def f(a, b):
-            self.df_models_filt = self.df_models[
-                self.df_models["species"].isin(a) & self.df_models["marker"].isin(b)
+        # --- table header --------------------------------------------------
+        header = widgets.HBox(
+            [
+                widgets.HTML("<b>Name</b>",  layout=widgets.Layout(width="50%")),
+                widgets.HTML("<b>Type</b>",  layout=widgets.Layout(width="30%")),
+                widgets.HTML("<b>Select</b>",layout=widgets.Layout(width="20%")),
             ]
-
-            self.df_models_filt2 = self.df_models_filt.drop(columns=['nn_type_alias'])
-            display(self.df_models_filt2)
-
-        self.outp_interact_table = interactive(
-            f,
-            a=widgets.SelectMultiple(
-                options=self.df_models["species"].unique(),
-                value=list(self.df_models["species"].unique()),
-                layout=widgets.Layout(width="50%"),
-                description="Species",
-            ),
-            b=widgets.SelectMultiple(
-                options=self.df_models["marker"].unique(),
-                value=list(self.df_models["marker"].unique()),
-                layout=widgets.Layout(width="50%"),
-                description="Marker/Type",
-            ),
         )
+
+        # --- one row per model --------------------------------------------
+        rows = []
+        self.model_checkboxes = {}        # model_id → Checkbox
+
+        for model_id, row in self.df_models.iterrows():
+            lbl_name = widgets.Label(model_id, layout=widgets.Layout(width="50%"))
+            lbl_type = widgets.Label(str(row.get("marker", "")),
+                                     layout=widgets.Layout(width="30%"))
+            cb       = widgets.Checkbox(value=False, indent=False,
+                                        layout=widgets.Layout(width="20%"))
+            self.model_checkboxes[model_id] = cb
+            rows.append(widgets.HBox([lbl_name, lbl_type, cb]))
+
+        self.outp_table = widgets.VBox([header] + rows)
+        display(self.outp_table)
 
     def select_segmentation_models(self):
         """
-        Selects segmentation models based on output of interactive table.
+        Builds *self.all_chosen_seg_models* from the check-boxes created
+        in *display_segmentation_models*.
         """
         self.all_chosen_seg_models = {}
-        for nnt in self.df_models_filt.nn_type_alias.unique():
-            self.all_chosen_seg_models[nnt] = list(
-                self.df_models_filt[self.df_models_filt.nn_type_alias == nnt].index
-            )
+
+        for model_id, cb in self.model_checkboxes.items():
+            if cb.value:                                     # ticked
+                nn_type = self.df_models.loc[model_id, "nn_type_alias"]
+                self.all_chosen_seg_models.setdefault(nn_type, []).append(model_id)
 
     def run_all_chosen_models(self):
         """
