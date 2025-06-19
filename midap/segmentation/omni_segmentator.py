@@ -141,6 +141,12 @@ class OmniSegmentation(SegmentationPredictor):
             #    imgs = [np.stack([im, im], axis=-1) for im in imgs]
 
             # we catch here ValueErrors because omni can fail at masking when there are no cells
+            print(len(imgs))
+            print(model.nchan)
+            print(imgs[0].shape)
+            print(imgs[0].dtype)
+            print(imgs.shape)
+            print(imgs[0].ndim)
             try:
                 mask, _, _ = model.eval(
                     imgs,
