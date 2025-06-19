@@ -54,7 +54,10 @@ class SegmentationJupyter(object):
             os.makedirs(self.path_data, exist_ok=True)
 
             # copy bundled example TIFFs (if any) into the new directory
-            example_dir = Path(self.path_midap).joinpath("img", "examples")
+            # NOTE: when MIDAP is installed via `pip`, the package root
+            #       sits inside site-packages, while the example images are
+            #       shipped one level higher:  <site-packages>/img/examples
+            example_dir = Path(self.path_midap).parent.joinpath("img", "examples")
             if example_dir.exists():
                 for f in example_dir.iterdir():
                     if f.is_file():
