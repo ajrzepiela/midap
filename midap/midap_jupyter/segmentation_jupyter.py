@@ -1,4 +1,5 @@
 import os
+import shutil
 from skimage import io
 from pathlib import Path
 
@@ -45,6 +46,19 @@ class SegmentationJupyter(object):
         # existing folders
         self.path_data_input = self.path + "/input_data/"
         self.path_data = self.path + "/raw_im/"
+
+        # ensure a raw_im folder exists and, if absent, seed it with
+        # example images that ship with MIDAP so the notebook has
+        # something to work with on a fresh installation.
+        if not os.path.isdir(self.path_data):
+            os.makedirs(self.path_data, exist_ok=True)
+
+            # copy bundled example TIFFs (if any) into the new directory
+            example_dir = Path(self.path_midap).joinpath("img", "examples")
+            if example_dir.exists():
+                for f in example_dir.iterdir():
+                    if f.is_file():
+                        shutil.copy(f, self.path_data)
 
         # folders created by class
         self.path_cut_base = Path(self.path).joinpath("cut_im/")
