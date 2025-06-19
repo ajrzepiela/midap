@@ -2,6 +2,7 @@ import os
 import shutil
 from skimage import io
 from pathlib import Path
+from importlib import resources          # Python ≥ 3.9
 
 import matplotlib
 import ipympl
@@ -53,11 +54,14 @@ class SegmentationJupyter(object):
         if not os.path.isdir(self.path_data):
             os.makedirs(self.path_data, exist_ok=True)
 
-            # copy bundled example TIFFs (if any) into the new directory
-            # NOTE: when MIDAP is installed via `pip`, the package root
-            #       sits inside site-packages, while the example images are
-            #       shipped one level higher:  <site-packages>/img/examples
-            example_dir = Path(self.path_midap).parent.joinpath("img", "examples")
+            # copy bundled example TIFFs (if any) into the new directory.
+            # The files are installed as midap/data_examples/*
+            try:
+                example_dir = resources.files("midap").joinpath("data_examples")
+            except AttributeError:        # Py < 3.9 fallback
+                import importlib_resources as resources
+                example_dir = resources.files("midap").joinpath("data_examples")
+
             if example_dir.exists():
                 for f in example_dir.iterdir():
                     if f.is_file():

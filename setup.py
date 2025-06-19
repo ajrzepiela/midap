@@ -73,8 +73,10 @@ Documentation at https://github.com/Microbial-Systems-Ecology/midap/wiki
     keywords="Segmentation, Tracking, Biology",
     install_requires=get_requirements(),
     packages=find_packages(),
+    # ship the TIFF demo stack inside the wheel
     package_data={
-        "midap.apps": ["download_info.json"],   # ← add this
+        "midap": ["data_examples/*"],            # ❶  images
+        "midap.apps": ["download_info.json"],
     },
     include_package_data=True,
     project_urls={
