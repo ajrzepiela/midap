@@ -158,8 +158,16 @@ class OmniSegmentation(SegmentationPredictor):
                     affinity_seg= True,
                     verbose=False,
                 )
-            except ValueError:
-                self.logger.warning("Segmentation failed, returning empty mask!")
+            except ValueError as e:
+                # collect some context to understand why it failed
+                msg  = f"Omnipose ValueError: {e}\n"
+                msg += f"  ‣ model expects nchan = {model.nchan}\n"
+                msg += f"  ‣ imgs is {type(imgs)}, len = {len(imgs)}\n"
+                msg += f"  ‣ first image shape  = {np.shape(imgs[0])}\n"
+                msg += f"  ‣ img array shape  = {np.shape(imgs)}\n"
+                msg += f"  ‣ first image dtype   = {np.asarray(imgs[0]).dtype}\n"
+                self.logger.error(msg)
+                # fall back to empty mask so the pipeline can continue
                 mask = np.zeros((len(imgs),) + imgs[0].shape, dtype=int)
 
             # keep only one channel if mask is (H, W, 2)
