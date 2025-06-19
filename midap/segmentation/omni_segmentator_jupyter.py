@@ -93,7 +93,7 @@ class OmniSegmentationJupyter(OmniSegmentation):
 
     def segment_images_jupyter(self, imgs, model_weights):
         # helper function for the seg method
-        model = self._build_cellpose_model(model_type=model_weights, gpu=True)
+        model = self._build_cellpose_model(model_weights, gpu=True)
 
         # --------- diagnostics ------------------------------------
         print("DEBUG – OmniSegmentationJupyter")
