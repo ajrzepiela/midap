@@ -164,9 +164,10 @@ class OmniSegmentation(SegmentationPredictor):
                 msg += f"  ‣ model expects nchan = {model.nchan}\n"
                 msg += f"  ‣ imgs is {type(imgs)}, len = {len(imgs)}\n"
                 msg += f"  ‣ first image shape  = {np.shape(imgs[0])}\n"
-                msg += f"  ‣ img array shape  = {np.shape(imgs)}\n"
-                msg += f"  ‣ first image dtype   = {np.asarray(imgs[0]).dtype}\n"
+                msg += f"  ‣ img array shape   = {np.shape(imgs)}\n"
+                msg += f"  ‣ first image dtype  = {np.asarray(imgs[0]).dtype}\n"
                 self.logger.error(msg)
+                print(msg)
                 # fall back to empty mask so the pipeline can continue
                 mask = np.zeros((len(imgs),) + imgs[0].shape, dtype=int)
 
