@@ -78,7 +78,7 @@ class OmniSegmentation(SegmentationPredictor):
             label_dict = {m: m for m in self.DEFAULT_MODELS
                           if m in self.AVAILABLE_MODELS}
             figures = []
-            for model_name, model_path in label_dict.items():
+            '''for model_name, model_path in label_dict.items():
                 self.logger.info("Try model: " + str(model_name))
                 model = self._build_cellpose_model(
                     model_path, gpu=self.gpu_available
@@ -110,6 +110,7 @@ class OmniSegmentation(SegmentationPredictor):
                 ax.set_yticks([])
                 ax.set_title(model_name)
                 figures.append(fig)
+                '''
 
             # Title for the GUI
             channel = os.path.basename(os.path.dirname(path_to_cutouts))
@@ -149,8 +150,11 @@ class OmniSegmentation(SegmentationPredictor):
                     transparency=True,
                     flow_threshold=0,
                     omni=True,
-                    resample=False,
-                    niter=20,
+                    resample=True,
+                    tile= False,
+                    niter= None,
+                    augment= False,
+                    affinity_seg= True,
                     verbose=0,
                 )
             except ValueError:
