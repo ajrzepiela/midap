@@ -30,7 +30,7 @@ class OmniSegmentation(SegmentationPredictor):
         "plant_omni", "bact_phase_cp", "bact_fluor_cp", "plant_cp",
         "worm_cp", "cyto", "nuclei", "cyto2",
     ]
-    DEFAULT_MODELS = ["bact_phase_omni", "bact_fluor_omni", "nuclei"]
+    DEFAULT_MODELS = ["nuclei"]
 
     def __init__(self, *args, **kwargs):
         """
@@ -136,9 +136,9 @@ class OmniSegmentation(SegmentationPredictor):
 
         def seg_method(imgs):
             # scale all the images
-            imgs = [self.scale_pixel_vals(img) for img in imgs]
-            if model.nchan == 2 and imgs[0].ndim == 2:        # duplicate chan
-                imgs = [np.stack([im, im], axis=-1) for im in imgs]
+            #imgs = [self.scale_pixel_vals(img) for img in imgs]
+            #if model.nchan == 2 and imgs[0].ndim == 2:        # duplicate chan
+            #    imgs = [np.stack([im, im], axis=-1) for im in imgs]
 
             # we catch here ValueErrors because omni can fail at masking when there are no cells
             try:
@@ -150,12 +150,13 @@ class OmniSegmentation(SegmentationPredictor):
                     transparency=True,
                     flow_threshold=0,
                     omni=True,
+                    cluster=True,
                     resample=True,
                     tile= False,
                     niter= None,
                     augment= False,
                     affinity_seg= True,
-                    verbose=0,
+                    verbose=False,
                 )
             except ValueError:
                 self.logger.warning("Segmentation failed, returning empty mask!")
@@ -190,7 +191,7 @@ class OmniSegmentation(SegmentationPredictor):
         }
 
         model_id = str(model_id)
-        nchan = 1
+        #nchan = 1
 
         if Path(model_id).is_file():                      # custom file
             try:
@@ -217,7 +218,7 @@ class OmniSegmentation(SegmentationPredictor):
                 gpu=gpu, nchan=nchan, pretrained_model=model_id
             )
 
-        if model_id in built_in_two_chan:                 # built-in name
-            nchan = 2
+        #if model_id in built_in_two_chan:                 # built-in name
+        #    nchan = 2
 
-        return models.CellposeModel(gpu=gpu, nchan=nchan, model_type=model_id)
+        return models.CellposeModel(gpu=gpu, model_type=model_id)
