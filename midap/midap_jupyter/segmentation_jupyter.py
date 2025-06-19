@@ -56,6 +56,7 @@ class SegmentationJupyter(object):
 
             # copy bundled example TIFFs (if any) into the new directory.
             # The files are installed as midap/data_examples/*
+            import importlib.resources as resources
             try:
                 example_dir = resources.files("midap").joinpath("data_examples")
             except AttributeError:        # Py < 3.9 fallback
