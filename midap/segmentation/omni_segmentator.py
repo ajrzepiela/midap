@@ -30,7 +30,7 @@ class OmniSegmentation(SegmentationPredictor):
         "plant_omni", "bact_phase_cp", "bact_fluor_cp", "plant_cp",
         "worm_cp", "cyto", "nuclei", "cyto2",
     ]
-    DEFAULT_MODELS = ["nuclei"]
+    DEFAULT_MODELS = ["nuclei","bact_fluor_omni","bact_phase_omni","worm_omni","worm_bact_omni"]
 
     def __init__(self, *args, **kwargs):
         """
@@ -141,12 +141,7 @@ class OmniSegmentation(SegmentationPredictor):
             #    imgs = [np.stack([im, im], axis=-1) for im in imgs]
 
             # we catch here ValueErrors because omni can fail at masking when there are no cells
-            print(len(imgs))
-            print(model.nchan)
-            print(imgs[0].shape)
-            print(imgs[0].dtype)
-            print(imgs.shape)
-            print(imgs[0].ndim)
+
             try:
                 mask, _, _ = model.eval(
                     imgs,
