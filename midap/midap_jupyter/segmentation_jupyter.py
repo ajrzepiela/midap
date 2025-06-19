@@ -420,7 +420,7 @@ class SegmentationJupyter(object):
 
         for model_id, row in self.df_models.iterrows():
             lbl_name = widgets.Label(model_id, layout=widgets.Layout(width="50%"))
-            lbl_type = widgets.Label(str(row.get("marker", "")),
+            lbl_type = widgets.Label(str(row.get("nn_type_alias", "")),
                                      layout=widgets.Layout(width="30%"))
             cb       = widgets.Checkbox(value=False, indent=False,
                                         layout=widgets.Layout(width="20%"))
