@@ -94,10 +94,10 @@ class CellposeSegmentationJupyter(CellposeSegmentation):
         imgs  = [self.scale_pixel_vals(im) for im in imgs]
 
         try:
-            eval_imgs = ([np.stack([im, im], -1) for im in imgs]
-                         if model.nchan == 2 and imgs[0].ndim == 2 else imgs)
+            #eval_imgs = ([np.stack([im, im], -1) for im in imgs]
+            #             if model.nchan == 2 and imgs[0].ndim == 2 else imgs)
             mask, _, _ = model.eval(
-                eval_imgs,
+                imgs,
                 channels=[0, 0],
    
             )
