@@ -215,3 +215,34 @@ class SegmentationPredictor(ABC):
         This is an abstract method forcing subclasses to implement it
         """
         pass
+
+    def cleanup(self):
+        """
+        Release GPU (and CPU) memory that may have been allocated by the
+        deep-learning back-ends after a prediction run.  Call this once a
+        predictor instance is no longer needed.  The helper tries to be
+        framework-agnostic and silently ignores missing libraries.
+        """
+        import gc
+        # --- TensorFlow --------------------------------------------------
+        try:
+            import tensorflow as _tf
+            _tf.keras.backend.clear_session()
+        except Exception:
+            # covers ImportError and any runtime errors if TF is not in use
+            pass
+
+        # --- PyTorch / Cellpose / Omnipose -------------------------------
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                # On some systems this additionally frees cached blocks
+                if hasattr(torch.cuda, "ipc_collect"):
+                    torch.cuda.ipc_collect()
+        except Exception:
+            pass
+
+        # Force Python garbage collection (especially important in
+        # long-running Jupyter sessions where references can linger).
+        gc.collect()

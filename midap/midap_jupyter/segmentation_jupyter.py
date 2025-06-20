@@ -479,6 +479,15 @@ class SegmentationJupyter(object):
                     "{}_{}".format(nnt, model)
                 ] = self.pred.seg_label
 
+                # ------------------------------------------------------
+                # Free GPU memory that might still be held by the just
+                # finished predictor.  This is crucial when executing
+                # multiple models sequentially in the same notebook /
+                # Colab runtime to avoid out-of-memory crashes.
+                # ------------------------------------------------------
+                if hasattr(self.pred, "cleanup"):
+                    self.pred.cleanup()
+
     def select_segmentator(self, segmentation_class: str):
         """
         Selects segmentator based on segmentation class.
