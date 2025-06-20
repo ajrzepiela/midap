@@ -523,6 +523,10 @@ class SegmentationJupyter(object):
         if class_instance is None:
             raise ValueError(f"Chosen class does not exist: {segmentation_class}")
 
+        # make sure GPU memory held by a previous predictor is freed
+        if hasattr(self, "pred") and hasattr(self.pred, "cleanup"):
+            self.pred.cleanup()
+
         # get the Predictor
         self.pred = class_instance(
             path_model_weights=path_model_weights,
@@ -648,6 +652,10 @@ class SegmentationJupyter(object):
         :param model_name: Name of chosen trained model.
         """
         self.pred.run_image_stack_jupyter(self.imgs_cut, model_name, clean_border=False)
+
+        # free GPU memory right after a single-model inference run
+        if hasattr(self.pred, "cleanup"):
+            self.pred.cleanup()
 
     def process_images(self):
         """
