@@ -382,6 +382,7 @@ class SegmentationJupyter(object):
         # 2) Inject default Omni / Cellpose-Omni models
         # ------------------------------------------------------------------
         from midap.segmentation.omni_segmentator import OmniSegmentation
+        from midap.segmentation.cellpose_segmentator_jupyter import CellposeSegmentationJupyter
 
         for mdl in OmniSegmentation.DEFAULT_MODELS:
             # Row index format must match the legacy pattern because further
@@ -396,6 +397,19 @@ class SegmentationJupyter(object):
             self.df_models.loc[idx, "species"] = "OmniPose"
             self.df_models.loc[idx, "marker"] = "omni"
             self.df_models.loc[idx, "nn_type_alias"] = "OmniSegmentationJupyter"
+
+        # --------------------------------------------------------------
+        # 3) Inject default *Cellpose* models (classic, non-omni)
+        # --------------------------------------------------------------
+        from midap.segmentation.cellpose_segmentator_jupyter import CellposeSegmentationJupyter
+        for mdl in CellposeSegmentationJupyter.DEFAULT_MODELS:
+            idx = f"model_weights_{mdl}"
+            if idx in self.df_models.index:
+                continue
+
+            self.df_models.loc[idx, "species"] = "Cellpose-SAM"
+            self.df_models.loc[idx, "marker"]  = "cellpose-sam"
+            self.df_models.loc[idx, "nn_type_alias"] = "CellposeSegmentationJupyter"
 
 
 
