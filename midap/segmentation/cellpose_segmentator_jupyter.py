@@ -105,9 +105,15 @@ class CellposeSegmentationJupyter(CellposeSegmentation):
             self.logger.warning("Cellpose failed, returning empty mask.")
             mask = np.zeros((len(imgs),) + imgs[0].shape, dtype=int)
 
+        # ----------------------------------------------------------
+        # Cellpose may return *list[ndarray]*.  Convert it into one
+        # NumPy stack so that the dimensionality checks below work.
+        # ----------------------------------------------------------
+        mask = np.asarray(mask)
+
         # keep only first channel if mask is (H,W,2)
         if mask.ndim == 3 and mask.shape[-1] == 2:
             mask = mask[..., 0]
 
-        self.seg_bin   = (np.asarray(mask) > 0).astype(int)
+        self.seg_bin   = (mask > 0).astype(int)
         self.seg_label = mask
