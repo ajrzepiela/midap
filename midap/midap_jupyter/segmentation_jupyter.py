@@ -1,5 +1,7 @@
 import os
+import sys
 import shutil
+
 from skimage import io
 from pathlib import Path
 from importlib import resources          # Python ≥ 3.9
