@@ -7,8 +7,8 @@ import os
 # MATPLOTLIB_BACKEND. If the variable is not set and no backend has been chosen
 # yet, we fall back to "TkAgg" for interactive local sessions.
 if 'matplotlib.pyplot' not in sys.modules:
-    backend = os.environ.get('MATPLOTLIB_BACKEND', 'TkAgg')
+    #backend = os.environ.get('MATPLOTLIB_BACKEND', 'TkAgg')
     import matplotlib
-    matplotlib.use(backend)
+    #matplotlib.use(backend)
 else:
     import matplotlib

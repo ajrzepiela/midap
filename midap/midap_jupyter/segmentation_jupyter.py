@@ -8,12 +8,12 @@ from importlib import resources          # Python ≥ 3.9
 
 #import matplotlib
 #import ipympl
-if 'matplotlib.pyplot' not in sys.modules:
-    backend = os.environ.get('MATPLOTLIB_BACKEND', 'TkAgg')
-    import matplotlib
-    matplotlib.use(backend)
-else:
-    import matplotlib
+#if 'matplotlib.pyplot' not in sys.modules:
+#    backend = os.environ.get('MATPLOTLIB_BACKEND', 'TkAgg')
+#    import matplotlib
+#    matplotlib.use(backend)
+#else:
+import matplotlib
 
 #matplotlib.use(os.environ.get("MATPLOTLIB_BACKEND", "module://ipympl.backend_nbagg"))
 import matplotlib.pyplot as plt
