@@ -544,85 +544,139 @@ class SegmentationJupyter(object):
             img_threshold=img_threshold,
         )
 
+    # ------------------------------------------------------------------
+    #  Quantitative agreement analysis
+    # ------------------------------------------------------------------
+    def compute_model_diff_scores(self):
+        """
+        Calculates a mean semantic-segmentation disagreement score
+        for every model that has been run.
+
+        Step 1 – pairwise disagreement:
+            For every unordered model pair (m1, m2) the fraction of pixels
+            whose semantic class labels differ is computed for each image
+            and averaged over the whole image stack.
+
+        Step 2 – per-model aggregation:
+            A model's final score is the mean of the pairwise scores of
+            all pairs that include this very model.
+
+        Returns
+        -------
+        dict
+            model_id → mean disagreement (float in [0,1])
+        """
+        models = list(self.dict_all_models.keys())
+        if len(models) < 2:
+            raise RuntimeError("Need at least two models to compare.")
+
+        # ---- pair-wise disagreement -----------------------------------
+        diff_pair = {}                                   # (m1,m2) → score
+        for i in range(len(models)):
+            for j in range(i + 1, len(models)):
+                m1, m2 = models[i], models[j]
+                sem_a, sem_b = self.dict_all_models[m1], self.dict_all_models[m2]
+
+                per_img = []
+                for a_img, b_img in zip(sem_a, sem_b):
+                    a_img = np.asarray(a_img)
+                    b_img = np.asarray(b_img)
+                    if a_img.ndim == 3 and a_img.shape[-1] == 2:
+                        a_img = a_img[..., 0]
+                    if b_img.ndim == 3 and b_img.shape[-1] == 2:
+                        b_img = b_img[..., 0]
+
+                    per_img.append((a_img != b_img).mean())
+
+                diff_pair[(m1, m2)] = float(np.mean(per_img))
+
+        # ---- aggregate per model --------------------------------------
+        model_vals = {m: [] for m in models}
+        for (m1, m2), val in diff_pair.items():
+            model_vals[m1].append(val)
+            model_vals[m2].append(val)
+
+        return {m: float(np.mean(v)) for m, v in model_vals.items()}
+
     def compare_segmentations(self):
         """
-        Displays two segmentations side-by-side for comparison of different pretrained models.
+        Visualises:
+          1. raw image
+          2. instance segmentation of model-1
+          3. instance segmentation of model-2
+          4. bar-plot of the per-model mean semantic disagreement scores
         """
 
+        # ----------------------------------------------------------------
+        # prepare bar-plot data (only once)
+        # ----------------------------------------------------------------
+        if not hasattr(self, "model_diff_scores"):
+            self.model_diff_scores = self.compute_model_diff_scores()
+
         def f(a, b, c):
-            fig = plt.figure(figsize=(15, 12))
+            fig = plt.figure(figsize=(20, 6))
+
+            # --- raw image ---------------------------------------------
             raw = self.imgs_cut[int(c)]
+            ax0 = fig.add_subplot(141)
+            ax0.imshow(raw, cmap="gray")
+            ax0.set_xticks([]); ax0.set_yticks([])
+            ax0.set_title("Raw image")
 
-            sem_seg_a = self.dict_all_models[a][int(c)]
-            if isinstance(sem_seg_a, list): 
-                sem_seg_a = np.array(sem_seg_a)
-            if sem_seg_a.ndim == 3 and sem_seg_a.shape[-1] == 2:
-                sem_seg_a = sem_seg_a[..., 0]
-            sem_seg_a = np.ma.masked_where(sem_seg_a == 0, sem_seg_a)
+            # --- instance seg – model 1 --------------------------------
+            inst_a = self.dict_all_models_label[a][int(c)]
+            inst_a = np.asarray(inst_a)
+            if inst_a.ndim == 3 and inst_a.shape[-1] == 2:
+                inst_a = inst_a[..., 0]
+            inst_a = np.ma.masked_where(inst_a == 0, inst_a)
 
-            sem_seg_b = self.dict_all_models[b][int(c)]
-            if isinstance(sem_seg_b, list): 
-                sem_seg_b = np.array(sem_seg_b)
-            if sem_seg_b.ndim == 3 and sem_seg_b.shape[-1] == 2:
-                sem_seg_b = sem_seg_b[..., 0]
-            sem_seg_b = np.ma.masked_where(sem_seg_b == 0, sem_seg_b)
+            ax1 = fig.add_subplot(142, sharex=ax0, sharey=ax0)
+            ax1.imshow(inst_a, cmap="tab20")
+            ax1.set_xticks([]); ax1.set_yticks([])
+            ax1.set_title("Model 1 (instance)")
 
-            inst_seg_a = self.dict_all_models_label[a][int(c)]
-            if isinstance(inst_seg_a, list):
-                inst_seg_a = np.array(inst_seg_a)
-            if inst_seg_a.ndim == 3 and inst_seg_a.shape[-1] == 2:
-                inst_seg_a = inst_seg_a[..., 0]
-            inst_seg_a = np.ma.masked_where(inst_seg_a == 0, inst_seg_a)
+            # --- instance seg – model 2 --------------------------------
+            inst_b = self.dict_all_models_label[b][int(c)]
+            inst_b = np.asarray(inst_b)
+            if inst_b.ndim == 3 and inst_b.shape[-1] == 2:
+                inst_b = inst_b[..., 0]
+            inst_b = np.ma.masked_where(inst_b == 0, inst_b)
 
-            inst_seg_b = self.dict_all_models_label[b][int(c)]
-            if isinstance(inst_seg_b, list):
-                inst_seg_b = np.array(inst_seg_b)
-            if inst_seg_b.ndim == 3 and inst_seg_b.shape[-1] == 2:
-                inst_seg_b = inst_seg_b[..., 0]
-            inst_seg_b = np.ma.masked_where(inst_seg_b == 0, inst_seg_b)
+            ax2 = fig.add_subplot(143, sharex=ax0, sharey=ax0)
+            ax2.imshow(inst_b, cmap="tab20")
+            ax2.set_xticks([]); ax2.set_yticks([])
+            ax2.set_title("Model 2 (instance)")
 
-            # Row 1 – raw + semantic
-            ax0 = fig.add_subplot(231)
-            ax0.imshow(raw, cmap='gray'); ax0.set_xticks([]); ax0.set_yticks([])
-            ax0.set_title('Raw image')
+            # --- bar-plot with mean disagreements ----------------------
+            ax3 = fig.add_subplot(144)
+            mdl_ids = list(self.model_diff_scores.keys())
+            scores  = [self.model_diff_scores[m] for m in mdl_ids]
+            ax3.bar(range(len(mdl_ids)), scores, color="steelblue")
+            ax3.set_xticks(range(len(mdl_ids)))
+            ax3.set_xticklabels(mdl_ids, rotation=90)
+            ax3.set_ylabel("Mean semantic difference")
+            ax3.set_title("Per-model disagreement")
 
-            ax1 = fig.add_subplot(232, sharex=ax0, sharey=ax0)
-            ax1.imshow(sem_seg_a, cmap='tab20'); ax1.set_xticks([]); ax1.set_yticks([])
-            ax1.set_title('Model 1 (semantic)')
-
-            ax2 = fig.add_subplot(233, sharex=ax0, sharey=ax0)
-            ax2.imshow(sem_seg_b, cmap='tab20'); ax2.set_title('Model 2 (semantic)')
-
-            # Row 2 – raw + instance
-            ax3 = fig.add_subplot(234, sharex=ax0, sharey=ax0)
-            ax3.imshow(raw, cmap='gray'); ax3.set_xticks([]); ax3.set_yticks([])
-
-            ax4 = fig.add_subplot(235, sharex=ax0, sharey=ax0)
-            ax4.imshow(inst_seg_a, cmap='tab20'); ax4.set_title('Model 1 (instance)')
-
-            ax5 = fig.add_subplot(236, sharex=ax0, sharey=ax0)
-            ax5.imshow(inst_seg_b, cmap='tab20'); ax5.set_title('Model 2 (instance)')
-
+            plt.tight_layout()
             plt.show()
 
         self.output_seg_comp = interactive(
             f,
             a=widgets.Dropdown(
                 options=self.dict_all_models.keys(),
-                layout=widgets.Layout(width="50%"),
-                description="Model 1",
+                description="Model 1", layout=widgets.Layout(width="45%")
             ),
             b=widgets.Dropdown(
                 options=self.dict_all_models.keys(),
-                layout=widgets.Layout(width="50%"),
-                description="Model 2",
+                description="Model 2", layout=widgets.Layout(width="45%")
             ),
             c=widgets.IntSlider(
                 min=0,
-                max=(len(list(self.dict_all_models.values())[0]) - 1),
-                description="Image ID",
+                max=len(next(iter(self.dict_all_models.values()))) - 1,
+                description="Image ID"
             ),
         )
+        display(self.output_seg_comp)
 
     def display_buttons_weights(self):
         """
