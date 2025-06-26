@@ -117,32 +117,55 @@ class SegmentationJupyter(object):
 
     def load_input_image(self, image_stack=False):
         """
-        Loads selected image and extracts image dimensions.
+        Loads selected images, equalises their spatial dimensions and
+        extracts image dimensions for further processing.
+
+        Workflow:
+        1) Probe each file header to determine its height/width without
+           actually loading the full pixel data (fast & memory-efficient).
+        2) Load the images, zero-padding them so that every image attains
+           the maximum height/width observed across the selection.
+        3) Continue with the original dimension bookkeeping logic.
         """
 
-        # read image(s)
+        # ------------------------------------------------------------------
+        # 1) Determine maximum height & width across all chosen images ------
+        # ------------------------------------------------------------------
+        sizes_hw = []  # list of tuples (H, W)
+        for f in self.chosen_files:
+            with Image.open(Path(self.chosen_dir).joinpath(f)) as im:
+                sizes_hw.append(im.size[::-1])  # PIL.Image.size → (W, H) → (H, W)
+        max_h = max(h for h, _ in sizes_hw)
+        max_w = max(w for _, w in sizes_hw)
+
+        # ------------------------------------------------------------------
+        # 2) Load images and zero-pad them to (max_h, max_w) ----------------
+        # ------------------------------------------------------------------
         self.imgs = []
         for f in self.chosen_files:
             path_chosen_img = Path(self.chosen_dir).joinpath(f)
-            self.imgs.append(io.imread(path_chosen_img))
+            img = io.imread(path_chosen_img)
+            h, w = img.shape[:2]
+            pad_h = max_h - h
+            pad_w = max_w - w
+            pad_spec = [(0, pad_h), (0, pad_w)]  # pad bottom & right edges
+            if img.ndim == 3:
+                pad_spec.append((0, 0))  # keep channel dimension unchanged
+            img_padded = np.pad(img, pad_spec, mode="constant", constant_values=0)
+            self.imgs.append(img_padded)
 
-        # check if image dimensions align
-        if len(list(set([i.shape for i in self.imgs]))) > 1:
-            ip.display.display(
-                ip.display.Markdown(
-                    "**The image shapes do not match. Please select only images with the same image dimensions.**"
-                )
-            )
-        elif len(list(set([i.shape for i in self.imgs]))) == 1:
-            self.imgs = np.stack(self.imgs, axis=0)
-            self.get_img_dims()
-            self.get_img_dims_ix()
+        # ------------------------------------------------------------------
+        # 3) Stack to numpy array and proceed with existing pipeline --------
+        # ------------------------------------------------------------------
+        self.imgs = np.stack(self.imgs, axis=0)
+        self.get_img_dims()
+        self.get_img_dims_ix()
 
-            # get indices of additional dimensions
-            self.get_ix_add_dims()
-            if image_stack==False:
-                self.make_dropdowns_img_dims()
-                ip.display.display(self.hbox_dropdowns)
+        # get indices of additional dimensions
+        self.get_ix_add_dims()
+        if not image_stack:
+            self.make_dropdowns_img_dims()
+            ip.display.display(self.hbox_dropdowns)
 
     def get_img_dims(self):
         """
@@ -651,9 +674,13 @@ class SegmentationJupyter(object):
             ax3 = fig.add_subplot(144)
             mdl_ids = list(self.model_diff_scores.keys())
             scores  = [self.model_diff_scores[m] for m in mdl_ids]
+            # Shorten model names
+            short_mdl_ids = [
+                f"{m[:5]}...{m.split('_')[-1]}" for m in mdl_ids
+            ]
             ax3.bar(range(len(mdl_ids)), scores, color="steelblue")
             ax3.set_xticks(range(len(mdl_ids)))
-            ax3.set_xticklabels(mdl_ids, rotation=90)
+            ax3.set_xticklabels(short_mdl_ids, rotation=90)
             ax3.set_ylabel("Mean semantic difference")
             ax3.set_title("Per-model disagreement")
 
