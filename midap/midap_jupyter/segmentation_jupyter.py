@@ -572,8 +572,8 @@ class SegmentationJupyter(object):
     # ------------------------------------------------------------------
     def compute_model_diff_scores(self):
         """
-        Calculates a mean semantic-segmentation disagreement score
-        for every model that has been run.
+        Calculates a mean and standard deviation of semantic-segmentation
+        disagreement scores for every model that has been run.
 
         Step 1 – pairwise disagreement:
             For every unordered model pair (m1, m2) the fraction of pixels
@@ -587,7 +587,7 @@ class SegmentationJupyter(object):
         Returns
         -------
         dict
-            model_id → mean disagreement (float in [0,1])
+            model_id → (mean disagreement, std deviation)
         """
         models = list(self.dict_all_models.keys())
         if len(models) < 2:
@@ -619,7 +619,7 @@ class SegmentationJupyter(object):
             model_vals[m1].append(val)
             model_vals[m2].append(val)
 
-        return {m: float(np.mean(v)) for m, v in model_vals.items()}
+        return {m: (float(np.mean(v)), float(np.std(v))) for m, v in model_vals.items()}
 
     def compare_segmentations(self):
         """
@@ -628,6 +628,7 @@ class SegmentationJupyter(object):
           2. instance segmentation of model-1
           3. instance segmentation of model-2
           4. bar-plot of the per-model mean semantic disagreement scores
+             with standard deviation as error bars.
         """
 
         # ----------------------------------------------------------------
@@ -670,15 +671,15 @@ class SegmentationJupyter(object):
             ax2.set_xticks([]); ax2.set_yticks([])
             ax2.set_title("Model 2 (instance)")
 
-            # --- bar-plot with mean disagreements ----------------------
+            # --- bar-plot with mean disagreements and std dev ---------
             ax3 = fig.add_subplot(144)
             mdl_ids = list(self.model_diff_scores.keys())
-            scores  = [self.model_diff_scores[m] for m in mdl_ids]
+            scores, std_devs = zip(*[self.model_diff_scores[m] for m in mdl_ids])
             # Shorten model names
             short_mdl_ids = [
                 f"{m[:5]}...{m.split('_')[-1]}" for m in mdl_ids
             ]
-            ax3.bar(range(len(mdl_ids)), scores, color="steelblue")
+            ax3.bar(range(len(mdl_ids)), scores, yerr=std_devs, color="steelblue", capsize=5)
             ax3.set_xticks(range(len(mdl_ids)))
             ax3.set_xticklabels(short_mdl_ids, rotation=90)
             ax3.set_ylabel("Mean semantic difference")
